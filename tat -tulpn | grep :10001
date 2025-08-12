@@ -1,0 +1,12 @@
+● webmin.service - Webmin server daemon
+     Loaded: loaded (/lib/systemd/system/webmin.service; enabled; vendor preset: enabled)
+     Active: activating (start) since Mon 2025-07-28 19:22:41 -03; 7s ago
+Cntrl PID: 832070 (miniserv.pl)
+      Tasks: 1 (limit: 4545)
+     Memory: 28.5M
+     CGroup: /system.slice/webmin.service
+             └─832070 /usr/bin/perl /usr/share/webmin/miniserv.pl /etc/webmin/miniserv.conf
+
+Jul 28 19:22:41 r14653s.vps-kinghost.net systemd[1]: Starting Webmin server daemon...
+Jul 28 19:22:41 r14653s.vps-kinghost.net perl[832070]: [0;1;39m[0;1;31m[0;1;39mpam_unix(webmin:auth): authentication failure; logname= uid=0 euid=0 tty= ruser= rhost=  user=root[0m
+Jul 28 19:22:43 r14653s.vps-kinghost.net webmin[832070]: Webmin starting
