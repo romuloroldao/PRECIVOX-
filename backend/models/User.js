@@ -8,6 +8,7 @@ export class User {
     this.id = data.id || null;
     this.email = data.email || null;
     this.name = data.name || null;
+    this.password_hash = data.password_hash || null; // ✅ ADICIONANDO password_hash
     this.phone = data.phone || null;
     this.role = data.role || 'cliente';
     this.status = data.status || 'active';
@@ -459,14 +460,20 @@ export class User {
 
       const { role, permissions } = result.rows[0];
 
-      // Owner e manager têm todas as permissões
-      if (role === 'owner' || role === 'manager') {
+      // Owner, manager e gestor têm todas as permissões
+      if (role === 'owner' || role === 'manager' || role === 'gestor') {
         return true;
       }
 
-      // Verificar permissões específicas
-      if (permissions && typeof permissions === 'object') {
-        return permissions[permission] === true;
+      // Verificar permissões específicas (suporte para array e objeto)
+      if (permissions) {
+        if (Array.isArray(permissions)) {
+          // Se permissions é um array, verificar se contém a permissão
+          return permissions.includes(permission);
+        } else if (typeof permissions === 'object') {
+          // Se permissions é um objeto, verificar se a chave é true
+          return permissions[permission] === true;
+        }
       }
 
       return false;

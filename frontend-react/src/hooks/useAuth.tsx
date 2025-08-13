@@ -202,38 +202,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
 
-      // Delay realístico para simular requisição
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Chamada para API real de login
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_URL}/users/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials)
+      });
 
-      // Buscar usuário
-      const user = demoUsers[credentials.email.toLowerCase()];
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || 'Erro no login');
+        return false;
+      }
+
+      // Login bem-sucedido
+      const { user, token, refreshToken } = result.data;
       
-      if (!user) {
-        setError('Email não registrado no sistema. Verifique o endereço ou entre em contato com o suporte.');
+      // Verificar se o usuário tem a role correta
+      if (user.role !== role) {
+        setError(`Este login é para usuários com papel de ${role}. Use o login correto.`);
         return false;
       }
-
-      // Validar senha (senha demo: "demo123")
-      if (credentials.password !== 'demo123') {
-        setError('Senha incorreta. Tente novamente ou use a opção "Esqueceu a senha?"');
-        return false;
-      }
-
-      // Usar token JWT real para gestor
-      const tokens = {
-        accessToken: role === 'gestor' 
-          ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImU0MTY4YzYyLWJjNjAtNGZjYi05MDcwLTk2ZWVkOTRiYTllYiIsImVtYWlsIjoiZGVtb0BwcmVjaXZveC5jb20uYnIiLCJyb2xlIjoiZ2VzdG9yIiwibmFtZSI6IkRlbW8gR2VzdG9yIiwiaWF0IjoxNzU0NTA2ODc2LCJleHAiOjE3NTQ1OTMyNzZ9.hLWfSJ9QDOskalYJ5Ids-JJlO9rS12ELGPQ4GiLG_gM'
-          : `token-${Date.now()}-${Math.random()}`,
-        refreshToken: `refresh-${Date.now()}-${Math.random()}`
-      };
 
       // Salvar no storage
       try {
         saveToStorage('user', user);
-        saveToStorage('tokens', tokens);
+        saveToStorage('tokens', { accessToken: token, refreshToken });
         saveToStorage('lastLogin', new Date().toISOString());
         // Salvar token para uso na API
-        localStorage.setItem('token', tokens.accessToken);
+        localStorage.setItem('token', token);
       } catch (storageError) {
         console.error('Erro ao salvar dados:', storageError);
       }

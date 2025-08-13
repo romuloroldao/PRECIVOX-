@@ -1,5 +1,9 @@
-// sw.js - SERVICE WORKER PARA CACHE OFFLINE E PERFORMANCE
-const CACHE_NAME = 'precivox-v1.0.5';
+// Service Worker para PRECIVOX
+const CACHE_NAME = 'precivox-v1.1'; // Atualizando versão do cache
+const STATIC_CACHE = 'precivox-static-v1.1';
+const DYNAMIC_CACHE = 'precivox-dynamic-v1.1';
+const API_CACHE = 'precivox-api-v1.1';
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -7,7 +11,6 @@ const STATIC_ASSETS = [
   '/precivox-logo.svg'
 ];
 
-const API_CACHE_NAME = 'precivox-api-v1.0.2';
 const IMAGE_CACHE_NAME = 'precivox-images-v1.0.2';
 
 // Estratégias de cache
@@ -44,7 +47,7 @@ self.addEventListener('activate', (event) => {
           cacheNames.map((cacheName) => {
             // Remover caches antigos
             if (cacheName !== CACHE_NAME && 
-                cacheName !== API_CACHE_NAME && 
+                cacheName !== API_CACHE && 
                 cacheName !== IMAGE_CACHE_NAME) {
               console.log('🗑️ Removendo cache antigo:', cacheName);
               return caches.delete(cacheName);
@@ -150,7 +153,7 @@ async function handleApiCall(request) {
     if (networkResponse.ok) {
       // Cachear apenas GETs de API por tempo limitado
       if (request.method === 'GET') {
-        const cache = await caches.open(API_CACHE_NAME);
+        const cache = await caches.open(API_CACHE);
         const clonedResponse = networkResponse.clone();
         
         // Adicionar timestamp para controle de expiração

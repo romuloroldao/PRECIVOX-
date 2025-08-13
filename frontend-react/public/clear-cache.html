@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRECIVOX - Limpeza de Cache</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 PRECIVOX - Limpeza de Cache</h1>
+        <p>Esta página irá limpar completamente o cache do navegador e do Service Worker.</p>
+        
+        <div class="status" id="status">
+            Aguardando ação...
+        </div>
+        
+        <button onclick="clearAllCache()">🧹 Limpar Todo Cache</button>
+        <button onclick="unregisterSW()">🗑️ Remover Service Worker</button>
+        <button onclick="goToMain()">🏠 Ir para PRECIVOX</button>
+    </div>
+
+    <script>
+        async function clearAllCache() {
+            const status = document.getElementById('status');
+            status.innerHTML = '🔄 Limpando cache...';
+            
+            try {
+                // Limpar cache do Service Worker
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    for (const cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        console.log('🗑️ Cache removido:', cacheName);
+                    }
+                }
+                
+                // Limpar localStorage
+                localStorage.clear();
+                console.log('🗑️ localStorage limpo');
+                
+                // Limpar sessionStorage
+                sessionStorage.clear();
+                console.log('🗑️ sessionStorage limpo');
+                
+                status.innerHTML = '✅ Cache limpo com sucesso!';
+                
+            } catch (error) {
+                status.innerHTML = '❌ Erro ao limpar cache: ' + error.message;
+                console.error('Erro:', error);
+            }
+        }
+        
+        async function unregisterSW() {
+            const status = document.getElementById('status');
+            status.innerHTML = '🔄 Removendo Service Worker...';
+            
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const registration of registrations) {
+                        await registration.unregister();
+                        console.log('🗑️ Service Worker removido');
+                    }
+                }
+                
+                status.innerHTML = '✅ Service Worker removido com sucesso!';
+                
+            } catch (error) {
+                status.innerHTML = '❌ Erro ao remover Service Worker: ' + error.message;
+                console.error('Erro:', error);
+            }
+        }
+        
+        function goToMain() {
+            window.location.href = '/';
+        }
+        
+        // Auto-limpeza ao carregar a página
+        window.addEventListener('load', () => {
+            setTimeout(clearAllCache, 1000);
+        });
+    </script>
+</body>
+</html>

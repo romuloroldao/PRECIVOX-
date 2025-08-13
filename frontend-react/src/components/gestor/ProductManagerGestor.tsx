@@ -351,7 +351,7 @@ const ProductManagerGestor: React.FC = () => {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImU0MTY4YzYyLWJjNjAtNGZjYi05MDcwLTk2ZWVkOTRiYTllYiIsImVtYWlsIjoiZGVtb0BwcmVjaXZveC5jb20uYnIiLCJyb2xlIjoiZ2VzdG9yIiwibmFtZSI6IkRlbW8gR2VzdG9yIiwiaWF0IjoxNzU0NTQwNDkwLCJleHAiOjE3NTQ2MjY4OTB9.sQC9-Kjv0Ry1JctoXIRPuPtaQ8JGU4UHUYzvKXUsYas'}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       
@@ -362,7 +362,19 @@ const ProductManagerGestor: React.FC = () => {
         loadProducts(); // Recarregar lista
       } else {
         const error = await response.json();
-        throw new Error(error.error || 'Erro no upload');
+        
+        // Tratamento específico para diferentes códigos de status
+        if (response.status === 403) {
+          showError('Acesso negado. Você não tem permissão para fazer upload neste mercado.');
+        } else if (response.status === 401) {
+          showError('Sessão expirada. Faça login novamente.');
+        } else if (response.status === 400) {
+          showError(`Erro de validação: ${error.error || 'Dados inválidos'}`);
+        } else if (response.status === 409) {
+          showWarning('Este arquivo já foi processado anteriormente.');
+        } else {
+          throw new Error(error.error || `Erro no upload (${response.status})`);
+        }
       }
     } catch (error) {
       console.error('Erro no upload:', error);

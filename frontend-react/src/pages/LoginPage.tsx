@@ -1,6 +1,7 @@
 // src/pages/LoginPage.tsx - LOGIN COM PERSONAS v5.1 - CORRIGIDO SEM REACT ROUTER
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { usePermissions } from '../hooks/usePermissions';
 import { 
   User, 
   Store, 
@@ -21,22 +22,26 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
   const { 
     loginAsCliente, 
     loginAsGestor, 
+    loginAsAdmin,
     isAuthenticated, 
     isLoading, 
     error,
-    user,
-    userRole,
-    isGestor,
-    isAdmin
+    user
   } = useAuth();
+
+  const permissions = usePermissions();
   
+  const userRole = user?.role;
+  const isGestor = userRole === 'gestor';
+  const isAdmin = userRole === 'admin';
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedPersona, setSelectedPersona] = useState<'cliente' | 'gestor' | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState<'cliente' | 'gestor' | 'admin' | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
   // ===================================
@@ -75,7 +80,7 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
     }));
   };
 
-  const handlePersonaSelect = (persona: 'cliente' | 'gestor') => {
+  const handlePersonaSelect = (persona: 'cliente' | 'gestor' | 'admin') => {
     console.log('🎭 Persona selecionada:', persona);
     setSelectedPersona(persona);
     
@@ -86,10 +91,16 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
         password: 'demo123',
         rememberMe: true
       });
-    } else {
+    } else if (persona === 'gestor') {
       setFormData({
-        email: 'demo@precivox.com.br',
-        password: 'demo123',
+        email: 'gestor.teste@precivox.com',
+        password: 'gestor123',
+        rememberMe: true
+      });
+    } else if (persona === 'admin') {
+      setFormData({
+        email: 'admin@precivox.com',
+        password: '123456',
         rememberMe: true
       });
     }
@@ -113,9 +124,12 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
       if (selectedPersona === 'cliente') {
         console.log('👤 Fazendo login como cliente...');
         success = await loginAsCliente(formData);
-      } else {
+      } else if (selectedPersona === 'gestor') {
         console.log('🏢 Fazendo login como gestor...');
         success = await loginAsGestor(formData);
+      } else if (selectedPersona === 'admin') {
+        console.log('👑 Fazendo login como admin...');
+        success = await loginAsAdmin(formData);
       }
       
       if (success) {
@@ -174,6 +188,21 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
         'Gestão de estoque inteligente',
         'Relatórios personalizados',
         'Insights de comportamento'
+      ]
+    },
+    {
+      id: 'admin',
+      title: 'Sou Administrador',
+      subtitle: 'Gerencio o sistema completo',
+      description: 'Controle total sobre mercados, usuários e configurações do sistema',
+      icon: Shield,
+      color: 'purple',
+      features: [
+        'Gestão completa de mercados',
+        'Administração de usuários',
+        'Configurações do sistema',
+        'Relatórios administrativos',
+        'Monitoramento de performance'
       ]
     }
   ];
@@ -247,13 +276,14 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
                     const IconComponent = persona.icon;
                     const colorClasses = {
                       blue: 'border-blue-200 hover:border-blue-400 hover:bg-blue-50',
-                      green: 'border-green-200 hover:border-green-400 hover:bg-green-50'
+                      green: 'border-green-200 hover:border-green-400 hover:bg-green-50',
+                      purple: 'border-purple-200 hover:border-purple-400 hover:bg-purple-50'
                     };
 
                     return (
                       <div
                         key={persona.id}
-                        onClick={() => handlePersonaSelect(persona.id as 'cliente' | 'gestor')}
+                        onClick={() => handlePersonaSelect(persona.id as 'cliente' | 'gestor' | 'admin')}
                         className={`
                           border-2 rounded-xl p-6 cursor-pointer transition-all duration-200
                           ${colorClasses[persona.color as keyof typeof colorClasses]}
@@ -262,7 +292,8 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
                         <div className="flex items-start space-x-4">
                           <div className={`
                             w-12 h-12 rounded-lg flex items-center justify-center
-                            ${persona.color === 'blue' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}
+                            ${persona.color === 'blue' ? 'bg-blue-100 text-blue-600' : 
+                              persona.color === 'green' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'}
                           `}>
                             <IconComponent className="w-6 h-6" />
                           </div>
@@ -287,9 +318,11 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
                 <div className="text-center">
                   <div className={`
                     inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium mb-4
-                    ${selectedPersona === 'cliente' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}
+                    ${selectedPersona === 'cliente' ? 'bg-blue-100 text-blue-700' : 
+                      selectedPersona === 'gestor' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}
                   `}>
-                    {selectedPersona === 'cliente' ? <User className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                    {selectedPersona === 'cliente' ? <User className="w-4 h-4" /> : 
+                      selectedPersona === 'gestor' ? <Store className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
                     <span>{personas.find(p => p.id === selectedPersona)?.title}</span>
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Fazer Login</h2>
@@ -371,7 +404,9 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
                       w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white
                       ${selectedPersona === 'cliente' 
                         ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500' 
-                        : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+                        : selectedPersona === 'gestor' 
+                          ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' 
+                          : 'bg-purple-600 hover:bg-purple-700 focus:ring-purple-500'
                       }
                       focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
                       disabled:opacity-50 disabled:cursor-not-allowed
@@ -381,7 +416,8 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     ) : (
                       <>
-                        Entrar como {selectedPersona === 'cliente' ? 'Cliente' : 'Gestor'}
+                        Entrar como {selectedPersona === 'cliente' ? 'Cliente' : 
+                          selectedPersona === 'gestor' ? 'Gestor' : 'Administrador'}
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </>
                     )}
@@ -396,7 +432,8 @@ const LoginPage: React.FC<{ onLogin?: (data: any) => void; onGoToRegister?: () =
                       <h4 className="text-sm font-medium text-yellow-800">Demonstração</h4>
                       <p className="text-xs text-yellow-700 mt-1">
                         Os dados de login foram preenchidos automaticamente para demonstração. 
-                        Clique em "Entrar" para acessar a experiência {selectedPersona === 'cliente' ? 'do Cliente' : 'do Gestor'}.
+                        Clique em "Entrar" para acessar a experiência {selectedPersona === 'cliente' ? 'do Cliente' : 
+                          selectedPersona === 'gestor' ? 'do Gestor' : 'do Administrador'}.
                       </p>
                     </div>
                   </div>

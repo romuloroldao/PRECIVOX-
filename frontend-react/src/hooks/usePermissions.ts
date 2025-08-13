@@ -1,7 +1,7 @@
 // src/hooks/usePermissions.ts - Sistema de Permissões PRECIVOX CORRIGIDO
 import { useMemo } from 'react';
 import { useAuth } from './useAuth'; // ✅ IMPORTAR useAuth
-import { User } from './useAuth';
+import { UserProfile } from './useAuth'; // ✅ Corrigir para UserProfile
 
 // ✅ TIPOS DE PERMISSÕES
 export interface Permissions {
@@ -31,6 +31,7 @@ export interface Permissions {
   canExportReports: boolean;
   canViewCustomerData: boolean;
   canManagePricing: boolean;
+  canUploadProducts: boolean; // ✅ Nova permissão para upload de produtos
   
   // Funcionalidades Administrativas
   canManageUsers: boolean;
@@ -54,15 +55,15 @@ export interface Permissions {
 }
 
 export interface PermissionContext {
-  user: User | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
-  userRole: User['role'] | null;
-  userPlan: User['plan'] | 'free';
+  userRole: UserProfile['role'] | null;
+  userPlan: UserProfile['plan'] | 'free';
   storeId?: string;
 }
 
 // ✅ CONFIGURAÇÃO DE PERMISSÕES POR ROLE
-const ROLE_PERMISSIONS: Record<User['role'], Partial<Permissions>> = {
+const ROLE_PERMISSIONS: Record<UserProfile['role'], Partial<Permissions>> = {
   // 👤 CLIENTE - Foco em listas e compras (SEM ANALYTICS)
   cliente: {
     // Navegação - ANALYTICS BLOQUEADO
@@ -91,6 +92,7 @@ const ROLE_PERMISSIONS: Record<User['role'], Partial<Permissions>> = {
     canExportReports: false,
     canViewCustomerData: false,
     canManagePricing: false,
+    canUploadProducts: false, // ✅ Nova permissão para cliente
     
     // Funcionalidades Administrativas
     canManageUsers: false,
@@ -99,38 +101,89 @@ const ROLE_PERMISSIONS: Record<User['role'], Partial<Permissions>> = {
     canManageSystemSettings: false,
     canAccessSupport: true,
     
-    // ✅ RECURSOS PREMIUM - LIBERADOS PARA CLIENTE PRO
-    canUseAdvancedFilters: true, // ✅ CORRIGIDO: era false
-    canUseAI: true, // ✅ CORRIGIDO: era false  
-    canExportData: true, // ✅ CORRIGIDO: era false
+    // Recursos Premium/Planos
+    canUseAdvancedFilters: false,
+    canUseAI: false,
+    canExportData: false,
     canUseAPIAccess: false,
-    canCustomizeDashboard: true, // ✅ CORRIGIDO: era false
+    canCustomizeDashboard: false,
     
     // Ações Específicas
     canInviteUsers: false,
     canModerateContent: false,
     canManageNotifications: true,
-    canAccessBetaFeatures: true // ✅ CORRIGIDO: era false
+    canAccessBetaFeatures: false
   },
-  
-  // 🏪 GESTOR - Foco em analytics e gestão da loja
+
+  // 🏪 GESTOR - Foco em gerenciamento de mercado
   gestor: {
-    // Navegação
+    // Navegação - ANALYTICS LIBERADO
+    canAccessDashboard: true,
+    canAccessAnalytics: true,      // ✅ LIBERADO para gestor
+    canAccessReports: true,        // ✅ LIBERADO para gestor
+    canAccessSettings: true,
+    canAccessAdminPanel: false,
+    
+    // Funcionalidades do Cliente
+    canCreateLists: true,
+    canEditLists: true,
+    canDeleteLists: true,
+    canShareLists: true,
+    canAddToFavorites: true,
+    canViewPrices: true,
+    canCompareProducts: true,
+    canSetPriceAlerts: true,
+    
+    // ✅ FUNCIONALIDADES DO GESTOR - TODAS LIBERADAS
+    canManageStore: true,
+    canManageProducts: true,
+    canManageInventory: true,
+    canViewStoreAnalytics: true,
+    canManageStoreSettings: true,
+    canExportReports: true,
+    canViewCustomerData: true,
+    canManagePricing: true,
+    canUploadProducts: true, // ✅ Nova permissão para gestor
+    
+    // Funcionalidades Administrativas
+    canManageUsers: false,
+    canManageStores: false,
+    canViewSystemLogs: false,
+    canManageSystemSettings: false,
+    canAccessSupport: true,
+    
+    // Recursos Premium/Planos
+    canUseAdvancedFilters: true,
+    canUseAI: true,
+    canExportData: true,
+    canUseAPIAccess: false,
+    canCustomizeDashboard: true,
+    
+    // Ações Específicas
+    canInviteUsers: true,
+    canModerateContent: true,
+    canManageNotifications: true,
+    canAccessBetaFeatures: true
+  },
+
+  // 👑 ADMIN - Acesso total ao sistema
+  admin: {
+    // Navegação - TUDO LIBERADO
     canAccessDashboard: true,
     canAccessAnalytics: true,
     canAccessReports: true,
     canAccessSettings: true,
-    canAccessAdminPanel: false,
+    canAccessAdminPanel: true,
     
-    // Funcionalidades do Cliente (acesso limitado)
-    canCreateLists: false,
-    canEditLists: false,
-    canDeleteLists: false,
-    canShareLists: false,
-    canAddToFavorites: false,
+    // Funcionalidades do Cliente
+    canCreateLists: true,
+    canEditLists: true,
+    canDeleteLists: true,
+    canShareLists: true,
+    canAddToFavorites: true,
     canViewPrices: true,
     canCompareProducts: true,
-    canSetPriceAlerts: false,
+    canSetPriceAlerts: true,
     
     // Funcionalidades do Gestor
     canManageStore: true,
@@ -141,56 +194,7 @@ const ROLE_PERMISSIONS: Record<User['role'], Partial<Permissions>> = {
     canExportReports: true,
     canViewCustomerData: true,
     canManagePricing: true,
-    
-    // Funcionalidades Administrativas
-    canManageUsers: false,
-    canManageStores: false,
-    canViewSystemLogs: false,
-    canManageSystemSettings: false,
-    canAccessSupport: true,
-    
-    // Recursos Premium
-    canUseAdvancedFilters: true,
-    canUseAI: true,
-    canExportData: true,
-    canUseAPIAccess: false, // Será definido por plano
-    canCustomizeDashboard: true,
-    
-    // Ações Específicas
-    canInviteUsers: true, // Para equipe da loja
-    canModerateContent: false,
-    canManageNotifications: true,
-    canAccessBetaFeatures: true
-  },
-  
-  // 👨‍💼 ADMIN - Acesso completo
-  admin: {
-    // Navegação - Tudo liberado
-    canAccessDashboard: true,
-    canAccessAnalytics: true,
-    canAccessReports: true,
-    canAccessSettings: true,
-    canAccessAdminPanel: true,
-    
-    // Funcionalidades do Cliente - Tudo liberado
-    canCreateLists: true,
-    canEditLists: true,
-    canDeleteLists: true,
-    canShareLists: true,
-    canAddToFavorites: true,
-    canViewPrices: true,
-    canCompareProducts: true,
-    canSetPriceAlerts: true,
-    
-    // Funcionalidades do Gestor - Tudo liberado
-    canManageStore: true,
-    canManageProducts: true,
-    canManageInventory: true,
-    canViewStoreAnalytics: true,
-    canManageStoreSettings: true,
-    canExportReports: true,
-    canViewCustomerData: true,
-    canManagePricing: true,
+    canUploadProducts: true, // ✅ Nova permissão para admin
     
     // Funcionalidades Administrativas - Tudo liberado
     canManageUsers: true,
@@ -199,131 +203,14 @@ const ROLE_PERMISSIONS: Record<User['role'], Partial<Permissions>> = {
     canManageSystemSettings: true,
     canAccessSupport: true,
     
-    // Recursos Premium - Tudo liberado
+    // Recursos Premium/Planos
     canUseAdvancedFilters: true,
     canUseAI: true,
     canExportData: true,
     canUseAPIAccess: true,
     canCustomizeDashboard: true,
     
-    // Ações Específicas - Tudo liberado
-    canInviteUsers: true,
-    canModerateContent: true,
-    canManageNotifications: true,
-    canAccessBetaFeatures: true
-  },
-
-  // ✅ OUTROS ROLES PARA COMPATIBILIDADE
-  guest: {
-    canAccessDashboard: false,
-    canAccessAnalytics: false,
-    canAccessReports: false,
-    canAccessSettings: false,
-    canAccessAdminPanel: false,
-    canCreateLists: false,
-    canEditLists: false,
-    canDeleteLists: false,
-    canShareLists: false,
-    canAddToFavorites: false,
-    canViewPrices: true,
-    canCompareProducts: true,
-    canSetPriceAlerts: false,
-    canManageStore: false,
-    canManageProducts: false,
-    canManageInventory: false,
-    canViewStoreAnalytics: false,
-    canManageStoreSettings: false,
-    canExportReports: false,
-    canViewCustomerData: false,
-    canManagePricing: false,
-    canManageUsers: false,
-    canManageStores: false,
-    canViewSystemLogs: false,
-    canManageSystemSettings: false,
-    canAccessSupport: false,
-    canUseAdvancedFilters: false,
-    canUseAI: false,
-    canExportData: false,
-    canUseAPIAccess: false,
-    canCustomizeDashboard: false,
-    canInviteUsers: false,
-    canModerateContent: false,
-    canManageNotifications: false,
-    canAccessBetaFeatures: false
-  },
-
-  cliente_premium: {
-    // Mesmo que cliente, mas com recursos premium
-    canAccessDashboard: false,
-    canAccessAnalytics: false,
-    canAccessReports: false,
-    canAccessSettings: true,
-    canAccessAdminPanel: false,
-    canCreateLists: true,
-    canEditLists: true,
-    canDeleteLists: true,
-    canShareLists: true,
-    canAddToFavorites: true,
-    canViewPrices: true,
-    canCompareProducts: true,
-    canSetPriceAlerts: true,
-    canManageStore: false,
-    canManageProducts: false,
-    canManageInventory: false,
-    canViewStoreAnalytics: false,
-    canManageStoreSettings: false,
-    canExportReports: false,
-    canViewCustomerData: false,
-    canManagePricing: false,
-    canManageUsers: false,
-    canManageStores: false,
-    canViewSystemLogs: false,
-    canManageSystemSettings: false,
-    canAccessSupport: true,
-    canUseAdvancedFilters: true,
-    canUseAI: true,
-    canExportData: true,
-    canUseAPIAccess: false,
-    canCustomizeDashboard: true,
-    canInviteUsers: false,
-    canModerateContent: false,
-    canManageNotifications: true,
-    canAccessBetaFeatures: true
-  },
-
-  super_admin: {
-    // Mesmo que admin
-    canAccessDashboard: true,
-    canAccessAnalytics: true,
-    canAccessReports: true,
-    canAccessSettings: true,
-    canAccessAdminPanel: true,
-    canCreateLists: true,
-    canEditLists: true,
-    canDeleteLists: true,
-    canShareLists: true,
-    canAddToFavorites: true,
-    canViewPrices: true,
-    canCompareProducts: true,
-    canSetPriceAlerts: true,
-    canManageStore: true,
-    canManageProducts: true,
-    canManageInventory: true,
-    canViewStoreAnalytics: true,
-    canManageStoreSettings: true,
-    canExportReports: true,
-    canViewCustomerData: true,
-    canManagePricing: true,
-    canManageUsers: true,
-    canManageStores: true,
-    canViewSystemLogs: true,
-    canManageSystemSettings: true,
-    canAccessSupport: true,
-    canUseAdvancedFilters: true,
-    canUseAI: true,
-    canExportData: true,
-    canUseAPIAccess: true,
-    canCustomizeDashboard: true,
+    // Ações Específicas
     canInviteUsers: true,
     canModerateContent: true,
     canManageNotifications: true,
@@ -332,7 +219,7 @@ const ROLE_PERMISSIONS: Record<User['role'], Partial<Permissions>> = {
 };
 
 // ✅ CONFIGURAÇÃO DE PERMISSÕES POR PLANO - MAIS FLEXÍVEL
-const PLAN_PERMISSIONS: Record<User['plan'], Partial<Permissions>> = {
+const PLAN_PERMISSIONS: Record<UserProfile['plan'], Partial<Permissions>> = {
   // 🆓 PLANO FREE - Funcionalidades básicas
   free: {
     canUseAdvancedFilters: true, // ✅ LIBERADO PARA TODOS
@@ -343,8 +230,8 @@ const PLAN_PERMISSIONS: Record<User['plan'], Partial<Permissions>> = {
     canAccessBetaFeatures: true // ✅ LIBERADO PARA TODOS
   },
   
-  // ⭐ PLANO PRO - Funcionalidades avançadas
-  pro: {
+  // ⭐ PLANO PREMIUM - Funcionalidades avançadas
+  premium: {
     canUseAdvancedFilters: true,
     canUseAI: true,
     canExportData: true,
@@ -366,97 +253,91 @@ const PLAN_PERMISSIONS: Record<User['plan'], Partial<Permissions>> = {
 
 // ✅ HOOK PRINCIPAL DE PERMISSÕES - CORRIGIDO
 export const usePermissions = () => {
-  // ✅ OBTER DADOS DO useAuth AUTOMATICAMENTE
-  const { user, isAuthenticated, userRole } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   
+  // ✅ Obter role do usuário
+  const userRole = user?.role || null;
+  
+  // ✅ Obter plano do usuário
+  const userPlan = user?.plan || 'free';
+  
+  // ✅ Obter storeId do usuário
+  const storeId = user?.marketId || undefined;
+
   return useMemo(() => {
-    console.log('🔐 [PERMISSIONS] Calculando permissões...');
-    console.log('👤 [PERMISSIONS] User:', user?.name);
-    console.log('🎭 [PERMISSIONS] Role:', userRole);
-    console.log('💼 [PERMISSIONS] Plan:', user?.plan);
-    console.log('✅ [PERMISSIONS] Authenticated:', isAuthenticated);
-    
-    // ✅ Se não estiver autenticado, permissões de guest
+    // ✅ Verificar se usuário está autenticado
     if (!isAuthenticated || !user || !userRole) {
-      console.log('🚫 [PERMISSIONS] Usuário não autenticado - permissões guest');
-      const guestPermissions = ROLE_PERMISSIONS.guest || {};
+      console.log('🚫 [PERMISSIONS] Usuário não autenticado - permissões cliente');
+      const guestPermissions = ROLE_PERMISSIONS.cliente || {};
       
       const guestWithHelpers = {
         ...guestPermissions,
-        canUseListFeatures: false,
-        can: (permission: keyof Permissions): boolean => Boolean(guestPermissions[permission]),
-        canAccess: () => false,
-        canManage: () => false,
-        canUse: () => false
+        // ✅ HELPERS PARA USUÁRIOS NÃO AUTENTICADOS
+        isGuest: () => true,
+        isCliente: () => false,
+        isGestor: () => false,
+        isAdmin: () => false,
+        hasPermission: () => false,
+        canAccessAdminPanel: () => false,
+        canViewAnalytics: () => false,
+        canManageStore: () => false,
+        canManageProducts: () => false,
+        canUploadProducts: () => false, // ✅ Nova permissão
+        canExportData: () => false,
+        canUseAI: () => false,
+        canUseAdvancedFilters: () => false,
+        canCustomizeDashboard: () => false,
+        canInviteUsers: () => false,
+        canModerateContent: () => false,
+        canAccessBetaFeatures: () => false,
+        canUseAPIAccess: () => false,
+        canViewSystemLogs: () => false,
+        canManageSystemSettings: () => false,
+        canManageUsers: () => false,
+        canManageStores: () => false,
+        canViewCustomerData: () => false,
+        canManagePricing: () => false,
+        canManageInventory: () => false,
+        canViewStoreAnalytics: () => false,
+        canManageStoreSettings: () => false,
+        canExportReports: () => false,
+        canCreateLists: () => false,
+        canEditLists: () => false,
+        canDeleteLists: () => false,
+        canShareLists: () => false,
+        canAddToFavorites: () => false,
+        canViewPrices: () => true, // ✅ Visitantes podem ver preços
+        canCompareProducts: () => true, // ✅ Visitantes podem comparar
+        canSetPriceAlerts: () => false,
+        canCompareStores: () => true, // ✅ Visitantes podem comparar lojas
+        canAccessSupport: () => false,
+        canManageNotifications: () => false,
+        canAccessReports: () => false,
+        canAccessSettings: () => false,
+        canAccessDashboard: () => false,
+        canAccessAnalytics: () => false,
+        canAccessAdminPanel: () => false
       };
-      
+
       return guestWithHelpers;
     }
-    
+
     // ✅ Obter permissões base do role
-    const rolePermissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.guest;
+    const rolePermissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.cliente;
     
     // ✅ Obter permissões do plano
-    const userPlan = user.plan || 'pro'; // ✅ PADRÃO PRO EM VEZ DE FREE
-    const planPermissions = PLAN_PERMISSIONS[userPlan] || PLAN_PERMISSIONS.pro;
+    const planPermissions = PLAN_PERMISSIONS[userPlan] || {};
     
-    // ✅ SIMPLIFICAR: Para clientes, sempre liberar funcionalidades de lista
-    const isCliente = userRole === 'cliente' || userRole === 'cliente_premium';
-    
-    // ✅ Combinar permissões (role + plano) - LÓGICA CORRIGIDA
-    const combinedPermissions: Permissions = {
-      // Navegação e Páginas
-      canAccessDashboard: rolePermissions.canAccessDashboard || false,
-      canAccessAnalytics: rolePermissions.canAccessAnalytics || false,
-      canAccessReports: rolePermissions.canAccessReports || false,
-      canAccessSettings: rolePermissions.canAccessSettings || false,
-      canAccessAdminPanel: rolePermissions.canAccessAdminPanel || false,
-      
-      // ✅ FUNCIONALIDADES DO CLIENTE - CORRIGIDAS
-      canCreateLists: isCliente ? true : (rolePermissions.canCreateLists || false),
-      canEditLists: isCliente ? true : (rolePermissions.canEditLists || false),
-      canDeleteLists: isCliente ? true : (rolePermissions.canDeleteLists || false),
-      canShareLists: isCliente ? true : (rolePermissions.canShareLists || false),
-      canAddToFavorites: isCliente ? true : (rolePermissions.canAddToFavorites || false),
-      canViewPrices: rolePermissions.canViewPrices || false,
-      canCompareProducts: rolePermissions.canCompareProducts || false,
-      canSetPriceAlerts: rolePermissions.canSetPriceAlerts || false,
-      
-      // Funcionalidades do Gestor
-      canManageStore: rolePermissions.canManageStore || false,
-      canManageProducts: rolePermissions.canManageProducts || false,
-      canManageInventory: rolePermissions.canManageInventory || false,
-      canViewStoreAnalytics: rolePermissions.canViewStoreAnalytics || false,
-      canManageStoreSettings: rolePermissions.canManageStoreSettings || false,
-      canExportReports: rolePermissions.canExportReports || false,
-      canViewCustomerData: rolePermissions.canViewCustomerData || false,
-      canManagePricing: rolePermissions.canManagePricing || false,
-      
-      // Funcionalidades Administrativas
-      canManageUsers: rolePermissions.canManageUsers || false,
-      canManageStores: rolePermissions.canManageStores || false,
-      canViewSystemLogs: rolePermissions.canViewSystemLogs || false,
-      canManageSystemSettings: rolePermissions.canManageSystemSettings || false,
-      canAccessSupport: rolePermissions.canAccessSupport || false,
-      
-      // ✅ RECURSOS PREMIUM - LÓGICA MAIS SIMPLES
-      canUseAdvancedFilters: rolePermissions.canUseAdvancedFilters !== false,
-      canUseAI: rolePermissions.canUseAI !== false,
-      canExportData: rolePermissions.canExportData !== false,
-      canUseAPIAccess: rolePermissions.canUseAPIAccess || false,
-      canCustomizeDashboard: rolePermissions.canCustomizeDashboard !== false,
-      
-      // Ações Específicas
-      canInviteUsers: rolePermissions.canInviteUsers || false,
-      canModerateContent: rolePermissions.canModerateContent || false,
-      canManageNotifications: rolePermissions.canManageNotifications || false,
-      canAccessBetaFeatures: rolePermissions.canAccessBetaFeatures !== false
+    // ✅ Combinar permissões (role + plano)
+    const combinedPermissions = {
+      ...rolePermissions,
+      ...planPermissions
     };
-    
+      
     console.log('✅ [PERMISSIONS] Permissões calculadas:', {
       role: userRole,
       plan: userPlan,
-      isCliente: isCliente,
+      isCliente: userRole === 'cliente',
       dashboard: combinedPermissions.canAccessDashboard,
       lists: combinedPermissions.canCreateLists,
       editLists: combinedPermissions.canEditLists,
