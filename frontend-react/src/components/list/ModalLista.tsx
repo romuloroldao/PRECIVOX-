@@ -341,29 +341,32 @@ const ModalLista = ({
     }
   };
 
-  // ✅ FUNÇÃO PRINCIPAL DE ANÁLISE IA
+  // ✅ HANDLER DE ANÁLISE IA UNIFICADO - NOVO FLUXO
   const handleAIAnalysis = () => {
-    if (!listItems || listItems.length === 0) {
-      showToast('Adicione itens à lista para análise IA', 'error');
-      return;
+    console.log('🧠 Iniciando análise IA unificada...');
+    
+    // 1. Fechar o modal atual
+    onClose();
+    
+    // 2. Salvar a lista atual se houver mudanças
+    if (listItems && listItems.length > 0 && onSaveList) {
+      console.log('💾 Salvando lista antes da análise IA...');
+      onSaveList(listName, listItems);
     }
-
-    try {
-      console.log('🧠 MODAL - Abrindo análise IA com', listItems.length, 'itens');
-      console.log('🎯 Itens para análise:', listItems);
-      
-      // Converter para formato esperado pelo AIAnalysisModal
-      const itemsForAI = listItems.map(item => ({
-        produto: item.produto,
-        quantidade: item.quantidade
-      }));
-      
-      openAnalysisModal(itemsForAI);
-      showToast('🧠 Abrindo análise IA avançada...', 'smart');
-    } catch (error) {
-      console.error('❌ MODAL - Erro na análise IA:', error);
-      showToast('Erro ao abrir análise IA', 'error');
-    }
+    
+    // 3. Armazenar estado para análise automática
+    localStorage.setItem('pendingAIAnalysis', JSON.stringify({
+      listId: currentListName,
+      timestamp: Date.now(),
+      shouldAutoStart: true
+    }));
+    
+    // 4. Redirecionar para /minha-lista
+    console.log('🔄 Redirecionando para /minha-lista com análise automática...');
+    window.location.hash = 'listas';
+    
+    // 5. Toast de confirmação
+    showToast('Redirecionando para análise de IA...', 'info');
   };
 
   // ===== EARLY RETURN =====

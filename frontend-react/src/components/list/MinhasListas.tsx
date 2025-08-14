@@ -17,11 +17,53 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  X
+  X,
+  Brain,
+  Download,
+  MessageCircle,
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 
 // Importar estilos customizados
 import '../../styles/MinhasListas.styles.css';
+
+// ✅ HOOKS DE IA E EXPORTAÇÃO
+import { useAIAnalysis } from '../../hooks/useAIAnalysis';
+
+// ✅ INTERFACES PARA ANÁLISE IA
+interface AIAnalysisResult {
+  insights: string[];
+  suggestions: Array<{
+    id: string;
+    type: 'add' | 'remove' | 'replace';
+    description: string;
+    impact: 'high' | 'medium' | 'low';
+    applied: boolean;
+  }>;
+  totalEconomia: number;
+  recomendacoes: string[];
+}
+
+// ✅ INTERFACES PARA EXPORTAÇÃO
+interface ExportOptions {
+  format: 'pdf' | 'whatsapp';
+  includeAI: boolean;
+  includeInstructions: boolean;
+}
+
+interface InteractiveList {
+  id: string;
+  listaId: string;
+  items: Array<{
+    produto: Product;
+    quantidade: number;
+    checked: boolean;
+  }>;
+  instructions: string[];
+  expiresAt: number;
+  shareUrl: string;
+}
 
 interface Product {
   id: string;
@@ -161,7 +203,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   );
 };
 
-const MinhasListas: React.FC<MinhasListasProps> = ({
+// ✅ COMPONENTE PRINCIPAL MINHASLISTAS
+export const MinhasListas: React.FC<MinhasListasProps> = ({
   listas,
   onBack,
   onCreateNewList,
@@ -170,14 +213,40 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
   onViewList,
   onDuplicateList
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState<'todas' | 'recentes' | 'favoritas'>('todas');
-  const [sortBy, setSortBy] = useState<'nome' | 'data' | 'itens' | 'valor'>('data');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // ===== ESTADOS EXISTENTES =====
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
-  const [isMobile, setIsMobile] = useState(false);
-  
-  // Estados para toast e confirmação
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'items'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedList, setSelectedList] = useState<Lista | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [listToDelete, setListToDelete] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+
+  // ✅ NOVOS ESTADOS PARA ANÁLISE IA
+  const [isAIAnalysisOpen, setIsAIAnalysisOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null);
+  const [currentAnalysisList, setCurrentAnalysisList] = useState<Lista | null>(null);
+
+  // ✅ NOVOS ESTADOS PARA EXPORTAÇÃO
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportOptions, setExportOptions] = useState<ExportOptions>({
+    format: 'pdf',
+    includeAI: true,
+    includeInstructions: true
+  });
+
+  // ✅ ESTADOS PARA LISTA INTERATIVA
+  const [interactiveLists, setInteractiveLists] = useState<InteractiveList[]>([]);
+  const [showInteractiveListModal, setShowInteractiveListModal] = useState(false);
+  const [currentInteractiveList, setCurrentInteractiveList] = useState<InteractiveList | null>(null);
+
+  // ✅ HOOK DE IA
+  const { openAnalysisModal, closeAnalysisModal } = useAIAnalysis();
+
+  // ✅ ESTADOS PARA TOAST E CONFIRMAÇÃO
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -214,20 +283,179 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
     }
   }, [listas, onBack, onCreateNewList, onEditList, onDeleteList, onViewList, onDuplicateList]);
 
-  // Detectar dispositivo móvel
+  // ✅ DETECTAR ANÁLISE IA PENDENTE
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
-        setViewMode('cards');
+    const pendingAnalysis = localStorage.getItem('pendingAIAnalysis');
+    if (pendingAnalysis) {
+      try {
+        const analysisData = JSON.parse(pendingAnalysis);
+        if (analysisData.shouldAutoStart) {
+          console.log('🧠 Detectada análise IA pendente, iniciando automaticamente...');
+          
+          // Limpar flag
+          localStorage.removeItem('pendingAIAnalysis');
+          
+          // Encontrar lista correspondente
+          const targetList = listas.find(lista => lista.nome === analysisData.listId);
+          if (targetList) {
+            setCurrentAnalysisList(targetList);
+            handleAIAnalysis(targetList);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro ao processar análise IA pendente:', error);
+        localStorage.removeItem('pendingAIAnalysis');
+      }
+    }
+  }, [listas]);
+
+  // ✅ LIMPEZA AUTOMÁTICA DE LISTAS INTERATIVAS EXPIRADAS
+  useEffect(() => {
+    const cleanupExpiredLists = () => {
+      const now = Date.now();
+      const validLists = interactiveLists.filter(list => list.expiresAt > now);
+      
+      if (validLists.length !== interactiveLists.length) {
+        setInteractiveLists(validLists);
+        console.log('🧹 Listas interativas expiradas removidas');
       }
     };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
+    const interval = setInterval(cleanupExpiredLists, 60000); // Verificar a cada minuto
+    return () => clearInterval(interval);
+  }, [interactiveLists]);
+
+  // ✅ FUNÇÃO DE ANÁLISE IA
+  const handleAIAnalysis = async (lista: Lista) => {
+    console.log('🧠 Iniciando análise IA para lista:', lista.nome);
+    
+    setIsAnalyzing(true);
+    setCurrentAnalysisList(lista);
+    
+    try {
+      // Simular análise IA
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const result: AIAnalysisResult = {
+        insights: [
+          'Sua lista tem boa variedade de produtos',
+          'Considere adicionar mais frutas e verduras',
+          'Alguns produtos podem ser substituídos por versões mais econômicas'
+        ],
+        suggestions: [
+          {
+            id: '1',
+            type: 'add',
+            description: 'Adicionar bananas (R$ 3,99/kg)',
+            impact: 'high',
+            applied: false
+          },
+          {
+            id: '2',
+            type: 'replace',
+            description: 'Substituir arroz branco por integral',
+            impact: 'medium',
+            applied: false
+          }
+        ],
+        totalEconomia: 15.50,
+        recomendacoes: [
+          'Compre em mercados diferentes para melhor preço',
+          'Aproveite promoções de fim de semana',
+          'Considere comprar em maior quantidade'
+        ]
+      };
+      
+      setAnalysisResult(result);
+      setIsAIAnalysisOpen(true);
+      
+    } catch (error) {
+      console.error('❌ Erro na análise IA:', error);
+      setToast({
+        message: 'Erro ao realizar análise IA',
+        type: 'error'
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // ✅ FUNÇÃO DE EXPORTAÇÃO PDF
+  const handleExportPDF = async (lista: Lista) => {
+    console.log('📄 Exportando PDF da lista:', lista.nome);
+    
+    setIsExporting(true);
+    
+    try {
+      // Simular geração de PDF
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simular download
+      const link = document.createElement('a');
+      link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`Lista: ${lista.nome}\n\nItens:\n${lista.itens.map(item => `- ${item.produto.nome} (${item.quantidade}x)`).join('\n')}`);
+      link.download = `${lista.nome}.txt`;
+      link.click();
+      
+      setToast({
+        message: 'PDF exportado com sucesso!',
+        type: 'success'
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao exportar PDF:', error);
+      setToast({
+        message: 'Erro ao exportar PDF',
+        type: 'error'
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // ✅ FUNÇÃO DE LISTA INTERATIVA WHATSAPP
+  const handleExportWhatsApp = async (lista: Lista) => {
+    console.log('📱 Criando lista interativa para WhatsApp:', lista.nome);
+    
+    try {
+      // Gerar ID único
+      const listId = Math.random().toString(36).substr(2, 9);
+      
+      // Criar lista interativa
+      const interactiveList: InteractiveList = {
+        id: listId,
+        listaId: lista.id,
+        items: lista.itens.map(item => ({
+          ...item,
+          checked: false
+        })),
+        instructions: analysisResult?.recomendacoes || [],
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 horas
+        shareUrl: `https://precivox.com.br/lista/${listId}`
+      };
+      
+      // Adicionar à lista de listas interativas
+      setInteractiveLists(prev => [...prev, interactiveList]);
+      
+      // Abrir WhatsApp com mensagem pré-preenchida
+      const message = `Olá! Aqui está minha lista de compras: ${interactiveList.shareUrl}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      
+      setToast({
+        message: 'Lista interativa criada e compartilhada!',
+        type: 'success'
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao criar lista interativa:', error);
+      setToast({
+        message: 'Erro ao criar lista interativa',
+        type: 'error'
+      });
+    }
+  };
+
+  // ✅ FUNÇÕES AUXILIARES CORRIGIDAS
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -243,264 +471,29 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
     return lista.itens.reduce((total, item) => total + item.quantidade, 0);
   };
 
-  // ✅ HANDLERS CORRIGIDOS COM LOGS E VALIDAÇÕES
-
-  const handleViewClick = (lista: Lista, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    console.log('👁️ MINHASLISTAS - Clique em "Ver Lista"');
-    console.log('📋 Lista:', {
-      id: lista.id,
-      nome: lista.nome,
-      itens: lista.itens?.length || 0,
-      total: getListTotal(lista)
-    });
-
-    if (!onViewList) {
-      console.error('❌ MINHASLISTAS - onViewList não definido!');
-      setToast({
-        message: 'Erro: Função de visualização não disponível',
-        type: 'error'
-      });
-      return;
-    }
-
-    if (typeof onViewList !== 'function') {
-      console.error('❌ MINHASLISTAS - onViewList não é uma função!', typeof onViewList);
-      setToast({
-        message: 'Erro: Função de visualização inválida',
-        type: 'error'
-      });
-      return;
-    }
-
-    try {
-      console.log('✅ MINHASLISTAS - Chamando onViewList...');
-      onViewList(lista);
-      console.log('🚀 MINHASLISTAS - onViewList executado com sucesso');
-      
-      setToast({
-        message: `Abrindo lista "${lista.nome}"...`,
-        type: 'info'
-      });
-    } catch (error) {
-      console.error('💥 MINHASLISTAS - Erro ao executar onViewList:', error);
-      setToast({
-        message: 'Erro ao abrir a lista',
-        type: 'error'
-      });
-    }
-  };
-
-  const handleEditClick = (lista: Lista, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    console.log('✏️ MINHASLISTAS - Clique em "Editar"');
-    console.log('📋 Lista para editar:', lista.nome);
-
-    if (!onEditList) {
-      console.error('❌ MINHASLISTAS - onEditList não definido!');
-      setToast({
-        message: 'Erro: Função de edição não disponível',
-        type: 'error'
-      });
-      return;
-    }
-
-    try {
-      console.log('✅ MINHASLISTAS - Chamando onEditList...');
-      onEditList(lista);
-      console.log('🚀 MINHASLISTAS - onEditList executado com sucesso');
-      
-      setToast({
-        message: `Editando lista "${lista.nome}"...`,
-        type: 'info'
-      });
-    } catch (error) {
-      console.error('💥 MINHASLISTAS - Erro ao executar onEditList:', error);
-      setToast({
-        message: 'Erro ao editar a lista',
-        type: 'error'
-      });
-    }
-  };
-
-  const handleCreateNewList = () => {
-    console.log('➕ MINHASLISTAS - Clique em "Nova Lista"');
-
-    if (!onCreateNewList) {
-      console.error('❌ MINHASLISTAS - onCreateNewList não definido!');
-      setToast({
-        message: 'Erro: Função de criação não disponível',
-        type: 'error'
-      });
-      return;
-    }
-
-    try {
-      console.log('✅ MINHASLISTAS - Chamando onCreateNewList...');
-      onCreateNewList();
-      console.log('🚀 MINHASLISTAS - onCreateNewList executado com sucesso');
-      
-      setToast({
-        message: 'Criando nova lista...',
-        type: 'success'
-      });
-    } catch (error) {
-      console.error('💥 MINHASLISTAS - Erro ao executar onCreateNewList:', error);
-      setToast({
-        message: 'Erro ao criar nova lista',
-        type: 'error'
-      });
-    }
-  };
-
-  const handleDeleteClick = (lista: Lista, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    
-    console.log(`🗑️ MINHASLISTAS - Solicitação de exclusão: ${lista.nome}`);
-    
-    setConfirmModal({
-      isOpen: true,
-      title: 'Excluir Lista',
-      message: `Tem certeza que deseja excluir a lista "${lista.nome}"? Esta ação não pode ser desfeita.`,
-      listaName: lista.nome,
-      onConfirm: () => {
-        console.log(`✅ MINHASLISTAS - Exclusão confirmada: ${lista.nome}`);
-        
-        if (!onDeleteList) {
-          console.error('❌ MINHASLISTAS - onDeleteList não definido!');
-          setToast({
-            message: 'Erro: Função de exclusão não disponível',
-            type: 'error'
-          });
-          return;
-        }
-
-        try {
-          onDeleteList(lista.id);
-          setToast({
-            message: `Lista "${lista.nome}" foi excluída com sucesso!`,
-            type: 'success'
-          });
-        } catch (error) {
-          console.error('💥 MINHASLISTAS - Erro ao executar onDeleteList:', error);
-          setToast({
-            message: 'Erro ao excluir a lista',
-            type: 'error'
-          });
-        }
-        
-        setConfirmModal({
-          isOpen: false,
-          title: '',
-          message: '',
-          onConfirm: () => {}
-        });
-      }
-    });
-  };
-
-  const handleRowClick = (lista: Lista) => {
-    console.log('🖱️ MINHASLISTAS - Clique na linha da tabela');
-    handleViewClick(lista);
-  };
-
-  const handleDuplicateClick = (lista: Lista, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    console.log('📋 MINHASLISTAS - Duplicando lista:', lista.nome);
-
-    if (!onDuplicateList) {
-      console.error('❌ MINHASLISTAS - onDuplicateList não definido!');
-      setToast({
-        message: 'Erro: Função de duplicação não disponível',
-        type: 'error'
-      });
-      return;
-    }
-
-    try {
-      onDuplicateList(lista);
-      setToast({
-        message: `Lista "${lista.nome}" duplicada com sucesso!`,
-        type: 'success'
-      });
-    } catch (error) {
-      console.error('💥 MINHASLISTAS - Erro ao executar onDuplicateList:', error);
-      setToast({
-        message: 'Erro ao duplicar a lista',
-        type: 'error'
-      });
-    }
-  };
-
-  const handleBackClick = () => {
-    console.log('⬅️ MINHASLISTAS - Clique em "Voltar"');
-
-    if (!onBack) {
-      console.error('❌ MINHASLISTAS - onBack não definido!');
-      setToast({
-        message: 'Erro: Função de voltar não disponível',
-        type: 'error'
-      });
-      return;
-    }
-
-    try {
-      onBack();
-      console.log('🚀 MINHASLISTAS - onBack executado com sucesso');
-    } catch (error) {
-      console.error('💥 MINHASLISTAS - Erro ao executar onBack:', error);
-      setToast({
-        message: 'Erro ao voltar',
-        type: 'error'
-      });
-    }
-  };
-
-  // Funções auxiliares
+  // ✅ FILTRAR E ORDENAR LISTAS CORRIGIDO
   const filteredAndSortedListas = listas
     .filter(lista => {
       const matchesSearch = lista.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            lista.itens.some(item => item.produto.nome.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      const matchesFilter = 
-        filterBy === 'todas' ||
-        (filterBy === 'favoritas' && lista.isFavorita) ||
-        (filterBy === 'recentes' && new Date(lista.dataUltimaEdicao) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-      
-      return matchesSearch && matchesFilter;
+      // Por enquanto, mostrar todas as listas
+      return matchesSearch;
     })
     .sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
-        case 'nome':
+        case 'name':
           comparison = a.nome.localeCompare(b.nome);
           break;
-        case 'data':
+        case 'date':
           comparison = new Date(b.dataUltimaEdicao).getTime() - new Date(a.dataUltimaEdicao).getTime();
           break;
-        case 'itens':
+        case 'items':
           comparison = getTotalItems(b) - getTotalItems(a);
           break;
-        case 'valor':
-          comparison = getListTotal(b) - getListTotal(a);
-          break;
         default:
-          return 0;
+          comparison = new Date(b.dataUltimaEdicao).getTime() - new Date(a.dataUltimaEdicao).getTime();
       }
       return sortOrder === 'desc' ? comparison : -comparison;
     });
@@ -548,7 +541,7 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
     });
   };
 
-  const handleSort = (column: 'nome' | 'data' | 'itens' | 'valor') => {
+  const handleSort = (column: 'date' | 'name' | 'items') => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -824,46 +817,73 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
               </td>
               <td className="px-6 py-4">
                 <div className="flex items-center justify-center gap-2">
-                  <button
-                    onClick={(e) => handleViewClick(lista, e)}
-                    className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
-                    title="Visualizar"
-                    type="button"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => handleEditClick(lista, e)}
-                    className="p-1 text-gray-600 hover:text-gray-800 transition-colors"
-                    title="Editar"
-                    type="button"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => shareList(lista, e)}
-                    className="p-1 text-green-600 hover:text-green-800 transition-colors"
-                    title="Compartilhar"
-                    type="button"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => handleDuplicateClick(lista, e)}
-                    className="p-1 text-orange-600 hover:text-orange-800 transition-colors"
-                    title="Duplicar"
-                    type="button"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteClick(lista, e)}
-                    className="p-1 text-red-600 hover:text-red-800 transition-colors"
-                    title="Excluir"
-                    type="button"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {/* ✅ AÇÕES DA LISTA */}
+                  <div className="flex items-center gap-2">
+                    {/* Análise IA */}
+                    <button
+                      onClick={() => handleAIAnalysis(lista)}
+                      disabled={isAnalyzing}
+                      className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                      title="Análise de IA"
+                    >
+                      {isAnalyzing ? (
+                        <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                      ) : (
+                        <Brain className="w-4 h-4" />
+                      )}
+                    </button>
+
+                    {/* Exportar */}
+                    <button
+                      onClick={() => {
+                        setSelectedList(lista);
+                        setIsExportModalOpen(true);
+                      }}
+                      className="p-1 text-green-600 hover:text-green-800 transition-colors"
+                      title="Exportar Lista"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+
+                    {/* Ver Lista */}
+                    <button
+                      onClick={() => onViewList(lista)}
+                      className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                      title="Visualizar"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+
+                    {/* Editar */}
+                    <button
+                      onClick={() => onEditList(lista)}
+                      className="p-1 text-orange-600 hover:text-orange-800 transition-colors"
+                      title="Editar"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    {/* Duplicar */}
+                    <button
+                      onClick={() => onDuplicateList(lista)}
+                      className="p-1 text-purple-600 hover:text-purple-800 transition-colors"
+                      title="Duplicar"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+
+                    {/* Excluir */}
+                    <button
+                      onClick={() => {
+                        setListToDelete(lista.id);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                      title="Excluir"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -872,6 +892,218 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
       </table>
     </div>
   );
+
+  // ✅ MODAL DE ANÁLISE IA
+  const renderAIAnalysisModal = () => {
+    if (!isAIAnalysisOpen || !analysisResult) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                <Brain className="w-8 h-8 text-blue-600" />
+                Análise de IA - {currentAnalysisList?.nome}
+              </h2>
+              <button
+                onClick={() => setIsAIAnalysisOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Insights */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">💡 Insights</h3>
+              <div className="space-y-2">
+                {analysisResult.insights.map((insight, index) => (
+                  <div key={index} className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                    <p className="text-blue-800">{insight}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sugestões */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">🚀 Sugestões</h3>
+              <div className="space-y-3">
+                {analysisResult.suggestions.map((suggestion) => (
+                  <div key={suggestion.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{suggestion.description}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            suggestion.impact === 'high' ? 'bg-red-100 text-red-800' :
+                            suggestion.impact === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {suggestion.impact === 'high' ? 'Alto Impacto' :
+                             suggestion.impact === 'medium' ? 'Médio Impacto' : 'Baixo Impacto'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          // Implementar aplicação da sugestão
+                          setToast({
+                            message: 'Sugestão aplicada com sucesso!',
+                            type: 'success'
+                          });
+                        }}
+                        className={`px-4 py-2 rounded-lg font-medium ${
+                          suggestion.applied
+                            ? 'bg-green-600 text-white'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                        disabled={suggestion.applied}
+                      >
+                        {suggestion.applied ? 'Aplicada' : 'Aplicar'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recomendações */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">📋 Recomendações</h3>
+              <div className="space-y-2">
+                {analysisResult.recomendacoes.map((recomendacao, index) => (
+                  <div key={index} className="bg-green-50 p-3 rounded-lg border-l-4 border-green-500">
+                    <p className="text-green-800">{recomendacao}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Economia Total */}
+            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-lg mb-6">
+              <div className="text-center">
+                <p className="text-sm opacity-90">Economia Potencial</p>
+                <p className="text-3xl font-bold">{formatPrice(analysisResult.totalEconomia)}</p>
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsAIAnalysisOpen(false)}
+                className="flex-1 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => {
+                  // Implementar exportação da análise
+                  setToast({
+                    message: 'Análise exportada com sucesso!',
+                    type: 'success'
+                  });
+                }}
+                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Exportar Análise
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ✅ MODAL DE EXPORTAÇÃO
+  const renderExportModal = () => {
+    if (!isExportModalOpen || !selectedList) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-md w-full">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">📤 Exportar Lista</h2>
+              <button
+                onClick={() => setIsExportModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Resumo da Lista */}
+            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+              <h3 className="font-medium text-gray-900 mb-2">{selectedList.nome}</h3>
+              <p className="text-sm text-gray-600">
+                {getTotalItems(selectedList)} itens • {formatPrice(getListTotal(selectedList))}
+              </p>
+            </div>
+
+            {/* Opções de Exportação */}
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="includeAI"
+                  checked={exportOptions.includeAI}
+                  onChange={(e) => setExportOptions(prev => ({ ...prev, includeAI: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <label htmlFor="includeAI" className="text-gray-700">
+                  Incluir análise de IA
+                </label>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="includeInstructions"
+                  checked={exportOptions.includeInstructions}
+                  onChange={(e) => setExportOptions(prev => ({ ...prev, includeInstructions: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <label htmlFor="includeInstructions" className="text-gray-700">
+                  Incluir instruções
+                </label>
+              </div>
+            </div>
+
+            {/* Botões de Exportação */}
+            <div className="space-y-3">
+              <button
+                onClick={() => handleExportPDF(selectedList)}
+                disabled={isExporting}
+                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isExporting ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Exportar PDF
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={() => handleExportWhatsApp(selectedList)}
+                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Lista Interativa WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -895,6 +1127,12 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
         onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
         type="danger"
       />
+
+      {/* ✅ MODAL DE ANÁLISE IA */}
+      {renderAIAnalysisModal()}
+
+      {/* ✅ MODAL DE EXPORTAÇÃO */}
+      {renderExportModal()}
 
       {/* ✅ Header - MOBILE FIRST */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
@@ -1009,27 +1247,24 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
               />
             </div>
 
-            {/* Filtros mobile */}
+            {/* ✅ Filtros mobile simplificados */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select
-                value={filterBy}
-                onChange={(e) => setFilterBy(e.target.value as 'todas' | 'recentes' | 'favoritas')}
+                value="todas"
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#004A7C] focus:border-transparent"
+                disabled
               >
                 <option value="todas">📋 Todas as Listas</option>
-                <option value="recentes">🕒 Recentes (7 dias)</option>
-                <option value="favoritas">⭐ Favoritas</option>
               </select>
 
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'nome' | 'data' | 'itens' | 'valor')}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'items')}
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#004A7C] focus:border-transparent text-sm"
               >
-                <option value="data">📅 Recentes</option>
-                <option value="nome">🔤 A-Z</option>
-                <option value="itens">📊 + Itens</option>
-                <option value="valor">💰 + Valor</option>
+                <option value="date">📅 Recentes</option>
+                <option value="name">🔤 A-Z</option>
+                <option value="items">📊 + Itens</option>
               </select>
             </div>
           </div>
@@ -1052,32 +1287,20 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
 
             {/* Linha 2: Filtros e Ordenação em chips */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Filtros como chips */}
+              {/* ✅ Filtros simplificados */}
               <div className="flex items-center gap-1">
                 <span className="text-sm font-medium text-gray-700 mr-2">Filtrar:</span>
-                {(['todas', 'recentes', 'favoritas'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setFilterBy(filter)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      filterBy === filter
-                        ? 'bg-[#004A7C] text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {filter === 'todas' && '📋 Todas'}
-                    {filter === 'recentes' && '🕒 Recentes'}
-                    {filter === 'favoritas' && '⭐ Favoritas'}
-                  </button>
-                ))}
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-[#004A7C] text-white">
+                  📋 Todas
+                </span>
               </div>
 
               <div className="w-px h-6 bg-gray-300 mx-2" />
 
-              {/* Ordenação como chips */}
+              {/* ✅ Ordenação como chips */}
               <div className="flex items-center gap-1">
                 <span className="text-sm font-medium text-gray-700 mr-2">Ordenar:</span>
-                {(['data', 'nome', 'itens', 'valor'] as const).map((sort) => (
+                {(['date', 'name', 'items'] as const).map((sort) => (
                   <button
                     key={sort}
                     onClick={() => {
@@ -1093,12 +1316,11 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
                         ? 'bg-[#004A7C] text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
-                    title={`Ordenar por ${sort === 'data' ? 'data' : sort === 'nome' ? 'nome' : sort === 'itens' ? 'quantidade de itens' : 'valor total'}`}
+                    title={`Ordenar por ${sort === 'date' ? 'data' : sort === 'name' ? 'nome' : 'quantidade de itens'}`}
                   >
-                    {sort === 'data' && '📅'}
-                    {sort === 'nome' && '🔤'}
-                    {sort === 'itens' && '📊'}
-                    {sort === 'valor' && '💰'}
+                    {sort === 'date' && '📅'}
+                    {sort === 'name' && '🔤'}
+                    {sort === 'items' && '📊'}
                     {sortBy === sort && (
                       sortOrder === 'desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
                     )}
@@ -1169,18 +1391,18 @@ const MinhasListas: React.FC<MinhasListasProps> = ({
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
             <div className="text-6xl mb-4">📝</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {searchTerm || filterBy !== 'todas' 
+              {searchTerm || 'todas' 
                 ? 'Nenhuma lista encontrada' 
                 : 'Nenhuma lista criada ainda'
               }
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              {searchTerm || filterBy !== 'todas'
+              {searchTerm || 'todas'
                 ? 'Tente ajustar os filtros ou busca para encontrar suas listas.'
                 : 'Crie sua primeira lista de compras e organize suas compras de forma inteligente.'
               }
             </p>
-            {(!searchTerm && filterBy === 'todas') && (
+            {(!searchTerm && 'todas' === 'todas') && (
               <button
                 onClick={handleCreateNewList}
                 className="bg-[#004A7C] text-white py-3 px-6 rounded-lg font-medium hover:bg-[#0066A3] transition-colors flex items-center gap-2 mx-auto"

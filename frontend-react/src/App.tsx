@@ -178,8 +178,11 @@ function App() {
     if (authLoading) return;
 
     if (!isAuthenticated) {
-      if (currentPage !== 'login' && currentPage !== 'register') {
-        handlePageChange('login');
+      // ✅ REMOVIDO: Redirecionamento automático para login
+      // ✅ PERMITIR ACESSO DIRETO À BUSCA SEM LOGIN
+      if (currentPage === '' || currentPage === 'login') {
+        setCurrentPage('search');
+        window.location.hash = 'search';
       }
       return;
     }
