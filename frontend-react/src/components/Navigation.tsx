@@ -228,8 +228,8 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
               })}
             </nav>
 
-            {/* Indicador de Status do Usuário */}
-            {isAuthenticated && user && (
+            {/* Indicador de Status do Usuário ou Botão Login */}
+            {isAuthenticated && user ? (
               <div className="hidden md:flex items-center space-x-2 text-sm">
                 <div className={`
                   w-2 h-2 rounded-full animate-pulse
@@ -241,6 +241,14 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
                   {user.role}
                 </span>
               </div>
+            ) : (
+              <button
+                onClick={() => handleNavigation('login')}
+                className="hidden md:flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <User className="h-4 w-4" />
+                <span>Login</span>
+              </button>
             )}
 
             {/* Botão Mobile Menu */}
@@ -326,6 +334,20 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
                     </button>
                   );
                 })}
+                
+                {/* ✅ BOTÃO LOGIN PARA USUÁRIOS NÃO AUTENTICADOS */}
+                {!isAuthenticated && (
+                  <button
+                    onClick={() => handleNavigation('login')}
+                    className="w-full flex items-center space-x-3 p-4 rounded-lg text-left transition-all duration-200 min-h-[60px] touch-manipulation bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
+                  >
+                    <User className="h-5 w-5" />
+                    <div className="flex-1">
+                      <div className="font-medium">Login</div>
+                      <div className="text-xs opacity-75">Entrar na sua conta</div>
+                    </div>
+                  </button>
+                )}
               </div>
             </div>
           </div>

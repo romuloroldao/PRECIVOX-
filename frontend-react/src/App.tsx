@@ -1,5 +1,5 @@
 // App.tsx - PROPS CORRIGIDAS PARA MINHASLISTAS + SISTEMA TOAST
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import './styles/App.styles.css';
 
@@ -20,6 +20,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import DetalheProduto from './components/products/DetalheProduto';
 import ListaCompleta from './components/list/ListaCompleta';
 import MinhasListas from './components/list/MinhasListas'; // ✅ MinhasListas está em components
+import { LoginModal } from './components/auth/LoginModal'; // ✅ MODAL DE LOGIN ADICIONADO
 // MultiSourceDemo removed for production
 // AITestComponent removed for production
 
@@ -100,6 +101,14 @@ function App() {
   const loading = false;
   const error = null;
   
+  // ✅ ESTADO DO MODAL DE LOGIN
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    type: 'addToList';
+    product: Product;
+    quantity: number;
+  } | null>(null);
+  
   const { 
     isConnected: apiConnected,
     analyticsData,
@@ -177,13 +186,11 @@ function App() {
   useEffect(() => {
     if (authLoading) return;
 
-    if (!isAuthenticated) {
-      // ✅ REMOVIDO: Redirecionamento automático para login
-      // ✅ PERMITIR ACESSO DIRETO À BUSCA SEM LOGIN
-      if (currentPage === '' || currentPage === 'login') {
-        setCurrentPage('search');
-        window.location.hash = 'search';
-      }
+    // ✅ FORÇAR SEMPRE PÁGINA DE BUSCA COMO PRIMEIRA PÁGINA
+    if (currentPage === '' || currentPage === 'login' || currentPage === 'welcome') {
+      console.log('🎯 Forçando página de busca como primeira página');
+      setCurrentPage('search');
+      window.location.hash = 'search';
       return;
     }
 
@@ -297,6 +304,14 @@ function App() {
   };
 
   const handleAddToList = (product: Product, quantity: number = 1) => {
+    // ✅ VERIFICAR SE USUÁRIO ESTÁ LOGADO
+    if (!isAuthenticated) {
+      console.log('🔒 Usuário não logado - Abrindo modal de login');
+      setPendingAction({ type: 'addToList', product, quantity });
+      setIsLoginModalOpen(true);
+      return;
+    }
+    
     if (!canCreateLists) {
       console.log('🚫 Usuário não pode criar listas');
       return;
@@ -777,6 +792,31 @@ function App() {
     );
   }
 
+  // ✅ HANDLERS DO MODAL DE LOGIN
+  const handleLoginModalClose = () => {
+    setIsLoginModalOpen(false);
+    setPendingAction(null);
+  };
+
+  const handleLoginModalSuccess = () => {
+    // ✅ EXECUTAR AÇÃO PENDENTE APÓS LOGIN BEM-SUCEDIDO
+    if (pendingAction && pendingAction.type === 'addToList') {
+      console.log('✅ Login bem-sucedido - Executando ação pendente');
+      addProductToCurrentList(pendingAction.product, pendingAction.quantity);
+    }
+    setPendingAction(null);
+  };
+
+  const handleGoToRegister = () => {
+    handleLoginModalClose();
+    handlePageChange('register');
+  };
+
+  const handleGoToForgotPassword = () => {
+    handleLoginModalClose();
+    handlePageChange('forgot-password');
+  };
+
   return (
     <ToastProvider>
       <div className="App">
@@ -788,6 +828,15 @@ function App() {
         <main className="main-content">
           {renderCurrentPage()}
         </main>
+        
+        {/* ✅ MODAL DE LOGIN */}
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={handleLoginModalClose}
+          onSuccess={handleLoginModalSuccess}
+          onGoToRegister={handleGoToRegister}
+          onGoToForgotPassword={handleGoToForgotPassword}
+        />
         
         {/* ✅ LOADING OVERLAY OTIMIZADO PARA MOBILE */}
         {(authLoading || (productsLoading && searchTerm)) && (

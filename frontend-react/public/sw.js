@@ -1,5 +1,7 @@
-// sw.js - SERVICE WORKER PARA CACHE OFFLINE E PERFORMANCE
-const CACHE_NAME = 'precivox-v1.0.5';
+// ✅ SERVICE WORKER PRECIVOX - VERSÃO ATUALIZADA
+const CACHE_NAME = 'precivox-v1.0.0-' + Date.now(); // ✅ CACHE BUSTING FORÇADO
+const STATIC_CACHE = 'precivox-static-v1.0.0-' + Date.now();
+const DYNAMIC_CACHE = 'precivox-dynamic-v1.0.0-' + Date.now();
 const STATIC_ASSETS = [
   '/',
   '/index.html',
