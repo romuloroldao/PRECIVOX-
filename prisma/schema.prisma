@@ -1,0 +1,393 @@
+// Schema do PRECIVOX - Módulo de Gestão de Mercados
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTENTICAÇÃO E USUÁRIOS
+// ============================================
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  nome            String
+  senha           String
+  role            Role     @default(CLIENTE)
+  telefone        String?
+  cpf             String?  @unique
+  avatar          String?
+  ativo           Boolean  @default(true)
+  dataCriacao     DateTime @default(now())
+  dataAtualizacao DateTime @updatedAt
+
+  // Relacionamentos
+  mercadosGerenciados Mercado[]
+  acoes               AcaoGestor[] // 🆕 Ações executadas pelo gestor
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  GESTOR
+  CLIENTE
+}
+
+// ============================================
+// PLANOS DE PAGAMENTO
+// ============================================
+
+model PlanoPagamento {
+  id             String   @id @default(cuid())
+  nome           String
+  descricao      String?
+  valor          Decimal  @db.Decimal(10, 2)
+  duracao        Int // em dias
+  limiteUnidades Int      @default(1)
+  limiteUploadMb Int      @default(10)
+  limiteUsuarios Int      @default(5)
+  ativo          Boolean  @default(true)
+  dataCriacao    DateTime @default(now())
+
+  // Relacionamentos
+  mercados Mercado[]
+
+  @@map("planos_de_pagamento")
+}
+
+// ============================================
+// MERCADOS
+// ============================================
+
+model Mercado {
+  id                   String   @id @default(cuid())
+  nome                 String
+  cnpj                 String   @unique
+  descricao            String?  @db.Text
+  telefone             String?
+  emailContato         String?
+  horarioFuncionamento String? // JSON ou string formatada
+  logo                 String?
+  ativo                Boolean  @default(true)
+  dataCriacao          DateTime @default(now())
+  dataAtualizacao      DateTime @updatedAt
+
+  // Relacionamentos
+  planoId String?
+  plano   PlanoPagamento? @relation(fields: [planoId], references: [id])
+
+  gestorId String?
+  gestor   User?   @relation(fields: [gestorId], references: [id])
+
+  unidades       Unidade[]
+  logsImportacao LogImportacao[]
+
+  // 🆕 Novos relacionamentos de IA
+  analises AnaliseIA[]
+  alertas  AlertaIA[]
+  metricas MetricasDashboard[]
+  acoes    AcaoGestor[]
+
+  @@map("mercados")
+}
+
+// ============================================
+// UNIDADES (Filiais)
+// ============================================
+
+model Unidade {
+  id                   String   @id @default(cuid())
+  nome                 String
+  endereco             String?
+  bairro               String?
+  cidade               String?
+  estado               String?
+  cep                  String?
+  telefone             String?
+  horarioFuncionamento String?
+  latitude             Float?
+  longitude            Float?
+  ativa                Boolean  @default(true)
+  dataCriacao          DateTime @default(now())
+  dataAtualizacao      DateTime @updatedAt
+
+  // Relacionamentos
+  mercadoId String
+  mercado   Mercado @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+
+  estoques Estoque[]
+
+  // 🆕 Novos relacionamentos de IA
+  analises AnaliseIA[]
+  alertas  AlertaIA[]
+  metricas MetricasDashboard[]
+
+  @@map("unidades")
+}
+
+// ============================================
+// PRODUTOS
+// ============================================
+
+model Produto {
+  id              String   @id @default(cuid())
+  nome            String
+  descricao       String?  @db.Text
+  categoria       String?
+  codigoBarras    String?  @unique
+  marca           String?
+  unidadeMedida   String? // UN, KG, L, etc
+  imagem          String?
+  ativo           Boolean  @default(true)
+  dataCriacao     DateTime @default(now())
+  dataAtualizacao DateTime @updatedAt
+
+  // 🆕 CAMPOS DE INTELIGÊNCIA ARTIFICIAL
+  giroEstoqueMedio    Float?    @default(0) // Calculado: vendas/estoque médio
+  elasticidadePreco   Float?    @default(-1.2) // Coeficiente de elasticidade
+  demandaPrevista7d   Int?      @default(0) // Previsão 7 dias
+  demandaPrevista30d  Int?      @default(0) // Previsão 30 dias
+  pontoReposicao      Int?      @default(0) // Quantidade crítica
+  margemContribuicao  Decimal?  @default(0) @db.Decimal(10, 2) // Margem unitária
+  scoreSazonalidade   Float?    @default(0.5) // 0 (não sazonal) a 1 (altamente sazonal)
+  categoriaABC        String?   @default("C") // A (20% top), B (30%), C (50% cauda longa)
+  ultimaAtualizacaoIA DateTime? @updatedAt
+
+  // Relacionamentos
+  estoques             Estoque[]
+  analises             AnaliseIA[]
+  produtosRelacionados ProdutoRelacionado[] @relation("ProdutoPrincipal")
+  relacionadoCom       ProdutoRelacionado[] @relation("ProdutoRelacionado")
+  AlertaIA             AlertaIA[]
+
+  @@map("produtos")
+}
+
+// ============================================
+// ESTOQUE (Produtos por Unidade)
+// ============================================
+
+model Estoque {
+  id               String   @id @default(cuid())
+  quantidade       Int      @default(0)
+  preco            Decimal  @db.Decimal(10, 2)
+  precoPromocional Decimal? @db.Decimal(10, 2)
+  emPromocao       Boolean  @default(false)
+  disponivel       Boolean  @default(true)
+  atualizadoEm     DateTime @updatedAt
+  dataCriacao      DateTime @default(now())
+
+  // Relacionamentos
+  unidadeId String
+  unidade   Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  produtoId String
+  produto   Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@unique([unidadeId, produtoId])
+  @@map("estoques")
+}
+
+// ============================================
+// LOGS DE IMPORTAÇÃO
+// ============================================
+
+model LogImportacao {
+  id               String           @id @default(cuid())
+  nomeArquivo      String
+  tamanhoBytes     Int
+  totalLinhas      Int              @default(0)
+  linhasSucesso    Int              @default(0)
+  linhasErro       Int              @default(0)
+  linhasDuplicadas Int              @default(0)
+  status           StatusImportacao @default(PROCESSANDO)
+  mensagemErro     String?          @db.Text
+  detalhesErros    String?          @db.Text // JSON com erros linha a linha
+  dataInicio       DateTime         @default(now())
+  dataFim          DateTime?
+
+  // Relacionamentos
+  mercadoId String
+  mercado   Mercado @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+
+  @@map("logs_importacao")
+}
+
+enum StatusImportacao {
+  PROCESSANDO
+  CONCLUIDO
+  FALHA
+  PARCIAL
+}
+
+// ============================================
+// 🆕 MÓDULOS DE INTELIGÊNCIA ARTIFICIAL
+// ============================================
+
+// Análises de IA geradas automaticamente
+model AnaliseIA {
+  id        String  @id @default(cuid())
+  mercadoId String
+  unidadeId String?
+  produtoId String?
+
+  tipo      String // DEMANDA, RUPTURA, PROMOCAO, ELASTICIDADE, SAZONALIDADE
+  categoria String? // Para análises agregadas por categoria
+
+  resultado       Json // Estrutura flexível com resultados
+  recomendacao    String   @db.Text
+  prioridade      String // BAIXA, MEDIA, ALTA, CRITICA
+  impactoEstimado Decimal? @db.Decimal(10, 2)
+
+  status         String    @default("PENDENTE") // PENDENTE, ACEITA, REJEITADA, EXECUTADA
+  feedbackGestor String?
+  aceitaEm       DateTime?
+  executadaEm    DateTime?
+
+  criadoEm DateTime  @default(now())
+  expiraEm DateTime?
+
+  // Relacionamentos
+  mercado Mercado      @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+  unidade Unidade?     @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  produto Produto?     @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  acoes   AcaoGestor[]
+
+  @@index([mercadoId, tipo, status])
+  @@index([unidadeId, criadoEm])
+  @@index([prioridade, status])
+  @@map("analises_ia")
+}
+
+// Alertas inteligentes para o gestor
+model AlertaIA {
+  id        String  @id @default(cuid())
+  mercadoId String
+  unidadeId String?
+  produtoId String?
+
+  tipo       String // RUPTURA, OPORTUNIDADE, PERFORMANCE, ANOMALIA, SAZONAL
+  titulo     String
+  descricao  String @db.Text
+  prioridade String // BAIXA, MEDIA, ALTA, CRITICA
+
+  acaoRecomendada String? @db.Text
+  linkAcao        String?
+
+  lido   Boolean   @default(false)
+  lidoEm DateTime?
+
+  metadata Json?
+
+  criadoEm   DateTime  @default(now())
+  expiradoEm DateTime?
+
+  // Relacionamentos
+  mercado Mercado  @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+  unidade Unidade? @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  produto Produto? @relation(fields: [produtoId], references: [id], onDelete: SetNull)
+
+  @@index([mercadoId, lido, prioridade])
+  @@index([criadoEm])
+  @@map("alertas_ia")
+}
+
+// Métricas consolidadas do dashboard
+model MetricasDashboard {
+  id        String   @id @default(cuid())
+  mercadoId String
+  unidadeId String?
+  data      DateTime @default(now())
+  periodo   String // DIA, SEMANA, MES
+
+  // Métricas de Estoque
+  giroEstoqueGeral Float   @default(0)
+  taxaRuptura      Float   @default(0)
+  valorEstoque     Decimal @default(0) @db.Decimal(12, 2)
+  diasCobertura    Float   @default(0)
+  produtosAtivos   Int     @default(0)
+  produtosInativos Int     @default(0)
+
+  // Métricas de Vendas
+  ticketMedio      Decimal @default(0) @db.Decimal(10, 2)
+  quantidadeVendas Int     @default(0)
+  faturamentoDia   Decimal @default(0) @db.Decimal(12, 2)
+  margemLiquida    Float   @default(0)
+  margemBruta      Float   @default(0)
+
+  // Métricas de Cliente
+  taxaConversao  Float  @default(0)
+  taxaRecompra   Float  @default(0)
+  clientesAtivos Int    @default(0)
+  clientesNovos  Int    @default(0)
+  nps            Float?
+  churnRate      Float?
+
+  // Comparações
+  variacaoD1  Json?
+  variacaoD7  Json?
+  variacaoD30 Json?
+
+  // Relacionamentos
+  mercado Mercado  @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+  unidade Unidade? @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@unique([mercadoId, data, periodo])
+  @@index([mercadoId, data])
+  @@map("metricas_dashboard")
+}
+
+// Produtos relacionados (Cross-sell/Upsell)
+model ProdutoRelacionado {
+  id                   String @id @default(cuid())
+  produtoId            String
+  produtoRelacionadoId String
+
+  tipo      String // CROSS_SELL, UPSELL, SUBSTITUTO
+  confianca Float // 0 a 1 (frequência de compra conjunta)
+  suporte   Float // 0 a 1 (% de transações com ambos)
+  lift      Float // Fator de aumento (>1 indica correlação positiva)
+
+  geradoEm DateTime @default(now())
+
+  // Relacionamentos
+  produto     Produto @relation("ProdutoPrincipal", fields: [produtoId], references: [id], onDelete: Cascade)
+  relacionado Produto @relation("ProdutoRelacionado", fields: [produtoRelacionadoId], references: [id], onDelete: Cascade)
+
+  @@unique([produtoId, produtoRelacionadoId, tipo])
+  @@index([produtoId, confianca])
+  @@map("produtos_relacionados")
+}
+
+// Histórico de ações do gestor
+model AcaoGestor {
+  id        String @id @default(cuid())
+  mercadoId String
+  userId    String
+
+  tipo      String // REPOSICAO, PROMOCAO, AJUSTE_PRECO, ACEITAR_RECOMENDACAO
+  descricao String @db.Text
+
+  analiseId String?
+
+  resultadoEsperado Json?
+  resultadoReal     Json?
+
+  executadaEm DateTime  @default(now())
+  avaliadaEm  DateTime?
+
+  // Relacionamentos
+  mercado Mercado    @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+  usuario User       @relation(fields: [userId], references: [id])
+  analise AnaliseIA? @relation(fields: [analiseId], references: [id], onDelete: SetNull)
+
+  @@index([mercadoId, executadaEm])
+  @@index([userId, tipo])
+  @@map("acoes_gestor")
+}

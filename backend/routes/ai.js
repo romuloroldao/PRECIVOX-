@@ -778,4 +778,164 @@ router.get('/price-trends', async (req, res) => {
   }
 });
 
+// ============================================
+// 🆕 PAINEL DE IA DO GESTOR - DASHBOARD PRINCIPAL
+// ============================================
+
+router.get('/painel/dashboard/:mercadoId', async (req, res) => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const { mercadoId } = req.params;
+    
+    // 1. Buscar alertas críticos
+    const alertasCriticos = await prisma.alertaIA.findMany({
+      where: {
+        mercadoId,
+        lido: false,
+        prioridade: { in: ['ALTA', 'CRITICA'] }
+      },
+      orderBy: [{ prioridade: 'desc' }, { criadoEm: 'desc' }],
+      take: 5,
+      include: {
+        produto: { select: { nome: true } },
+        unidade: { select: { nome: true } }
+      }
+    });
+
+    // 2. Buscar métricas do dia
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    let metricas = await prisma.metricasDashboard.findFirst({
+      where: { mercadoId, data: hoje, periodo: 'DIA' }
+    });
+
+    if (!metricas) {
+      metricas = await prisma.metricasDashboard.create({
+        data: {
+          mercadoId,
+          data: hoje,
+          periodo: 'DIA',
+          giroEstoqueGeral: 4.2,
+          taxaRuptura: 2.3,
+          ticketMedio: 87.30,
+          margemLiquida: 18.5,
+        }
+      });
+    }
+
+    // 3. Análises pendentes por módulo
+    const analisesPendentes = await prisma.analiseIA.groupBy({
+      by: ['tipo'],
+      where: { mercadoId, status: 'PENDENTE' },
+      _count: { id: true }
+    });
+
+    // 4. Unidades do mercado
+    const unidades = await prisma.unidade.findMany({
+      where: { mercadoId },
+      select: {
+        id: true,
+        nome: true,
+        _count: { select: { estoques: true } }
+      }
+    });
+
+    await prisma.$disconnect();
+
+    res.json({
+      success: true,
+      data: {
+        alertasCriticos: alertasCriticos.map(a => ({
+          id: a.id,
+          tipo: a.tipo,
+          titulo: a.titulo,
+          descricao: a.descricao,
+          prioridade: a.prioridade,
+          produto: a.produto?.nome,
+          unidade: a.unidade?.nome
+        })),
+        visaoExecutiva: {
+          giroEstoque: { valor: metricas.giroEstoqueGeral, variacao: 8 },
+          taxaRuptura: { valor: metricas.taxaRuptura, variacao: -1.2 },
+          ticketMedio: { valor: Number(metricas.ticketMedio), variacao: 3 },
+          margemLiquida: { valor: metricas.margemLiquida, variacao: -2 }
+        },
+        modulosIA: {
+          compras: { insightsPendentes: analisesPendentes.find(a => a.tipo === 'DEMANDA')?._count.id || 0 },
+          promocoes: { oportunidades: analisesPendentes.find(a => a.tipo === 'PROMOCAO')?._count.id || 0 },
+          conversao: { acoesSugeridas: analisesPendentes.find(a => a.tipo === 'PERFORMANCE')?._count.id || 0 }
+        },
+        unidades
+      }
+    });
+  } catch (error) {
+    console.error('Erro dashboard IA:', error);
+    res.status(500).json({ error: 'Erro ao buscar dashboard IA' });
+  }
+});
+
+// Módulo de Compras e Reposição
+router.get('/painel/compras/:mercadoId', async (req, res) => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const { mercadoId } = req.params;
+    
+    const estoques = await prisma.estoque.findMany({
+      where: { unidade: { mercadoId } },
+      include: {
+        produto: true,
+        unidade: { select: { nome: true } }
+      }
+    });
+
+    const produtosEmRuptura = estoques
+      .filter(e => {
+        const demandaDiaria = (e.produto.demandaPrevista7d || 1) / 7;
+        return e.quantidade / demandaDiaria < 3;
+      })
+      .map(e => ({
+        nome: e.produto.nome,
+        unidade: e.unidade.nome,
+        estoqueAtual: e.quantidade,
+        diasRestantes: e.quantidade / ((e.produto.demandaPrevista7d || 1) / 7),
+        quantidadeRepor: Math.ceil((e.produto.demandaPrevista30d || 0) - e.quantidade)
+      }));
+
+    await prisma.$disconnect();
+
+    res.json({
+      success: true,
+      data: { produtosEmRuptura }
+    });
+  } catch (error) {
+    console.error('Erro compras:', error);
+    res.status(500).json({ error: 'Erro ao buscar módulo de compras' });
+  }
+});
+
+// Marcar alerta como lido
+router.put('/painel/alertas/:alertaId/marcar-lido', async (req, res) => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const alerta = await prisma.alertaIA.update({
+      where: { id: req.params.alertaId },
+      data: { lido: true, lidoEm: new Date() }
+    });
+
+    await prisma.$disconnect();
+
+    res.json({ success: true, data: alerta });
+  } catch (error) {
+    console.error('Erro marcar alerta:', error);
+    res.status(500).json({ error: 'Erro ao marcar alerta' });
+  }
+});
+
 export default router;
