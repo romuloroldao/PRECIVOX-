@@ -175,10 +175,108 @@ export class User {
         return null;
       }
       
-      return new User(result.rows[0]);
+      const user = new User(result.rows[0]);
+      // Adicionar password_hash para verificação
+      user.password_hash = result.rows[0].password_hash;
+      user.failed_login_attempts = result.rows[0].failed_login_attempts || 0;
+      user.account_locked_until = result.rows[0].account_locked_until;
+      return user;
     } catch (error) {
       console.error('❌ Erro ao buscar usuário por email:', error);
       throw error;
+    }
+  }
+
+  // Verificar senha
+  async verifyPassword(password) {
+    try {
+      if (!this.password_hash) {
+        return false;
+      }
+      return await bcrypt.compare(password, this.password_hash);
+    } catch (error) {
+      console.error('❌ Erro ao verificar senha:', error);
+      return false;
+    }
+  }
+
+  // Verificar se conta está bloqueada
+  async isAccountLocked() {
+    if (!this.account_locked_until) {
+      return false;
+    }
+    
+    const now = new Date();
+    const lockedUntil = new Date(this.account_locked_until);
+    
+    if (now < lockedUntil) {
+      return true;
+    }
+    
+    // Se o período de bloqueio expirou, limpar
+    await query(
+      'UPDATE users SET account_locked_until = NULL, failed_login_attempts = 0 WHERE id = $1',
+      [this.id]
+    );
+    
+    return false;
+  }
+
+  // Registrar tentativa de login falhada
+  async registerFailedLogin() {
+    try {
+      const maxAttempts = 5;
+      const lockDuration = 15 * 60 * 1000; // 15 minutos
+      
+      const newAttempts = (this.failed_login_attempts || 0) + 1;
+      
+      let sql;
+      let values;
+      
+      if (newAttempts >= maxAttempts) {
+        // Bloquear conta
+        const lockUntil = new Date(Date.now() + lockDuration);
+        sql = `
+          UPDATE users 
+          SET failed_login_attempts = $1, account_locked_until = $2 
+          WHERE id = $3
+        `;
+        values = [newAttempts, lockUntil, this.id];
+      } else {
+        sql = `
+          UPDATE users 
+          SET failed_login_attempts = $1 
+          WHERE id = $2
+        `;
+        values = [newAttempts, this.id];
+      }
+      
+      await query(sql, values);
+      this.failed_login_attempts = newAttempts;
+    } catch (error) {
+      console.error('❌ Erro ao registrar login falhado:', error);
+    }
+  }
+
+  // Registrar login bem-sucedido
+  async registerLogin(ipAddress, userAgent) {
+    try {
+      const sql = `
+        UPDATE users 
+        SET 
+          last_login = CURRENT_TIMESTAMP,
+          last_login_ip = $1,
+          login_count = login_count + 1,
+          failed_login_attempts = 0,
+          account_locked_until = NULL
+        WHERE id = $2
+      `;
+      
+      await query(sql, [ipAddress, this.id]);
+      this.failed_login_attempts = 0;
+      this.account_locked_until = null;
+    } catch (error) {
+      console.error('❌ Erro ao registrar login:', error);
     }
   }
 

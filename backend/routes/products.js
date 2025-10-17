@@ -15,6 +15,7 @@ import {
   sanitizeInput
 } from '../middleware/validation.js';
 import productImageAI from '../services/imageAI.js';
+import { convertToPrecivoxStandard } from '../utils/fileConverter.js';
 
 const router = express.Router();
 
@@ -403,6 +404,25 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Apenas arquivos JSON são permitidos'), false);
+    }
+  }
+});
+
+// Upload com conversão inteligente (aceita múltiplos formatos)
+const uploadConverter = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = ['.csv', '.xlsx', '.xls', '.json', '.xml'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Formato não suportado: ${ext}. Use CSV, XLSX, XLS, JSON ou XML.`), false);
     }
   }
 });
@@ -844,6 +864,116 @@ router.get('/upload-status/:uploadId',
       res.status(500).json({
         success: false,
         error: 'Erro interno do servidor'
+      });
+    }
+  }
+);
+
+// POST /api/products/upload-smart/:marketId - Upload inteligente com conversão automática
+router.post('/upload-smart/:marketId',
+  authenticate,
+  validateUuidParam,
+  requireMarketAccess('manage'),
+  uploadConverter.single('file'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'Arquivo é obrigatório'
+        });
+      }
+
+      const marketId = req.params.marketId;
+      const file = req.file;
+
+      console.log(`📁 Arquivo recebido: ${file.originalname} (${file.size} bytes)`);
+
+      // Converte o arquivo para o padrão PRECIVOX
+      const conversionResult = await convertToPrecivoxStandard(file.path, path.dirname(file.path));
+
+      if (!conversionResult.success || conversionResult.status === 'error') {
+        // Remove arquivo temporário
+        await fs.unlink(file.path).catch(() => {});
+        
+        return res.status(400).json({
+          success: false,
+          error: 'Erro na conversão do arquivo',
+          message: conversionResult.message,
+          stats: conversionResult.stats
+        });
+      }
+
+      // Importa os produtos convertidos no banco de dados
+      const products = conversionResult.convertedData;
+      let importedCount = 0;
+      const importErrors = [];
+
+      for (const product of products) {
+        try {
+          await query(`
+            INSERT INTO products (
+              nome, categoria, subcategoria, preco, market_id, marca,
+              codigo_barras, descricao, estoque, promocao, 
+              status, data_source, created_at, updated_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 
+              'active', 'smart_upload', NOW(), NOW()
+            )
+          `, [
+            product.nome,
+            product.categoria,
+            product.categoria, // subcategoria = categoria por padrão
+            product.preco,
+            marketId,
+            product.marca,
+            product.codigo_barras || null,
+            product.descricao || null,
+            product.quantidade || 0,
+            product.em_promocao || false
+          ]);
+          importedCount++;
+        } catch (error) {
+          console.error(`❌ Erro ao importar produto "${product.nome}":`, error.message);
+          importErrors.push(`${product.nome}: ${error.message}`);
+        }
+      }
+
+      // Remove arquivos temporários
+      await fs.unlink(file.path).catch(() => {});
+      if (conversionResult.convertedFilePath) {
+        await fs.unlink(conversionResult.convertedFilePath).catch(() => {});
+      }
+
+      res.json({
+        success: true,
+        message: `Upload concluído: ${importedCount} produtos importados com sucesso`,
+        data: {
+          filename: file.originalname,
+          conversion: {
+            total: conversionResult.stats.total,
+            converted: conversionResult.stats.valid,
+            imported: importedCount,
+            inferred: conversionResult.stats.inferidos,
+            ignored: conversionResult.stats.ignorados
+          },
+          warnings: conversionResult.warnings,
+          errors: importErrors.length > 0 ? importErrors : undefined
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Erro no upload inteligente:', error);
+      
+      // Remove arquivo em caso de erro
+      if (req.file?.path) {
+        await fs.unlink(req.file.path).catch(() => {});
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno do servidor',
+        message: error.message
       });
     }
   }

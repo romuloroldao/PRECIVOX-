@@ -146,6 +146,58 @@ export const schemas = {
     })
   }),
 
+  // Validação de cadastro público de mercado (manager opcional)
+  marketPublicRegister: Joi.object({
+    name: Joi.string().min(2).max(255).required().messages({
+      'string.min': 'Nome do mercado deve ter pelo menos 2 caracteres',
+      'string.max': 'Nome do mercado deve ter no máximo 255 caracteres',
+      'any.required': 'Nome do mercado é obrigatório'
+    }),
+    description: Joi.string().max(1000),
+    cnpj: Joi.string().pattern(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/).required().messages({
+      'string.pattern.base': 'CNPJ deve estar no formato 00.000.000/0000-00',
+      'any.required': 'CNPJ é obrigatório'
+    }),
+    business_name: Joi.string().max(255),
+    business_type: Joi.string().max(100),
+    website_url: Joi.string().uri(),
+    email: Joi.string().email(),
+    phone: Joi.string().pattern(/^\(\d{2}\)\s\d{4,5}-\d{4}$/),
+    whatsapp: Joi.string().pattern(/^\(\d{2}\)\s\d{4,5}-\d{4}$/),
+    address_street: Joi.string().max(200).required().messages({
+      'any.required': 'Endereço é obrigatório'
+    }),
+    address_number: Joi.string().max(20),
+    address_complement: Joi.string().max(200),
+    address_neighborhood: Joi.string().max(100),
+    address_city: Joi.string().max(100).required().messages({
+      'any.required': 'Cidade é obrigatória'
+    }),
+    address_state: Joi.string().length(2).uppercase().required().messages({
+      'any.required': 'Estado é obrigatório',
+      'string.length': 'Estado deve ter 2 caracteres (ex: SP)'
+    }),
+    address_zip_code: Joi.string().pattern(/^\d{5}-\d{3}$/).required().messages({
+      'string.pattern.base': 'CEP deve estar no formato 00000-000',
+      'any.required': 'CEP é obrigatório'
+    }),
+    latitude: Joi.number().min(-90).max(90),
+    longitude: Joi.number().min(-180).max(180),
+    category: Joi.string().valid('Mercado', 'Supermercado', 'Hipermercado', 'Mercearia', 'Atacadista', 'Conveniência', 'Açougue', 'Padaria', 'Outro'),
+    size_category: Joi.string().valid('small', 'medium', 'large', 'supermarket', 'hypermarket'),
+    delivery_available: Joi.boolean(),
+    pickup_available: Joi.boolean(),
+    operating_hours: Joi.object(),
+    payment_methods: Joi.array().items(
+      Joi.string().valid('cash', 'credit_card', 'debit_card', 'pix', 'bank_transfer', 'food_voucher')
+    ),
+    manager: Joi.object({
+      name: Joi.string().min(2).max(255).required(),
+      email: Joi.string().email().required(),
+      phone: Joi.string().pattern(/^\(\d{2}\)\s\d{4,5}-\d{4}$/).required()
+    }).optional()
+  }),
+
   marketUpdate: Joi.object({
     name: Joi.string().min(2).max(255),
     description: Joi.string().max(1000),
@@ -265,6 +317,7 @@ export const validateUserLogin = validate(schemas.userLogin);
 export const validateUserUpdate = validate(schemas.userUpdate);
 export const validatePasswordChange = validate(schemas.passwordChange);
 export const validateMarketCreate = validate(schemas.marketCreate);
+export const validateMarketPublicRegister = validate(schemas.marketPublicRegister);
 export const validateMarketUpdate = validate(schemas.marketUpdate);
 export const validateListUsers = validate(schemas.listUsers, 'query');
 export const validateListMarkets = validate(schemas.listMarkets, 'query');

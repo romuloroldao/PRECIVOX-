@@ -11,6 +11,7 @@ import {
 } from '../middleware/auth.js';
 import {
   validateMarketCreate,
+  validateMarketPublicRegister,
   validateMarketUpdate,
   validateListMarkets,
   validateUuidParam,
@@ -163,7 +164,101 @@ router.get('/slug/:slug', optionalAuth, async (req, res) => {
 // ROTAS AUTENTICADAS
 // =====================================================
 
-// POST /api/markets - Criar novo mercado (autenticado)
+// POST /api/markets/register - Cadastro público de mercado (SEM autenticação)
+router.post('/register', validateMarketPublicRegister, async (req, res) => {
+  try {
+    const { manager, ...marketData } = req.body;
+    
+    console.log('📋 Recebendo cadastro de mercado:', {
+      nome: marketData.name,
+      cnpj: marketData.cnpj,
+      email: marketData.email
+    });
+
+    // Verificar se CNPJ já existe
+    const existingMarket = await Market.findByCnpj(marketData.cnpj);
+    if (existingMarket) {
+      return res.status(409).json({
+        success: false,
+        error: 'CNPJ já está cadastrado'
+      });
+    }
+
+    // Criar mercado em transação atômica
+    const result = await transaction(async (client) => {
+      // 1. Criar mercado com status 'pending' (aguardando aprovação)
+      const market = await Market.createWithTransaction(client, {
+        ...marketData,
+        status: 'pending', // Mercados públicos começam como pending
+        verified: false
+      }, null); // sem createdBy (cadastro público)
+      
+      // 2. Criar/associar gestor se fornecido
+      let managerUser;
+      if (manager?.email) {
+        // Verificar se usuário já existe
+        const existingUser = await User.findByEmail(manager.email);
+        
+        if (existingUser) {
+          // Usuário existe, associar ao mercado
+          await Market.addUserWithTransaction(client, market.id, existingUser.id, 'owner', null, null);
+          managerUser = existingUser;
+        } else {
+          // Criar novo usuário gestor
+          managerUser = await User.createWithTransaction(client, {
+            ...manager,
+            role: 'gestor',
+            status: 'pending_verification', // Requer verificação de email
+            email_verified: false
+          }, null);
+          
+          // Associar ao mercado
+          await Market.addUserWithTransaction(client, market.id, managerUser.id, 'owner', null, null);
+        }
+      }
+
+      return { market, managerUser };
+    });
+
+    console.log('✅ Mercado cadastrado com sucesso:', result.market.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Mercado cadastrado com sucesso! Aguarde aprovação da equipe PRECIVOX.',
+      data: {
+        market: {
+          id: result.market.id,
+          name: result.market.name,
+          slug: result.market.slug,
+          status: result.market.status,
+          cnpj: result.market.cnpj
+        },
+        manager: result.managerUser ? {
+          id: result.managerUser.id,
+          name: result.managerUser.name,
+          email: result.managerUser.email
+        } : null
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao cadastrar mercado:', error);
+    
+    if (error.code === 'DUPLICATE_CNPJ' || error.code === '23505') {
+      return res.status(409).json({
+        success: false,
+        error: 'CNPJ já está cadastrado'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao cadastrar mercado. Por favor, tente novamente.'
+    });
+  }
+});
+
+// POST /api/markets - Criar novo mercado (autenticado - ADMIN)
 router.post('/', authenticate, requireAdmin, validateMarketCreate, async (req, res) => {
   try {
     const { manager, ...marketData } = req.body;

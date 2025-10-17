@@ -12,6 +12,7 @@ import marketRoutes from './routes/markets.js';
 import productRoutes from './routes/products.js';
 import aiRoutes from './routes/ai.js';
 import analyticsRoutes from './routes/analytics.js';
+import loginSimplesRoutes from './routes/login-simples.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -102,6 +103,9 @@ app.use(cors({
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Servir arquivos estáticos
+app.use(express.static('public'));
 
 // Trust proxy (para IP real em produção)
 app.set('trust proxy', 1);
@@ -201,7 +205,39 @@ app.get('/api/admin/status', async (req, res) => {
   }
 });
 
+// Usuários recentes (admin endpoint)
+app.get('/api/admin/recent-users', async (req, res) => {
+  try {
+    const result = await req.db.query(`
+      SELECT 
+        id,
+        email,
+        name,
+        role,
+        created_at,
+        last_login_at,
+        is_active
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+
+    res.json({
+      success: true,
+      data: result.rows,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar usuários recentes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar usuários recentes'
+    });
+  }
+});
+
 // Rotas principais
+app.use('/api', loginSimplesRoutes); // ✅ LOGIN SIMPLIFICADO (compatível com schema português)
 app.use('/api/users', userRoutes);
 app.use('/api/auth', userRoutes); // ✅ ALIAS PARA COMPATIBILIDADE COM FRONTEND
 app.use('/api/markets', marketRoutes);
