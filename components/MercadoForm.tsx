@@ -2,14 +2,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PlanoPagamento, User } from '@prisma/client';
 
 interface MercadoFormProps {
   mercado?: any;
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
-  planos?: PlanoPagamento[];
-  gestores?: User[];
+  planos?: any[];
+  gestores?: any[];
   isAdmin?: boolean;
 }
 
