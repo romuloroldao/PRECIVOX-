@@ -29,7 +29,10 @@ export default function AdminDashboardPage() {
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  
+  // ✅ useRef para garantir fetch único - mais confiável que useState
+  const hasFetchedRef = useRef(false);
+  
   const { data: session, status } = useSession();
   const user = session?.user;
 
@@ -87,18 +90,20 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // UseEffect corrigido para evitar loop infinito
+  // ✅ UseEffect OTIMIZADO para garantir UMA ÚNICA execução
   useEffect(() => {
     // Só executar UMA ÚNICA VEZ quando autenticado como ADMIN
-    if (status === 'authenticated' && !initialLoadDone && user?.role === 'ADMIN') {
-      setInitialLoadDone(true); // Marca como carregado IMEDIATAMENTE
+    if (status === 'authenticated' && user?.role === 'ADMIN' && !hasFetchedRef.current) {
+      // ✅ Marca como "já buscado" IMEDIATAMENTE para bloquear re-renders
+      hasFetchedRef.current = true;
       setIsFetching(true);
       
+      // ✅ Promise.all para buscar dados em paralelo (2 requisições simultâneas)
       Promise.all([fetchStats(), fetchRecentUsers()]).finally(() => {
         setIsFetching(false);
       });
     }
-  }, [status, initialLoadDone, fetchStats, fetchRecentUsers]);
+  }, [status, user?.role, fetchStats, fetchRecentUsers]);
 
   // Verificar se está carregando ou não autenticado
   if (status === 'loading') {
@@ -357,6 +362,7 @@ export default function AdminDashboardPage() {
               onClick={() => {
                 if (!isFetching) {
                   setIsFetching(true);
+                  // ✅ Busca manual não reseta o ref (apenas o primeiro load automático)
                   Promise.all([fetchStats(), fetchRecentUsers()]).finally(() => setIsFetching(false));
                 }
               }}

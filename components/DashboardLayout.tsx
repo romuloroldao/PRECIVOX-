@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuthenticatedUser, logout } from '@/lib/auth-client';
+import { useSession } from 'next-auth/react';
+import { logout } from '@/lib/auth-client';
 import { getRoleLabel } from '@/lib/redirect';
 
 interface DashboardLayoutProps {
@@ -12,21 +13,20 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, role }: DashboardLayoutProps) {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, status } = useSession();
+  const hasCheckedAuth = useRef(false);
+  
+  // ✅ Usar a sessão do NextAuth em vez de fazer requisição separada
+  const user = session?.user;
+  const isLoading = status === 'loading';
 
+  // ✅ Apenas redireciona se não autenticado, sem fazer requisição extra
   useEffect(() => {
-    const loadUser = async () => {
-      const userData = await getAuthenticatedUser();
-      if (!userData) {
-        router.push('/login');
-        return;
-      }
-      setUser(userData);
-      setIsLoading(false);
-    };
-    loadUser();
-  }, [router]);
+    if (!hasCheckedAuth.current && status === 'unauthenticated') {
+      hasCheckedAuth.current = true;
+      router.push('/login');
+    }
+  }, [status, router]);
 
   const handleLogout = async () => {
     await logout();
