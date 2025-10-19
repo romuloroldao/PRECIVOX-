@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useSession } from 'next-auth/react';
 
@@ -29,13 +29,11 @@ export default function AdminDashboardPage() {
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const { data: session, status } = useSession();
   const user = session?.user;
-  
-  // Ref para prevenir requisições duplicadas
-  const hasFetchedRef = useRef(false);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
@@ -61,9 +59,9 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchRecentUsers = async () => {
+  const fetchRecentUsers = useCallback(async () => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
@@ -87,24 +85,20 @@ export default function AdminDashboardPage() {
         console.error('Erro ao buscar usuários recentes:', error);
       }
     }
-  };
+  }, []);
 
   // UseEffect corrigido para evitar loop infinito
   useEffect(() => {
-    // Só executar quando:
-    // 1. Status é 'authenticated'
-    // 2. Usuário é ADMIN
-    // 3. Ainda não foi buscado (previne duplicatas)
-    // 4. Não está atualmente buscando
-    if (status === 'authenticated' && user?.role === 'ADMIN' && !hasFetchedRef.current && !isFetching) {
-      hasFetchedRef.current = true; // Marca como já buscado
+    // Só executar UMA ÚNICA VEZ quando autenticado como ADMIN
+    if (status === 'authenticated' && !initialLoadDone && user?.role === 'ADMIN') {
+      setInitialLoadDone(true); // Marca como carregado IMEDIATAMENTE
       setIsFetching(true);
       
       Promise.all([fetchStats(), fetchRecentUsers()]).finally(() => {
         setIsFetching(false);
       });
     }
-  }, [status]); // Apenas 'status' como dependência
+  }, [status, initialLoadDone, fetchStats, fetchRecentUsers]);
 
   // Verificar se está carregando ou não autenticado
   if (status === 'loading') {
