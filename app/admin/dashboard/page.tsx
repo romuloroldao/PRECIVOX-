@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useSession } from 'next-auth/react';
 
@@ -31,6 +31,80 @@ export default function AdminDashboardPage() {
   const [isFetching, setIsFetching] = useState(false);
   const { data: session, status } = useSession();
   const user = session?.user;
+  
+  // Ref para prevenir requisições duplicadas
+  const hasFetchedRef = useRef(false);
+
+  const fetchStats = async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch('/api/admin/stats', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      } else {
+        console.error('Erro ao buscar estatísticas:', response.status);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Timeout ao buscar estatísticas');
+      } else {
+        console.error('Erro ao buscar estatísticas:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRecentUsers = async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch('/api/admin/recent-users', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRecentUsers(data);
+      } else {
+        console.error('Erro ao buscar usuários recentes:', response.status);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Timeout ao buscar usuários recentes');
+      } else {
+        console.error('Erro ao buscar usuários recentes:', error);
+      }
+    }
+  };
+
+  // UseEffect corrigido para evitar loop infinito
+  useEffect(() => {
+    // Só executar quando:
+    // 1. Status é 'authenticated'
+    // 2. Usuário é ADMIN
+    // 3. Ainda não foi buscado (previne duplicatas)
+    // 4. Não está atualmente buscando
+    if (status === 'authenticated' && user?.role === 'ADMIN' && !hasFetchedRef.current && !isFetching) {
+      hasFetchedRef.current = true; // Marca como já buscado
+      setIsFetching(true);
+      
+      Promise.all([fetchStats(), fetchRecentUsers()]).finally(() => {
+        setIsFetching(false);
+      });
+    }
+  }, [status]); // Apenas 'status' como dependência
 
   // Verificar se está carregando ou não autenticado
   if (status === 'loading') {
@@ -56,42 +130,6 @@ export default function AdminDashboardPage() {
       </DashboardLayout>
     );
   }
-
-  useEffect(() => {
-    if (session && user && user.role === 'ADMIN' && !isFetching) {
-      setIsFetching(true);
-      Promise.all([fetchStats(), fetchRecentUsers()]).finally(() => {
-        setIsFetching(false);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, session?.user?.role]);
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/admin/stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar estatísticas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRecentUsers = async () => {
-    try {
-      const response = await fetch('/api/admin/recent-users');
-      if (response.ok) {
-        const data = await response.json();
-        setRecentUsers(data);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar usuários recentes:', error);
-    }
-  };
 
   return (
     <DashboardLayout role="ADMIN">
@@ -325,7 +363,7 @@ export default function AdminDashboardPage() {
               onClick={() => {
                 if (!isFetching) {
                   setIsFetching(true);
-                  fetchRecentUsers().finally(() => setIsFetching(false));
+                  Promise.all([fetchStats(), fetchRecentUsers()]).finally(() => setIsFetching(false));
                 }
               }}
               disabled={isFetching}
