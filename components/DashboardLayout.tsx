@@ -60,13 +60,13 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
             {/* User Menu */}
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.nome}</p>
+                <p className="text-sm font-medium text-gray-900">{(user as any)?.nome || user?.name}</p>
                 <p className="text-xs text-gray-500">{user?.email}</p>
               </div>
-              {user?.imagem && (
+              {((user as any)?.imagem || user?.image) && (
                 <img
-                  src={user.imagem}
-                  alt={user.nome}
+                  src={(user as any)?.imagem || user?.image || ''}
+                  alt={(user as any)?.nome || user?.name || 'User'}
                   className="w-10 h-10 rounded-full"
                 />
               )}

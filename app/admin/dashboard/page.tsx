@@ -221,9 +221,9 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Management Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* User Management */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Gerenciar Usuários</h2>
               <button 
@@ -287,6 +287,80 @@ export default function AdminDashboardPage() {
                   <div>
                     <span className="font-medium text-gray-900 block">Analytics</span>
                     <span className="text-sm text-gray-500">Relatórios de uso</span>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Mercados Management */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Gerenciar Mercados</h2>
+              <button 
+                onClick={() => window.location.href = '/admin/mercados'}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                + Novo Mercado
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button 
+                onClick={() => window.location.href = '/admin/mercados'}
+                className="text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-gray-900 block">Ver todos os mercados</span>
+                    <span className="text-sm text-gray-500">Lista completa de mercados</span>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => window.location.href = '/admin/mercados'}
+                className="text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-gray-900 block">Upload de Banco de Dados</span>
+                    <span className="text-sm text-gray-500">Importar dados CSV/XLSX</span>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => window.location.href = '/admin/mercados'}
+                className="text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-gray-900 block">Gerenciar Unidades</span>
+                    <span className="text-sm text-gray-500">Unidades de mercados</span>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => window.location.href = '/admin/mercados'}
+                className="text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-gray-900 block">Produtos</span>
+                    <span className="text-sm text-gray-500">Gerenciar produtos</span>
                   </div>
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
