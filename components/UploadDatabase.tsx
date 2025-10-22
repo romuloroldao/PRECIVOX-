@@ -54,7 +54,7 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
 
     try {
       const formData = new FormData();
-      formData.append('arquivo', selectedFile);
+      formData.append('file', selectedFile);
       formData.append('unidadeId', unidadeId);
 
       // Simula progresso
@@ -69,7 +69,7 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
       }, 500);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/mercados/${mercadoId}/upload`, {
+      const response = await fetch(`/api/products/upload-smart/${mercadoId}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -128,7 +128,7 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
         >
           <option value="">Selecione uma unidade</option>
-          {unidades.map((unidade) => (
+          {unidades && Array.isArray(unidades) && unidades.map((unidade) => (
             <option key={unidade.id} value={unidade.id}>
               {unidade.nome}
             </option>

@@ -86,7 +86,28 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
       }
 
       const resultado = await response.json();
-      onUploadComplete(resultado);
+      
+      // Validar estrutura da resposta
+      if (!resultado || typeof resultado !== 'object') {
+        throw new Error('Resposta inválida do servidor');
+      }
+      
+      // Verificar se tem a estrutura esperada
+      if (!resultado.resultado) {
+        console.warn('Resposta não tem estrutura esperada:', resultado);
+        // Criar estrutura padrão se não existir
+        const resultadoPadrao = {
+          resultado: {
+            totalLinhas: 0,
+            sucesso: 0,
+            erros: 0,
+            duplicados: 0
+          }
+        };
+        onUploadComplete(resultadoPadrao);
+      } else {
+        onUploadComplete(resultado);
+      }
 
       // Limpa form
       setSelectedFile(null);

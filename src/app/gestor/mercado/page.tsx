@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import UnidadeForm from '@/components/UnidadeForm';
 import UploadDatabase from '@/components/UploadDatabase';
+import Header from '@/components/Header';
 
 export default function GestorMercadoPage() {
   const [mercado, setMercado] = useState<any>(null);
@@ -195,8 +196,17 @@ export default function GestorMercadoPage() {
   };
 
   const handleUploadComplete = async (resultado: any) => {
+    // Verificar se resultado existe e tem a estrutura esperada
+    if (!resultado || !resultado.resultado) {
+      console.error('Resultado do upload inválido:', resultado);
+      alert('Erro: Resultado do upload inválido');
+      return;
+    }
+
+    const { totalLinhas, sucesso, erros, duplicados } = resultado.resultado;
+    
     alert(
-      `Upload concluído!\n\nTotal: ${resultado.resultado.totalLinhas}\nSucesso: ${resultado.resultado.sucesso}\nErros: ${resultado.resultado.erros}\nDuplicados: ${resultado.resultado.duplicados}`
+      `Upload concluído!\n\nTotal: ${totalLinhas || 0}\nSucesso: ${sucesso || 0}\nErros: ${erros || 0}\nDuplicados: ${duplicados || 0}`
     );
     await loadImportacoes(mercado.id);
   };
@@ -237,8 +247,9 @@ export default function GestorMercadoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <Header title="PRECIVOX - Meu Mercado" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Cabeçalho */}
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow p-6">

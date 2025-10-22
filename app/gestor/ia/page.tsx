@@ -18,25 +18,22 @@ export default function PainelIAGestor() {
       setLoading(true);
       
       // Buscar mercado do gestor
-      const token = localStorage.getItem('token');
-      const mercadosResponse = await fetch('/api/markets', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const mercadosResponse = await fetch('/api/markets');
 
       if (mercadosResponse.ok) {
-        const mercados = await mercadosResponse.json();
-        if (mercados.length > 0) {
-          const meuMercado = mercados[0];
+        const result = await mercadosResponse.json();
+        if (result.success && result.data && result.data.length > 0) {
+          const meuMercado = result.data[0];
           setMercadoId(meuMercado.id);
           
           // Buscar dashboard de IA
-          const dashboardResponse = await fetch(`/api/ai/painel/dashboard/${meuMercado.id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const dashboardResponse = await fetch(`/api/ai/painel/dashboard/${meuMercado.id}`);
 
           if (dashboardResponse.ok) {
             const data = await dashboardResponse.json();
-            setDashboard(data.data);
+            if (data.success) {
+              setDashboard(data.data);
+            }
           }
         }
       }
@@ -49,10 +46,8 @@ export default function PainelIAGestor() {
 
   const handleMarcarAlertaLido = async (alertaId: string) => {
     try {
-      const token = localStorage.getItem('token');
       await fetch(`/api/ai/painel/alertas/${alertaId}/marcar-lido`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` }
+        method: 'PUT'
       });
       loadDashboard();
     } catch (error) {

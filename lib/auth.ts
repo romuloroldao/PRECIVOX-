@@ -1,5 +1,5 @@
 import { NextAuthOptions } from 'next-auth';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
+import { CustomPrismaAdapter } from './prisma-adapter-custom';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import FacebookProvider from 'next-auth/providers/facebook';
@@ -10,7 +10,7 @@ import bcrypt from 'bcryptjs';
 import { getDashboardUrl } from './redirect';
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: CustomPrismaAdapter(prisma),
   providers: [
     // Credentials Provider (Email + Senha)
     CredentialsProvider({

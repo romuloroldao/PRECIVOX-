@@ -12,7 +12,7 @@ import marketRoutes from './routes/markets.js';
 import productRoutes from './routes/products.js';
 import aiRoutes from './routes/ai.js';
 import analyticsRoutes from './routes/analytics.js';
-import loginSimplesRoutes from './routes/login-simples.js';
+// import loginSimplesRoutes from './routes/login-simples.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -237,7 +237,7 @@ app.get('/api/admin/recent-users', async (req, res) => {
 });
 
 // Rotas principais
-app.use('/api', loginSimplesRoutes); // ✅ LOGIN SIMPLIFICADO (compatível com schema português)
+// app.use('/api', loginSimplesRoutes); // ✅ LOGIN SIMPLIFICADO (compatível com schema português)
 app.use('/api/users', userRoutes);
 app.use('/api/auth', userRoutes); // ✅ ALIAS PARA COMPATIBILIDADE COM FRONTEND
 app.use('/api/markets', marketRoutes);

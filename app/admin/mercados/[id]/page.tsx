@@ -5,10 +5,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import UnidadeForm from '@/components/UnidadeForm';
 import UploadDatabase from '@/components/UploadDatabase';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import { useToast } from '@/components/ToastContainer';
 
 export default function MercadoDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const mercadoId = params.id as string;
 
   const [mercado, setMercado] = useState<any>(null);
@@ -28,15 +31,19 @@ export default function MercadoDetailsPage() {
   const loadMercado = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/mercados/${mercadoId}`, {
+      const response = await fetch(`/api/markets/${mercadoId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
-        setMercado(await response.json());
+        const result = await response.json();
+        setMercado(result.data || result);
+      } else {
+        toast.error('Erro ao carregar mercado');
       }
     } catch (error) {
       console.error('Erro ao carregar mercado:', error);
+      toast.error('Erro ao carregar mercado');
     } finally {
       setLoading(false);
     }
@@ -45,12 +52,13 @@ export default function MercadoDetailsPage() {
   const loadUnidades = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/mercados/${mercadoId}/unidades`, {
+      const response = await fetch(`/api/markets/${mercadoId}/unidades`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
-        setUnidades(await response.json());
+        const result = await response.json();
+        setUnidades(result.data || []);
       }
     } catch (error) {
       console.error('Erro ao carregar unidades:', error);
@@ -60,12 +68,13 @@ export default function MercadoDetailsPage() {
   const loadImportacoes = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/mercados/${mercadoId}/importacoes`, {
+      const response = await fetch(`/api/markets/${mercadoId}/importacoes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
-        setImportacoes(await response.json());
+        const result = await response.json();
+        setImportacoes(result.data || []);
       }
     } catch (error) {
       console.error('Erro ao carregar importações:', error);
@@ -75,7 +84,7 @@ export default function MercadoDetailsPage() {
   const handleCreateUnidade = async (data: any) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/mercados/${mercadoId}/unidades`, {
+      const response = await fetch(`/api/markets/${mercadoId}/unidades`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,14 +96,14 @@ export default function MercadoDetailsPage() {
       if (response.ok) {
         await loadUnidades();
         setShowUnidadeForm(false);
-        alert('Unidade criada com sucesso!');
+        toast.success('Unidade criada com sucesso!');
       } else {
         const error = await response.json();
-        alert(error.message || 'Erro ao criar unidade');
+        toast.error(error.message || 'Erro ao criar unidade');
       }
     } catch (error) {
       console.error('Erro ao criar unidade:', error);
-      alert('Erro ao criar unidade');
+      toast.error('Erro ao criar unidade');
     }
   };
 
@@ -114,14 +123,14 @@ export default function MercadoDetailsPage() {
         await loadUnidades();
         setEditingUnidade(null);
         setShowUnidadeForm(false);
-        alert('Unidade atualizada com sucesso!');
+        toast.success('Unidade atualizada com sucesso!');
       } else {
         const error = await response.json();
-        alert(error.message || 'Erro ao atualizar unidade');
+        toast.error(error.message || 'Erro ao atualizar unidade');
       }
     } catch (error) {
       console.error('Erro ao atualizar unidade:', error);
-      alert('Erro ao atualizar unidade');
+      toast.error('Erro ao atualizar unidade');
     }
   };
 
@@ -137,20 +146,20 @@ export default function MercadoDetailsPage() {
 
       if (response.ok) {
         await loadUnidades();
-        alert('Unidade excluída com sucesso!');
+        toast.success('Unidade excluída com sucesso!');
       } else {
         const error = await response.json();
-        alert(error.message || 'Erro ao excluir unidade');
+        toast.error(error.message || 'Erro ao excluir unidade');
       }
     } catch (error) {
       console.error('Erro ao excluir unidade:', error);
-      alert('Erro ao excluir unidade');
+      toast.error('Erro ao excluir unidade');
     }
   };
 
   const handleUploadComplete = async (resultado: any) => {
-    alert(
-      `Upload concluído!\n\nTotal: ${resultado.resultado.totalLinhas}\nSucesso: ${resultado.resultado.sucesso}\nErros: ${resultado.resultado.erros}\nDuplicados: ${resultado.resultado.duplicados}`
+    toast.success(
+      `Upload concluído! Total: ${resultado.resultado.totalLinhas}, Sucesso: ${resultado.resultado.sucesso}, Erros: ${resultado.resultado.erros}`
     );
     await loadImportacoes();
   };
@@ -180,10 +189,13 @@ export default function MercadoDetailsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
+          <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <p className="text-gray-600 mb-4">Mercado não encontrado</p>
           <button
             onClick={() => router.push('/admin/mercados')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Voltar para Mercados
           </button>
@@ -193,50 +205,57 @@ export default function MercadoDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cabeçalho */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push('/admin/mercados')}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Voltar para Mercados
-          </button>
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        {/* Breadcrumbs */}
+        <Breadcrumbs
+          items={[
+            { label: 'Mercados', path: '/admin/mercados' },
+            { label: mercado.nome },
+          ]}
+        />
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{mercado.nome}</h1>
-                <p className="text-gray-600">CNPJ: {mercado.cnpj}</p>
-              </div>
-              {!mercado.ativo && (
-                <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-full">
-                  Inativo
-                </span>
-              )}
+        {/* Botão Voltar */}
+        <button
+          onClick={() => router.push('/admin/mercados')}
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Voltar para Mercados
+        </button>
+
+        {/* Cabeçalho do Mercado */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{mercado.nome}</h1>
+              <p className="text-gray-600">CNPJ: {mercado.cnpj}</p>
             </div>
+            {!mercado.ativo && (
+              <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-full">
+                Inativo
+              </span>
+            )}
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-              <div>
-                <p className="text-sm text-gray-600">Plano</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {mercado.plano?.nome || 'Sem plano'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Gestor</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {mercado.gestor?.nome || 'Sem gestor'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Unidades</p>
-                <p className="text-lg font-semibold text-gray-900">{unidades.length}</p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <div>
+              <p className="text-sm text-gray-600">Plano</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {mercado.plano?.nome || 'Sem plano'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Gestor</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {mercado.gestor?.nome || 'Sem gestor'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Unidades</p>
+              <p className="text-lg font-semibold text-gray-900">{unidades.length}</p>
             </div>
           </div>
         </div>
@@ -244,23 +263,41 @@ export default function MercadoDetailsPage() {
         {/* Tabs */}
         <div className="mb-6">
           <div className="border-b border-gray-200">
-            <nav className="flex -mb-px space-x-8">
+            <nav className="flex -mb-px space-x-8 overflow-x-auto">
               {[
-                { key: 'info', label: 'Informações' },
-                { key: 'unidades', label: 'Unidades' },
-                { key: 'upload', label: 'Upload de Base' },
-                { key: 'historico', label: 'Histórico' },
+                { key: 'info', label: 'Informações', icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )},
+                { key: 'unidades', label: 'Unidades', icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                )},
+                { key: 'upload', label: 'Upload de Base', icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                )},
+                { key: 'historico', label: 'Histórico', icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )},
               ].map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap ${
                     activeTab === tab.key
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {tab.label}
+                  {tab.icon}
+                  <span>{tab.label}</span>
                 </button>
               ))}
             </nav>
@@ -272,32 +309,96 @@ export default function MercadoDetailsPage() {
           {/* Tab: Informações */}
           {activeTab === 'info' && (
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Informações do Mercado</h2>
-              <div className="space-y-4">
-                {mercado.descricao && (
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Informações do Mercado</h2>
+              
+              {/* Informações Básicas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-600">Descrição</p>
-                    <p className="text-gray-900">{mercado.descricao}</p>
+                    <p className="text-sm text-gray-600 font-medium">Nome</p>
+                    <p className="text-gray-900 text-lg">{mercado.nome || 'Não informado'}</p>
                   </div>
-                )}
-                {mercado.telefone && (
                   <div>
-                    <p className="text-sm text-gray-600">Telefone</p>
-                    <p className="text-gray-900">{mercado.telefone}</p>
+                    <p className="text-sm text-gray-600 font-medium">CNPJ</p>
+                    <p className="text-gray-900">{mercado.cnpj || 'Não informado'}</p>
                   </div>
-                )}
-                {mercado.emailContato && (
                   <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="text-gray-900">{mercado.emailContato}</p>
+                    <p className="text-sm text-gray-600 font-medium">Status</p>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      mercado.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {mercado.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
                   </div>
-                )}
-                {mercado.horarioFuncionamento && (
+                </div>
+                
+                <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-600">Horário de Funcionamento</p>
-                    <p className="text-gray-900">{mercado.horarioFuncionamento}</p>
+                    <p className="text-sm text-gray-600 font-medium">Data de Criação</p>
+                    <p className="text-gray-900">
+                      {mercado.dataCriacao ? new Date(mercado.dataCriacao).toLocaleDateString('pt-BR') : 'Não informado'}
+                    </p>
                   </div>
-                )}
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Última Atualização</p>
+                    <p className="text-gray-900">
+                      {mercado.dataAtualizacao ? new Date(mercado.dataAtualizacao).toLocaleDateString('pt-BR') : 'Não informado'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Total de Unidades</p>
+                    <p className="text-gray-900 text-lg font-semibold">{unidades.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informações de Contato */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Informações de Contato</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Telefone</p>
+                    <p className="text-gray-900">{mercado.telefone || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Email de Contato</p>
+                    <p className="text-gray-900">{mercado.emailContato || 'Não informado'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Descrição */}
+              {mercado.descricao && (
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Descrição</h3>
+                  <p className="text-gray-700 leading-relaxed">{mercado.descricao}</p>
+                </div>
+              )}
+
+              {/* Horário de Funcionamento */}
+              {mercado.horarioFuncionamento && (
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Horário de Funcionamento</h3>
+                  <p className="text-gray-700">{mercado.horarioFuncionamento}</p>
+                </div>
+              )}
+
+              {/* Ações */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => setActiveTab('unidades')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Gerenciar Unidades
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('upload')}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Upload de Base
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -319,20 +420,33 @@ export default function MercadoDetailsPage() {
                   <div className="mb-4">
                     <button
                       onClick={() => setShowUnidadeForm(true)}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                     >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
                       Nova Unidade
                     </button>
                   </div>
 
                   {unidades.length === 0 ? (
                     <div className="bg-white rounded-lg shadow p-12 text-center">
-                      <p className="text-gray-500">Nenhuma unidade cadastrada</p>
+                      <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
+                      <p className="text-gray-500 mb-2">Nenhuma unidade cadastrada</p>
+                      <p className="text-sm text-gray-400 mb-4">Clique em "Nova Unidade" para começar</p>
+                      <button
+                        onClick={() => setShowUnidadeForm(true)}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Criar Primeira Unidade
+                      </button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {unidades.map((unidade: any) => (
-                        <div key={unidade.id} className="bg-white rounded-lg shadow p-6">
+                      {unidades && Array.isArray(unidades) && unidades.map((unidade: any) => (
+                        <div key={unidade.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
                           <div className="flex justify-between items-start mb-4">
                             <h3 className="text-lg font-bold text-gray-900">{unidade.nome}</h3>
                             {!unidade.ativa && (
@@ -342,15 +456,16 @@ export default function MercadoDetailsPage() {
                             )}
                           </div>
                           <div className="space-y-2 text-sm text-gray-600 mb-4">
-                            {unidade.endereco && <p>{unidade.endereco}</p>}
+                            {unidade.endereco && <p>📍 {unidade.endereco}</p>}
                             {unidade.cidade && (
-                              <p>
-                                {unidade.cidade} - {unidade.estado}
-                              </p>
+                              <p>🌆 {unidade.cidade} - {unidade.estado}</p>
                             )}
-                            {unidade.telefone && <p>{unidade.telefone}</p>}
+                            {unidade.telefone && <p>📞 {unidade.telefone}</p>}
                           </div>
-                          <p className="text-sm text-gray-500 mb-4">
+                          <p className="text-sm text-gray-500 mb-4 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
                             {unidade._count?.estoques || 0} produtos em estoque
                           </p>
                           <div className="flex space-x-2">
@@ -359,13 +474,13 @@ export default function MercadoDetailsPage() {
                                 setEditingUnidade(unidade);
                                 setShowUnidadeForm(true);
                               }}
-                              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => handleDeleteUnidade(unidade.id)}
-                              className="flex-1 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
+                              className="flex-1 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
                             >
                               Excluir
                             </button>
@@ -396,7 +511,10 @@ export default function MercadoDetailsPage() {
               </div>
               {importacoes.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">
-                  Nenhuma importação realizada ainda
+                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p>Nenhuma importação realizada ainda</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -418,8 +536,8 @@ export default function MercadoDetailsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {importacoes.map((importacao: any) => (
-                        <tr key={importacao.id}>
+                      {importacoes && Array.isArray(importacoes) && importacoes.map((importacao: any) => (
+                        <tr key={importacao.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {importacao.nomeArquivo}
                           </td>
@@ -436,10 +554,10 @@ export default function MercadoDetailsPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="space-y-1">
-                              <div>✅ Sucesso: {importacao.linhasSucesso}</div>
-                              <div>❌ Erros: {importacao.linhasErro}</div>
-                              <div>🔄 Duplicados: {importacao.linhasDuplicadas}</div>
+                            <div className="flex items-center space-x-4">
+                              <span className="text-green-600">✅ {importacao.linhasSucesso}</span>
+                              <span className="text-red-600">❌ {importacao.linhasErro}</span>
+                              <span className="text-yellow-600">🔄 {importacao.linhasDuplicadas}</span>
                             </div>
                           </td>
                         </tr>
@@ -455,4 +573,3 @@ export default function MercadoDetailsPage() {
     </div>
   );
 }
-

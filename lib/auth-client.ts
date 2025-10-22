@@ -4,6 +4,9 @@
 import axios from 'axios';
 import { LoginInput, RegisterInput } from './validations';
 
+// Configurar timeout padrão para todas as requisições
+axios.defaults.timeout = 10000; // 10 segundos
+
 export interface AuthResponse {
   success: boolean;
   data?: {
@@ -111,6 +114,7 @@ export async function getAuthenticatedUser() {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      timeout: 8000, // 8 segundos específico para esta requisição
     });
     
     if (response.data.success) {
@@ -118,8 +122,17 @@ export async function getAuthenticatedUser() {
     }
     
     return null;
-  } catch (error) {
-    console.error('Erro ao buscar usuário:', error);
+  } catch (error: any) {
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      console.error('Timeout ao buscar usuário');
+    } else if (error.response?.status === 401) {
+      // Token inválido, fazer logout
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      document.cookie = 'token=; path=/; max-age=0';
+    } else {
+      console.error('Erro ao buscar usuário:', error);
+    }
     return null;
   }
 }

@@ -33,4 +33,67 @@ export async function GET(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { success: false, error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userRole = (session.user as any).role;
+
+    // Apenas ADMIN pode criar planos
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Apenas administradores podem criar planos' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { nome, descricao, valor, duracao, limiteUnidades, limiteUploadMb, limiteUsuarios } = body;
+
+    // Validações básicas
+    if (!nome || !valor || !duracao) {
+      return NextResponse.json(
+        { success: false, error: 'Nome, valor e duração são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
+    // Criar plano
+    const novoPlano = await prisma.planos_de_pagamento.create({
+      data: {
+        id: `plano-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        nome,
+        descricao: descricao || null,
+        valor: parseFloat(valor),
+        duracao: parseInt(duracao),
+        limiteUnidades: limiteUnidades ? parseInt(limiteUnidades) : 1,
+        limiteUploadMb: limiteUploadMb ? parseInt(limiteUploadMb) : 10,
+        limiteUsuarios: limiteUsuarios ? parseInt(limiteUsuarios) : 5,
+        ativo: true,
+        dataCriacao: new Date()
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: novoPlano,
+      message: 'Plano criado com sucesso'
+    }, { status: 201 });
+
+  } catch (error: any) {
+    console.error('Erro ao criar plano:', error);
+    return NextResponse.json(
+      { success: false, error: 'Erro ao criar plano', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
 

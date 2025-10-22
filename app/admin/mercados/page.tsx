@@ -2,10 +2,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import MercadoCard from '@/components/MercadoCard';
 import MercadoForm from '@/components/MercadoForm';
+import MarketList from '@/components/MarketList';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import { useToast } from '@/components/ToastContainer';
+
+type ViewMode = 'cards' | 'list';
 
 export default function MercadosPage() {
+  const router = useRouter();
+  const toast = useToast();
+  
   const [mercados, setMercados] = useState([]);
   const [planos, setPlanos] = useState([]);
   const [gestores, setGestores] = useState([]);
@@ -14,6 +23,45 @@ export default function MercadosPage() {
   const [editingMercado, setEditingMercado] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAtivo, setFilterAtivo] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
+
+  // Carregar preferência de visualização do localStorage
+  useEffect(() => {
+    const savedView = localStorage.getItem('mercados-view-mode');
+    if (savedView === 'cards' || savedView === 'list') {
+      setViewMode(savedView);
+    }
+  }, []);
+
+  // Salvar preferência de visualização
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('mercados-view-mode', mode);
+    toast.info(`Visualização alterada para ${mode === 'cards' ? 'cards' : 'lista'}`);
+  };
+
+  // Atalhos de teclado
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + N = Novo Mercado
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n' && !showForm) {
+        e.preventDefault();
+        setShowForm(true);
+        toast.info('Abrindo formulário de novo mercado');
+      }
+      
+      // ESC = Voltar/Cancelar
+      if (e.key === 'Escape' && showForm) {
+        e.preventDefault();
+        setShowForm(false);
+        setEditingMercado(null);
+        toast.info('Formulário cancelado');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [showForm, toast]);
 
   useEffect(() => {
     loadData();
@@ -22,7 +70,6 @@ export default function MercadosPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
 
       const [mercadosRes, planosRes, gestoresRes] = await Promise.all([
         fetch('/api/markets'),
@@ -44,6 +91,7 @@ export default function MercadosPage() {
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
     }
@@ -64,13 +112,13 @@ export default function MercadosPage() {
       if (response.ok && result.success) {
         await loadData();
         setShowForm(false);
-        alert(result.message || 'Mercado criado com sucesso!');
+        toast.success(result.message || 'Mercado criado com sucesso!');
       } else {
-        alert(result.error || 'Erro ao criar mercado');
+        toast.error(result.error || 'Erro ao criar mercado');
       }
     } catch (error) {
       console.error('Erro ao criar mercado:', error);
-      alert('Erro ao criar mercado');
+      toast.error('Erro ao criar mercado');
     }
   };
 
@@ -90,13 +138,13 @@ export default function MercadosPage() {
         await loadData();
         setEditingMercado(null);
         setShowForm(false);
-        alert(result.message || 'Mercado atualizado com sucesso!');
+        toast.success(result.message || 'Mercado atualizado com sucesso!');
       } else {
-        alert(result.error || 'Erro ao atualizar mercado');
+        toast.error(result.error || 'Erro ao atualizar mercado');
       }
     } catch (error) {
       console.error('Erro ao atualizar mercado:', error);
-      alert('Erro ao atualizar mercado');
+      toast.error('Erro ao atualizar mercado');
     }
   };
 
@@ -112,13 +160,13 @@ export default function MercadosPage() {
 
       if (response.ok && result.success) {
         await loadData();
-        alert(result.message || 'Mercado excluído com sucesso!');
+        toast.success(result.message || 'Mercado excluído com sucesso!');
       } else {
-        alert(result.error || 'Erro ao excluir mercado');
+        toast.error(result.error || 'Erro ao excluir mercado');
       }
     } catch (error) {
       console.error('Erro ao excluir mercado:', error);
-      alert('Erro ao excluir mercado');
+      toast.error('Erro ao excluir mercado');
     }
   };
 
@@ -147,12 +195,19 @@ export default function MercadosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        {/* Breadcrumbs */}
+        <Breadcrumbs />
+
         {/* Cabeçalho */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Mercados</h1>
           <p className="text-gray-600">Gerenciamento completo de mercados e suas unidades</p>
+          <div className="mt-2 text-sm text-gray-500">
+            💡 <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl+N</kbd> para novo mercado • 
+            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">ESC</kbd> para cancelar
+          </div>
         </div>
 
         {/* Formulário de Criação/Edição */}
@@ -212,10 +267,42 @@ export default function MercadosPage() {
               <option value="inativo">Inativos</option>
             </select>
 
-            {/* Botão Novo */}
+            {/* Botões de Visualização */}
+            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+              <button
+                onClick={() => handleViewModeChange('cards')}
+                className={`px-4 py-2 flex items-center space-x-2 transition-colors ${
+                  viewMode === 'cards'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Visualização em Cards"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                <span className="hidden sm:inline">Cards</span>
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`px-4 py-2 flex items-center space-x-2 transition-colors border-l ${
+                  viewMode === 'list'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-300'
+                }`}
+                title="Visualização em Lista"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+            </div>
+
+            {/* Botão Novo (Desktop) */}
             <button
               onClick={() => setShowForm(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+              className="hidden sm:flex px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors items-center"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -301,30 +388,69 @@ export default function MercadosPage() {
                   />
                 </svg>
                 <p className="text-gray-500 mb-2">Nenhum mercado encontrado</p>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-400 mb-4">
                   {searchTerm ? 'Tente ajustar sua busca' : 'Clique em "Novo Mercado" para começar'}
                 </p>
+                {!searchTerm && (
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Criar Primeiro Mercado
+                  </button>
+                )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMercados.map((mercado: any) => (
-                  <MercadoCard
-                    key={mercado.id}
-                    mercado={mercado}
+              <>
+                {viewMode === 'cards' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredMercados.map((mercado: any) => (
+                      <MercadoCard
+                        key={mercado.id}
+                        mercado={mercado}
+                        isAdmin={true}
+                        onEdit={() => {
+                          setEditingMercado(mercado);
+                          setShowForm(true);
+                        }}
+                        onDelete={() => handleDeleteMercado(mercado.id)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <MarketList
+                    mercados={filteredMercados}
                     isAdmin={true}
-                    onEdit={() => {
+                    onEdit={(mercado) => {
                       setEditingMercado(mercado);
                       setShowForm(true);
                     }}
-                    onDelete={() => handleDeleteMercado(mercado.id)}
+                    onDelete={handleDeleteMercado}
                   />
-                ))}
-              </div>
+                )}
+              </>
             )}
           </>
         )}
       </div>
+
+      {/* FAB Mobile */}
+      {!showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="sm:hidden fixed bottom-6 right-6 z-30 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          aria-label="Novo Mercado"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
-

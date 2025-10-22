@@ -16,27 +16,24 @@ export default function ModuloComprasPage() {
   const loadDados = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
       // Buscar mercado
-      const mercadosResponse = await fetch('/api/markets', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const mercadosResponse = await fetch('/api/markets');
 
       if (mercadosResponse.ok) {
-        const mercados = await mercadosResponse.json();
-        if (mercados.length > 0) {
-          const meuMercado = mercados[0];
+        const result = await mercadosResponse.json();
+        if (result.success && result.data && result.data.length > 0) {
+          const meuMercado = result.data[0];
           setMercadoId(meuMercado.id);
           
           // Buscar dados do módulo de compras
-          const comprasResponse = await fetch(`/api/ai/painel/compras/${meuMercado.id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const comprasResponse = await fetch(`/api/ai/painel/compras/${meuMercado.id}`);
 
           if (comprasResponse.ok) {
             const data = await comprasResponse.json();
-            setDados(data.data);
+            if (data.success) {
+              setDados(data.data);
+            }
           }
         }
       }

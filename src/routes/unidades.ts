@@ -1,75 +1,74 @@
-// Rotas para Gestão de Unidades
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, authorizeRole, AuthRequest } from '../middleware/auth';
-import { canAccessUnidade, checkPlanLimits } from '../middleware/permissions';
+import { authenticateToken, authorizeRole } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 /**
- * GET /mercados/:id/unidades
  * Lista todas as unidades de um mercado
  */
-router.get('/mercados/:id/unidades', authenticate, async (req: AuthRequest, res) => {
+router.get('/:mercadoId', authenticateToken, async (req, res) => {
   try {
-    const { id: mercadoId } = req.params;
-    const { role, id: userId } = req.user!;
-    const { ativa } = req.query;
+    const { mercadoId } = req.params;
+    const { role, userId } = (req as any).user;
 
-    let where: any = { mercadoId };
+    // Verifica se o mercado existe
+    const mercado = await prisma.mercado.findFirst({
+      where: { id: mercadoId }
+    });
 
-    // Gestor só vê unidades do seu mercado
+    if (!mercado) {
+      return res.status(404).json({
+        error: 'Mercado não encontrado',
+        message: 'O mercado especificado não existe'
+      });
+    }
+
+    // Gestor só pode ver unidades do seu mercado
     if (role === 'GESTOR') {
       const mercado = await prisma.mercado.findFirst({
         where: {
           id: mercadoId,
-          gestorId: userId,
-        },
+          gestorId: userId
+        }
       });
 
       if (!mercado) {
         return res.status(403).json({
           error: 'Acesso negado',
-          message: 'Você não tem permissão para acessar as unidades deste mercado',
+          message: 'Você não tem permissão para acessar este mercado'
         });
       }
     }
 
-    if (ativa !== undefined) {
-      where.ativa = ativa === 'true';
-    }
-
     const unidades = await prisma.unidade.findMany({
-      where,
+      where: { mercadoId },
       include: {
         _count: {
-          select: {
-            estoques: true,
-          },
-        },
+          select: { estoques: true }
+        }
       },
-      orderBy: { dataCriacao: 'desc' },
+      orderBy: { dataCriacao: 'desc' }
     });
 
-    return res.json(unidades);
+    res.json(unidades);
   } catch (error) {
     console.error('Erro ao listar unidades:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Erro ao listar unidades',
-      message: 'Ocorreu um erro ao buscar as unidades',
+      message: 'Ocorreu um erro ao buscar as unidades'
     });
   }
 });
 
 /**
- * GET /unidades/:id
- * Obtém detalhes de uma unidade específica
+ * Busca uma unidade específica
  */
-router.get('/unidades/:id', authenticate, async (req: AuthRequest, res) => {
+router.get('/unidade/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { role, id: userId } = req.user!;
+    const { role, userId } = (req as any).user;
 
     const unidade = await prisma.unidade.findUnique({
       where: { id },
@@ -80,227 +79,284 @@ router.get('/unidades/:id', authenticate, async (req: AuthRequest, res) => {
               select: {
                 id: true,
                 nome: true,
-                email: true,
-              },
-            },
-          },
+                email: true
+              }
+            }
+          }
         },
         _count: {
-          select: {
-            estoques: true,
-          },
-        },
-      },
+          select: { estoques: true }
+        }
+      }
     });
 
     if (!unidade) {
       return res.status(404).json({
         error: 'Unidade não encontrada',
+        message: 'A unidade especificada não existe'
       });
     }
 
-    // Verifica permissões
+    // Gestor só pode ver unidades do seu mercado
     if (role === 'GESTOR' && unidade.mercado.gestorId !== userId) {
       return res.status(403).json({
         error: 'Acesso negado',
-        message: 'Você não tem permissão para acessar esta unidade',
+        message: 'Você não tem permissão para acessar esta unidade'
       });
     }
 
-    return res.json(unidade);
+    res.json(unidade);
   } catch (error) {
     console.error('Erro ao buscar unidade:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Erro ao buscar unidade',
-      message: 'Ocorreu um erro ao buscar a unidade',
+      message: 'Ocorreu um erro ao buscar a unidade'
     });
   }
 });
 
 /**
- * POST /mercados/:id/unidades
  * Cria uma nova unidade para um mercado
  */
-router.post(
-  '/mercados/:id/unidades',
-  authenticate,
-  authorizeRole('ADMIN', 'GESTOR'),
-  checkPlanLimits,
-  async (req: AuthRequest, res) => {
-    try {
-      const { id: mercadoId } = req.params;
-      const { role, id: userId } = req.user!;
-      const {
+router.post('/:mercadoId', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
+  try {
+    const { mercadoId } = req.params;
+    const { role, userId } = (req as any).user;
+    const {
+      nome,
+      endereco,
+      cidade,
+      estado,
+      cep,
+      telefone,
+      bairro
+    } = req.body;
+
+    // Validações
+    if (!nome || !endereco || !cidade || !estado) {
+      return res.status(400).json({
+        error: 'Dados obrigatórios',
+        message: 'Nome, endereço, cidade e estado são obrigatórios'
+      });
+    }
+
+    // Verifica se o mercado existe
+    const mercado = await prisma.mercado.findUnique({
+      where: { id: mercadoId },
+      include: { plano: true }
+    });
+
+    if (!mercado) {
+      return res.status(404).json({
+        error: 'Mercado não encontrado',
+        message: 'O mercado especificado não existe'
+      });
+    }
+
+    // Verifica limite de unidades do plano
+    if (mercado.plano) {
+      const unidadesExistentes = await prisma.unidade.count({
+        where: { mercadoId }
+      });
+
+      if (unidadesExistentes >= mercado.plano.limiteUnidades) {
+        return res.status(400).json({
+          error: 'Limite de unidades atingido',
+          message: `O plano permite apenas ${mercado.plano.limiteUnidades} unidades`
+        });
+      }
+    }
+
+    // Gestor só pode criar unidades no seu mercado
+    if (role === 'GESTOR') {
+      const mercado = await prisma.mercado.findFirst({
+        where: {
+          id: mercadoId,
+          gestorId: userId
+        }
+      });
+
+      if (!mercado) {
+        return res.status(403).json({
+          error: 'Acesso negado',
+          message: 'Você não tem permissão para criar unidades neste mercado'
+        });
+      }
+    }
+
+    const unidade = await prisma.unidade.create({
+      data: {
         nome,
         endereco,
-        bairro,
         cidade,
         estado,
         cep,
         telefone,
-        horarioFuncionamento,
-        latitude,
-        longitude,
-      } = req.body;
-
-      // Valida campos obrigatórios
-      if (!nome) {
-        return res.status(400).json({
-          error: 'Nome é obrigatório',
-        });
-      }
-
-      // Gestor só pode criar unidades no seu mercado
-      if (role === 'GESTOR') {
-        const mercado = await prisma.mercado.findFirst({
-          where: {
-            id: mercadoId,
-            gestorId: userId,
-          },
-        });
-
-        if (!mercado) {
-          return res.status(403).json({
-            error: 'Acesso negado',
-            message: 'Você não tem permissão para criar unidades neste mercado',
-          });
+        bairro,
+        mercadoId
+      },
+      include: {
+        mercado: {
+          include: {
+            gestor: {
+              select: {
+                id: true,
+                nome: true,
+                email: true
+              }
+            }
+          }
         }
       }
+    });
 
-      const unidade = await prisma.unidade.create({
-        data: {
-          mercadoId,
-          nome,
-          endereco,
-          bairro,
-          cidade,
-          estado,
-          cep,
-          telefone,
-          horarioFuncionamento,
-          latitude,
-          longitude,
-        },
-        include: {
-          mercado: true,
-        },
-      });
-
-      return res.status(201).json(unidade);
-    } catch (error) {
-      console.error('Erro ao criar unidade:', error);
-      return res.status(500).json({
-        error: 'Erro ao criar unidade',
-        message: 'Ocorreu um erro ao criar a unidade',
-      });
-    }
+    res.status(201).json(unidade);
+  } catch (error) {
+    console.error('Erro ao criar unidade:', error);
+    res.status(500).json({
+      error: 'Erro ao criar unidade',
+      message: 'Ocorreu um erro ao criar a unidade'
+    });
   }
-);
+});
 
 /**
- * PUT /unidades/:id
  * Atualiza uma unidade
  */
-router.put(
-  '/unidades/:id',
-  authenticate,
-  authorizeRole('ADMIN', 'GESTOR'),
-  canAccessUnidade,
-  async (req: AuthRequest, res) => {
-    try {
-      const { id } = req.params;
-      const {
+router.put('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, userId } = (req as any).user;
+    const {
+      nome,
+      endereco,
+      cidade,
+      estado,
+      cep,
+      telefone,
+      bairro,
+      ativa
+    } = req.body;
+
+    // Verifica se a unidade existe
+    const unidadeExistente = await prisma.unidade.findUnique({
+      where: { id },
+      include: { mercado: true }
+    });
+
+    if (!unidadeExistente) {
+      return res.status(404).json({
+        error: 'Unidade não encontrada',
+        message: 'A unidade especificada não existe'
+      });
+    }
+
+    // Gestor só pode editar unidades do seu mercado
+    if (role === 'GESTOR' && unidadeExistente.mercado.gestorId !== userId) {
+      return res.status(403).json({
+        error: 'Acesso negado',
+        message: 'Você não tem permissão para editar esta unidade'
+      });
+    }
+
+    const unidade = await prisma.unidade.update({
+      where: { id },
+      data: {
         nome,
         endereco,
-        bairro,
         cidade,
         estado,
         cep,
         telefone,
-        horarioFuncionamento,
-        latitude,
-        longitude,
-        ativa,
-      } = req.body;
+        bairro,
+        ativa
+      },
+      include: {
+        mercado: {
+          include: {
+            gestor: {
+              select: {
+                id: true,
+                nome: true,
+                email: true
+              }
+            }
+          }
+        }
+      }
+    });
 
-      const unidade = await prisma.unidade.update({
-        where: { id },
-        data: {
-          nome,
-          endereco,
-          bairro,
-          cidade,
-          estado,
-          cep,
-          telefone,
-          horarioFuncionamento,
-          latitude,
-          longitude,
-          ativa,
-        },
-        include: {
-          mercado: true,
-        },
-      });
-
-      return res.json(unidade);
-    } catch (error) {
-      console.error('Erro ao atualizar unidade:', error);
-      return res.status(500).json({
-        error: 'Erro ao atualizar unidade',
-        message: 'Ocorreu um erro ao atualizar a unidade',
-      });
-    }
+    res.json(unidade);
+  } catch (error) {
+    console.error('Erro ao atualizar unidade:', error);
+    res.status(500).json({
+      error: 'Erro ao atualizar unidade',
+      message: 'Ocorreu um erro ao atualizar a unidade'
+    });
   }
-);
+});
 
 /**
- * DELETE /unidades/:id
- * Exclui uma unidade
+ * Remove uma unidade
  */
-router.delete(
-  '/unidades/:id',
-  authenticate,
-  authorizeRole('ADMIN', 'GESTOR'),
-  canAccessUnidade,
-  async (req: AuthRequest, res) => {
-    try {
-      const { id } = req.params;
+router.delete('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, userId } = (req as any).user;
 
-      await prisma.unidade.delete({
-        where: { id },
-      });
+    // Verifica se a unidade existe
+    const unidade = await prisma.unidade.findUnique({
+      where: { id },
+      include: { mercado: true }
+    });
 
-      return res.status(204).send();
-    } catch (error) {
-      console.error('Erro ao excluir unidade:', error);
-      return res.status(500).json({
-        error: 'Erro ao excluir unidade',
-        message: 'Ocorreu um erro ao excluir a unidade',
+    if (!unidade) {
+      return res.status(404).json({
+        error: 'Unidade não encontrada',
+        message: 'A unidade especificada não existe'
       });
     }
+
+    // Gestor só pode excluir unidades do seu mercado
+    if (role === 'GESTOR' && unidade.mercado.gestorId !== userId) {
+      return res.status(403).json({
+        error: 'Acesso negado',
+        message: 'Você não tem permissão para excluir esta unidade'
+      });
+    }
+
+    await prisma.unidade.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Unidade excluída com sucesso' });
+  } catch (error) {
+    console.error('Erro ao excluir unidade:', error);
+    res.status(500).json({
+      error: 'Erro ao excluir unidade',
+      message: 'Ocorreu um erro ao excluir a unidade'
+    });
   }
-);
+});
 
 /**
- * GET /unidades/:id/estoque
  * Lista estoque de uma unidade
  */
-router.get('/unidades/:id/estoque', authenticate, async (req: AuthRequest, res) => {
+router.get('/:unidadeId/estoque', async (req, res) => {
   try {
-    const { id: unidadeId } = req.params;
+    const { unidadeId } = req.params;
     const { categoria, disponivel, busca } = req.query;
 
     let where: any = { unidadeId };
 
     if (categoria) {
       where.produto = {
-        categoria: categoria as string,
+        categoria: categoria as string
       };
     }
 
-    if (disponivel !== undefined) {
-      where.disponivel = disponivel === 'true';
+    if (disponivel === 'true') {
+      where.disponivel = true;
     }
 
     if (busca) {
@@ -309,32 +365,57 @@ router.get('/unidades/:id/estoque', authenticate, async (req: AuthRequest, res) 
         OR: [
           { nome: { contains: busca as string, mode: 'insensitive' } },
           { codigoBarras: { contains: busca as string } },
-          { marca: { contains: busca as string, mode: 'insensitive' } },
-        ],
+          { marca: { contains: busca as string, mode: 'insensitive' } }
+        ]
       };
     }
 
     const estoques = await prisma.estoque.findMany({
       where,
       include: {
-        produto: true,
+        produto: true
       },
-      orderBy: {
-        produto: {
-          nome: 'asc',
-        },
-      },
+      orderBy: { preco: 'asc' }
     });
 
-    return res.json(estoques);
+    res.json(estoques);
   } catch (error) {
     console.error('Erro ao listar estoque:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Erro ao listar estoque',
-      message: 'Ocorreu um erro ao buscar o estoque',
+      message: 'Ocorreu um erro ao buscar o estoque'
+    });
+  }
+});
+
+/**
+ * Lista todas as cidades únicas
+ */
+router.get('/cidades', async (req, res) => {
+  try {
+    const cidades = await prisma.unidade.findMany({
+      where: {
+        ativa: true
+      },
+      select: {
+        cidade: true
+      },
+      distinct: ['cidade']
+    });
+
+    const cidadesUnicas = cidades
+      .map(u => u.cidade)
+      .filter((cidade, index, arr) => arr.indexOf(cidade) === index)
+      .sort();
+
+    res.json(cidadesUnicas);
+  } catch (error) {
+    console.error('Erro ao buscar cidades:', error);
+    res.status(500).json({
+      error: 'Erro ao buscar cidades',
+      message: 'Ocorreu um erro ao buscar as cidades'
     });
   }
 });
 
 export default router;
-

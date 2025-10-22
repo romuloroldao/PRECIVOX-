@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import mercadosRouter from './routes/mercados';
 import unidadesRouter from './routes/unidades';
 import planosRouter from './routes/planos';
+import produtosRouter from './routes/produtos';
+import authRouter from './routes/auth';
 import fs from 'fs';
 import path from 'path';
 
@@ -33,6 +35,8 @@ app.get('/health', (req, res) => {
 app.use('/api/mercados', mercadosRouter);
 app.use('/api', unidadesRouter);
 app.use('/api/planos', planosRouter);
+app.use('/api/produtos', produtosRouter);
+app.use('/api/auth', authRouter);
 
 // Tratamento de erros 404
 app.use((req, res) => {

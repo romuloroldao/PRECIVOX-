@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login - PRECIVOX</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        .info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Teste de Login - PRECIVOX</h1>
+        <p style="color: #666; margin-bottom: 20px;">
+            Este formulário testa diretamente a API de autenticação do NextAuth.
+        </p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    value="admin@precivox.com" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="senha">Senha:</label>
+                <input 
+                    type="password" 
+                    id="senha" 
+                    name="senha" 
+                    value="senha123" 
+                    required
+                >
+            </div>
+
+            <button type="submit" id="submitBtn">Fazer Login</button>
+        </form>
+
+        <div id="result" class="result"></div>
+
+        <div style="margin-top: 30px; padding: 15px; background: #fef3c7; border-radius: 5px; border: 1px solid #f59e0b;">
+            <h3 style="margin-top: 0; color: #92400e;">📝 Como Usar:</h3>
+            <ol style="margin: 0; padding-left: 20px; color: #78350f;">
+                <li>Preencha email e senha (já estão preenchidos com dados de teste)</li>
+                <li>Clique em "Fazer Login"</li>
+                <li>Veja o resultado abaixo (sucesso ou erro detalhado)</li>
+                <li>Abra o Console do navegador (F12) para mais detalhes</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const resultDiv = document.getElementById('result');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+
+            // Resetar resultado
+            resultDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Autenticando...';
+
+            console.log('🔄 Iniciando login...', { email });
+
+            try {
+                // Testar signIn do NextAuth
+                console.log('📡 Chamando /api/auth/signin...');
+                
+                const csrfResponse = await fetch('/api/auth/csrf');
+                const { csrfToken } = await csrfResponse.json();
+                console.log('✅ CSRF Token obtido:', csrfToken);
+
+                const response = await fetch('/api/auth/callback/credentials', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        email,
+                        senha,
+                        csrfToken,
+                        callbackUrl: '/admin/dashboard',
+                        json: 'true'
+                    })
+                });
+
+                console.log('📥 Resposta recebida:', response.status, response.statusText);
+
+                const data = await response.text();
+                console.log('📦 Dados:', data);
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Login Bem-Sucedido!</h3>
+                        <p>Status: ${response.status}</p>
+                        <pre>${data}</pre>
+                        <p><strong>Redirecionando para dashboard...</strong></p>
+                    `;
+                    
+                    // Redirecionar após 2 segundos
+                    setTimeout(() => {
+                        window.location.href = '/admin/dashboard';
+                    }, 2000);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Erro no Login</h3>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                        <pre>${data}</pre>
+                    `;
+                }
+
+                resultDiv.style.display = 'block';
+
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Erro de Conexão</h3>
+                    <p>${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+                resultDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Fazer Login';
+            }
+        });
+    </script>
+</body>
+</html>
+

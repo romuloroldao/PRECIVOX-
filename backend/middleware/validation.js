@@ -271,6 +271,14 @@ export const schemas = {
     })
   }),
 
+  // Validação de Market ID (aceita UUID ou string customizada)
+  marketIdParam: Joi.object({
+    marketId: Joi.string().min(1).required().messages({
+      'string.min': 'Market ID deve ter pelo menos 1 caractere',
+      'any.required': 'Market ID é obrigatório'
+    })
+  }),
+
   // Validação de adição de usuário ao mercado
   addUserToMarket: Joi.object({
     user_id: Joi.string().uuid().required(),
@@ -322,6 +330,7 @@ export const validateMarketUpdate = validate(schemas.marketUpdate);
 export const validateListUsers = validate(schemas.listUsers, 'query');
 export const validateListMarkets = validate(schemas.listMarkets, 'query');
 export const validateUuidParam = validate(schemas.uuidParam, 'params');
+export const validateMarketIdParam = validate(schemas.marketIdParam, 'params');
 export const validateAddUserToMarket = validate(schemas.addUserToMarket);
 
 // Middleware para sanitizar dados de entrada

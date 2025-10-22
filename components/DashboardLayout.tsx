@@ -29,7 +29,16 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   }, [status, router]);
 
   const handleLogout = async () => {
-    await logout();
+    try {
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Forçar logout local
+      localStorage.removeItem('token');
+      sessionStorage.clear();
+      router.push('/login');
+    }
   };
 
   if (isLoading) {

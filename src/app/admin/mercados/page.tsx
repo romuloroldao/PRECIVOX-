@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import MercadoCard from '@/components/MercadoCard';
 import MercadoForm from '@/components/MercadoForm';
+import Header from '@/components/Header';
 
 export default function MercadosPage() {
   const [mercados, setMercados] = useState([]);
@@ -147,8 +148,9 @@ export default function MercadosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <Header title="PRECIVOX - Gestão de Mercados" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Cabeçalho */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Mercados</h1>
