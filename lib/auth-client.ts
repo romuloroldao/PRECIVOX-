@@ -1,165 +1,163 @@
-// Funções de autenticação do lado do cliente
+// Cliente de Autenticação para PRECIVOX
 'use client';
 
-import axios from 'axios';
-import { LoginInput, RegisterInput } from './validations';
+interface User {
+  id: string;
+  email: string;
+  nome: string;
+  role: 'ADMIN' | 'GESTOR' | 'CLIENTE';
+}
 
-// Configurar timeout padrão para todas as requisições
-axios.defaults.timeout = 10000; // 10 segundos
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
 
-export interface AuthResponse {
-  success: boolean;
-  data?: {
-    token: string;
-    usuario: {
-      id: string;
-      nome: string;
-      email: string;
-      role: string;
-      imagem?: string | null;
-    };
-    redirectUrl: string;
+class AuthClient {
+  private static instance: AuthClient;
+  private listeners: Array<(state: AuthState) => void> = [];
+  private state: AuthState = {
+    user: null,
+    isAuthenticated: false,
+    isLoading: true
   };
-  error?: string;
-}
 
-/**
- * Realiza login com e-mail e senha
- */
-export async function login(credentials: LoginInput): Promise<AuthResponse> {
-  try {
-    const response = await axios.post('/api/auth/login', credentials, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (response.data.success && response.data.data.token) {
-      // Salvar token no localStorage e cookie
-      localStorage.setItem('token', response.data.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.data.usuario));
-      document.cookie = `token=${response.data.data.token}; path=/; max-age=604800`; // 7 dias
+  private constructor() {
+    this.initializeAuth();
+  }
+
+  public static getInstance(): AuthClient {
+    if (!AuthClient.instance) {
+      AuthClient.instance = new AuthClient();
     }
-    
-    return response.data;
-  } catch (error: any) {
-    console.error('Erro no login:', error);
-    return {
-      success: false,
-      error: error.response?.data?.error || 'Erro ao fazer login',
+    return AuthClient.instance;
+  }
+
+  private async initializeAuth() {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          this.setState({
+            user: data.user,
+            isAuthenticated: true,
+            isLoading: false
+          });
+        } else {
+          this.logout();
+        }
+      } else {
+        this.setState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao inicializar autenticação:', error);
+      this.logout();
+    }
+  }
+
+  private setState(newState: Partial<AuthState>) {
+    this.state = { ...this.state, ...newState };
+    this.listeners.forEach(listener => listener(this.state));
+  }
+
+  public subscribe(listener: (state: AuthState) => void) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
     };
   }
-}
 
-/**
- * Realiza cadastro de novo usuário
- */
-export async function register(data: RegisterInput): Promise<AuthResponse> {
-  try {
-    const response = await axios.post('/api/auth/register', data);
-    
-    if (response.data.success && response.data.data.token) {
-      // Salvar token no localStorage e cookie
-      localStorage.setItem('token', response.data.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.data.usuario));
-      document.cookie = `token=${response.data.data.token}; path=/; max-age=604800`; // 7 dias
-    }
-    
-    return response.data;
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || 'Erro ao fazer cadastro',
-    };
+  public getState(): AuthState {
+    return this.state;
   }
-}
 
-/**
- * Realiza logout
- */
-export async function logout(): Promise<void> {
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (token) {
-      await axios.post('/api/auth/logout', null, {
+  public async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
+        body: JSON.stringify({ email, password })
       });
-    }
-  } catch (error) {
-    console.error('Erro ao fazer logout:', error);
-  } finally {
-    // Limpar dados locais
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    document.cookie = 'token=; path=/; max-age=0';
-    window.location.href = '/login';
-  }
-}
 
-/**
- * Obtém o usuário autenticado
- */
-export async function getAuthenticatedUser() {
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      return null;
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        this.setState({
+          user: data.user,
+          isAuthenticated: true,
+          isLoading: false
+        });
+        return { success: true };
+      } else {
+        const error = await response.json();
+        return { success: false, error: error.message || 'Erro ao fazer login' };
+      }
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      return { success: false, error: 'Erro de conexão' };
     }
-    
-    const response = await axios.get('/api/auth/me', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      timeout: 8000, // 8 segundos específico para esta requisição
-    });
-    
-    if (response.data.success) {
-      return response.data.data;
-    }
-    
-    return null;
-  } catch (error: any) {
-    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-      console.error('Timeout ao buscar usuário');
-    } else if (error.response?.status === 401) {
-      // Token inválido, fazer logout
+  }
+
+  public async logout(): Promise<void> {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    } finally {
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      document.cookie = 'token=; path=/; max-age=0';
-    } else {
-      console.error('Erro ao buscar usuário:', error);
+      this.setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false
+      });
+      
+      // Redirecionar para a página de login ou home
+      window.location.href = '/';
     }
-    return null;
+  }
+
+  public getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  public isAdmin(): boolean {
+    return this.state.user?.role === 'ADMIN';
+  }
+
+  public isGestor(): boolean {
+    return this.state.user?.role === 'GESTOR';
+  }
+
+  public isCliente(): boolean {
+    return this.state.user?.role === 'CLIENTE';
+  }
+
+  public getUser(): User | null {
+    return this.state.user;
   }
 }
 
-/**
- * Verifica se o usuário está autenticado
- */
-export function isAuthenticated(): boolean {
-  if (typeof window === 'undefined') return false;
-  // Verificar tanto localStorage quanto cookie
-  return !!(localStorage.getItem('token') || document.cookie.includes('token='));
-}
-
-/**
- * Obtém o token armazenado
- */
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
-}
-
-/**
- * Obtém os dados do usuário do localStorage
- */
-export function getStoredUser() {
-  if (typeof window === 'undefined') return null;
-  const userStr = localStorage.getItem('user');
-  return userStr ? JSON.parse(userStr) : null;
-}
-
+export const authClient = AuthClient.getInstance();
+export default authClient;

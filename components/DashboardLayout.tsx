@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { logout } from '@/lib/auth-client';
+import { useSession, signOut } from 'next-auth/react';
 import { getRoleLabel } from '@/lib/redirect';
 
 interface DashboardLayoutProps {
@@ -30,14 +29,28 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
 
   const handleLogout = async () => {
     try {
-      await logout();
-      router.push('/login');
+      // Limpar todos os dados locais primeiro
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Limpar cookies
+      document.cookie = 'token=; path=/; max-age=0';
+      document.cookie = 'next-auth.session-token=; path=/; max-age=0';
+      document.cookie = '__Secure-next-auth.session-token=; path=/; max-age=0';
+      
+      // Fazer logout do NextAuth
+      await signOut({ 
+        callbackUrl: '/login',
+        redirect: true 
+      });
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      // Forçar logout local
-      localStorage.removeItem('token');
+      // Forçar redirecionamento mesmo com erro
+      localStorage.clear();
       sessionStorage.clear();
-      router.push('/login');
+      document.cookie = 'token=; path=/; max-age=0';
+      document.cookie = 'next-auth.session-token=; path=/; max-age=0';
+      window.location.href = '/login';
     }
   };
 

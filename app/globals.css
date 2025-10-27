@@ -7,6 +7,10 @@
   --precivox-green: #00cc66;
   --precivox-dark: #1a1a2e;
   --precivox-light: #f5f7fa;
+  --color-precivox-blue: #0066cc;
+  --color-precivox-green: #00cc66;
+  --color-precivox-dark: #1a1a2e;
+  --color-precivox-light: #f5f7fa;
 }
 
 body {
@@ -15,6 +19,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
 }
 
 @layer components {
