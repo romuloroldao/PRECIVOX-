@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+// Forçar renderização dinâmica
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+
 
 // Rate limiting simples em memória
 const requestCounts = new Map<string, { count: number; resetTime: number }>();

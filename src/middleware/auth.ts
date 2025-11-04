@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-secret-super-seguro';
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || JWT_SECRET;
 
 export interface AuthRequest extends Request {
   user?: {
@@ -33,30 +34,40 @@ export const authenticate = async (
 
     const token = authHeader.substring(7);
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      id: string;
-      email: string;
-      role: 'ADMIN' | 'GESTOR' | 'CLIENTE';
-      nome: string;
-    };
+    // Tenta validar com JWT_SECRET (backend) e, em fallback, com NEXTAUTH_SECRET (token do NextAuth)
+    let decoded: any | null = null;
+    const secretsToTry = [JWT_SECRET, NEXTAUTH_SECRET];
+    for (const secret of secretsToTry) {
+      try {
+        decoded = jwt.verify(token, secret) as any;
+        break;
+      } catch (e) {
+        decoded = null;
+      }
+    }
 
-    req.user = decoded;
-    next();
-  } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
+    if (!decoded) {
       return res.status(401).json({
         error: 'Token inválido',
         message: 'O token fornecido não é válido',
       });
     }
 
+    // Normaliza campos esperados
+    req.user = {
+      id: decoded.id || decoded.sub,
+      email: decoded.email,
+      role: decoded.role || 'CLIENTE',
+      nome: decoded.nome || decoded.name || '',
+    };
+    next();
+  } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       return res.status(401).json({
         error: 'Token expirado',
         message: 'Seu token expirou. Por favor, faça login novamente',
       });
     }
-
     return res.status(500).json({
       error: 'Erro de autenticação',
       message: 'Ocorreu um erro ao verificar suas credenciais',

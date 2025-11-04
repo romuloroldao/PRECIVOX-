@@ -2,32 +2,22 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  images: {
-    domains: ['localhost'],
-  },
-  // Removido rewrites - Nginx agora gerencia roteamento de APIs
   
-  // Configurações de performance para evitar erro 502
+  // ✅ Configuração de output standalone para produção
+  output: 'standalone',
+  
+  // ✅ Configuração de imagens com domínio de produção
+  images: {
+    domains: ['precivox.com.br', 'localhost'],
+    unoptimized: false,
+  },
+  
+  // ✅ Configurações experimentais otimizadas
   experimental: {
-    // Aumentar timeout para builds grandes
     workerThreads: true,
   },
   
-  // Configurações de servidor
-  serverRuntimeConfig: {
-    // Timeout de 30 segundos para APIs
-    apiTimeout: 30000,
-  },
-  
-  // Otimização de build
-  onDemandEntries: {
-    // Período que uma página fica no cache (em ms)
-    maxInactiveAge: 60 * 1000,
-    // Número de páginas a manter simultaneamente
-    pagesBufferLength: 5,
-  },
-  
-  // Headers de segurança e cache
+  // ✅ Headers de segurança e cache
   async headers() {
     return [
       {
@@ -39,8 +29,20 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ];
   },
+  
+  // ✅ Remover rewrites desnecessários - Next.js gerencia automaticamente
+  // Nginx fará o proxy correto para /_next/static
 }
 
 module.exports = nextConfig

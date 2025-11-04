@@ -499,7 +499,6 @@ export default function MercadoDetailsPage() {
             <UploadDatabase
               mercadoId={mercadoId}
               unidades={unidades}
-              onUploadComplete={handleUploadComplete}
             />
           )}
 

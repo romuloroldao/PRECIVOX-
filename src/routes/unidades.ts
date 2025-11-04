@@ -1,14 +1,44 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticateToken, authorizeRole } from '../middleware/auth';
+import { authenticate, authorizeRole } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
+
+/**
+ * Lista todas as cidades únicas (público - para página de busca)
+ * DEVE VIR ANTES DE /:mercadoId para não ser capturada como parâmetro
+ */
+router.get('/cidades', async (req, res) => {
+  try {
+    const cidades = await prisma.unidades.findMany({
+      where: {
+        ativa: true
+      },
+      select: {
+        cidade: true
+      },
+      distinct: ['cidade']
+    });
+
+    const cidadesUnicas = cidades
+      .map(u => u.cidade)
+      .filter((cidade, index, arr) => arr.indexOf(cidade) === index)
+      .sort();
+
+    res.json(cidadesUnicas);
+  } catch (error) {
+    console.error('Erro ao buscar cidades:', error);
+    res.status(500).json({
+      error: 'Erro ao buscar cidades',
+      message: 'Ocorreu um erro ao buscar as cidades'
+    });
+  }
+});
 
 /**
  * Lista todas as unidades de um mercado
  */
-router.get('/:mercadoId', authenticateToken, async (req, res) => {
+router.get('/:mercadoId', authenticate, async (req, res) => {
   try {
     const { mercadoId } = req.params;
     const { role, userId } = (req as any).user;
@@ -42,7 +72,7 @@ router.get('/:mercadoId', authenticateToken, async (req, res) => {
       }
     }
 
-    const unidades = await prisma.unidade.findMany({
+    const unidades = await prisma.unidades.findMany({
       where: { mercadoId },
       include: {
         _count: {
@@ -65,12 +95,12 @@ router.get('/:mercadoId', authenticateToken, async (req, res) => {
 /**
  * Busca uma unidade específica
  */
-router.get('/unidade/:id', authenticateToken, async (req, res) => {
+router.get('/unidade/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { role, userId } = (req as any).user;
 
-    const unidade = await prisma.unidade.findUnique({
+    const unidade = await prisma.unidades.findUnique({
       where: { id },
       include: {
         mercado: {
@@ -118,7 +148,7 @@ router.get('/unidade/:id', authenticateToken, async (req, res) => {
 /**
  * Cria uma nova unidade para um mercado
  */
-router.post('/:mercadoId', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
+router.post('/:mercadoId', authenticate, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
   try {
     const { mercadoId } = req.params;
     const { role, userId } = (req as any).user;
@@ -155,7 +185,7 @@ router.post('/:mercadoId', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), 
 
     // Verifica limite de unidades do plano
     if (mercado.plano) {
-      const unidadesExistentes = await prisma.unidade.count({
+      const unidadesExistentes = await prisma.unidades.count({
         where: { mercadoId }
       });
 
@@ -184,7 +214,7 @@ router.post('/:mercadoId', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), 
       }
     }
 
-    const unidade = await prisma.unidade.create({
+    const unidade = await prisma.unidades.create({
       data: {
         nome,
         endereco,
@@ -223,7 +253,7 @@ router.post('/:mercadoId', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), 
 /**
  * Atualiza uma unidade
  */
-router.put('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
+router.put('/:id', authenticate, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
   try {
     const { id } = req.params;
     const { role, userId } = (req as any).user;
@@ -239,7 +269,7 @@ router.put('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (r
     } = req.body;
 
     // Verifica se a unidade existe
-    const unidadeExistente = await prisma.unidade.findUnique({
+    const unidadeExistente = await prisma.unidades.findUnique({
       where: { id },
       include: { mercado: true }
     });
@@ -259,7 +289,7 @@ router.put('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (r
       });
     }
 
-    const unidade = await prisma.unidade.update({
+    const unidade = await prisma.unidades.update({
       where: { id },
       data: {
         nome,
@@ -299,13 +329,13 @@ router.put('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (r
 /**
  * Remove uma unidade
  */
-router.delete('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
+router.delete('/:id', authenticate, authorizeRole('ADMIN', 'GESTOR'), async (req, res) => {
   try {
     const { id } = req.params;
     const { role, userId } = (req as any).user;
 
     // Verifica se a unidade existe
-    const unidade = await prisma.unidade.findUnique({
+    const unidade = await prisma.unidades.findUnique({
       where: { id },
       include: { mercado: true }
     });
@@ -325,7 +355,7 @@ router.delete('/:id', authenticateToken, authorizeRole('ADMIN', 'GESTOR'), async
       });
     }
 
-    await prisma.unidade.delete({
+    await prisma.unidades.delete({
       where: { id }
     });
 
@@ -384,36 +414,6 @@ router.get('/:unidadeId/estoque', async (req, res) => {
     res.status(500).json({
       error: 'Erro ao listar estoque',
       message: 'Ocorreu um erro ao buscar o estoque'
-    });
-  }
-});
-
-/**
- * Lista todas as cidades únicas
- */
-router.get('/cidades', async (req, res) => {
-  try {
-    const cidades = await prisma.unidade.findMany({
-      where: {
-        ativa: true
-      },
-      select: {
-        cidade: true
-      },
-      distinct: ['cidade']
-    });
-
-    const cidadesUnicas = cidades
-      .map(u => u.cidade)
-      .filter((cidade, index, arr) => arr.indexOf(cidade) === index)
-      .sort();
-
-    res.json(cidadesUnicas);
-  } catch (error) {
-    console.error('Erro ao buscar cidades:', error);
-    res.status(500).json({
-      error: 'Erro ao buscar cidades',
-      message: 'Ocorreu um erro ao buscar as cidades'
     });
   }
 });

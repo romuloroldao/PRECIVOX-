@@ -1,14 +1,13 @@
 // Rotas para Gestão de Mercados
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, authorizeRole, AuthRequest } from '../middleware/auth';
 import { canAccessMercado, checkPlanLimits } from '../middleware/permissions';
 import multer from 'multer';
 import path from 'path';
 import { processarArquivoUpload, obterHistoricoImportacoes } from '../lib/uploadHandler';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Configuração do multer para upload de arquivos
 const storage = multer.diskStorage({
@@ -41,6 +40,47 @@ const upload = multer({
 // ============================================
 // ROTAS DE MERCADOS
 // ============================================
+
+/**
+ * GET /mercados/public
+ * Lista mercados ativos (público - para página de busca)
+ */
+router.get('/public', async (req, res) => {
+  try {
+    // Debug logs (podem ser removidos depois)
+    // console.log('Rota pública de mercados chamada');
+    
+    const { ativo } = req.query;
+    
+    const where: any = {};
+    if (ativo === 'true') {
+      where.ativo = true;
+    }
+    
+    const mercados = await prisma.mercados.findMany({
+      where,
+      select: {
+        id: true,
+        nome: true,
+        ativo: true,
+        _count: {
+          select: { unidades: true }
+        }
+      },
+      orderBy: { nome: 'asc' }
+    });
+    
+    res.json(mercados);
+  } catch (error: any) {
+    console.error('Erro ao buscar mercados públicos:', error);
+    console.error('Stack:', error?.stack);
+    res.status(500).json({
+      error: 'Erro ao buscar mercados',
+      message: error?.message || 'Ocorreu um erro ao buscar os mercados',
+      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    });
+  }
+});
 
 /**
  * GET /mercados
@@ -79,7 +119,7 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       where.planoId = planoId as string;
     }
 
-    const mercados = await prisma.mercado.findMany({
+    const mercados = await prisma.mercados.findMany({
       where,
       include: {
         plano: true,
@@ -126,7 +166,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res) => {
       where.gestorId = userId;
     }
 
-    const mercado = await prisma.mercado.findFirst({
+    const mercado = await prisma.mercados.findFirst({
       where,
       include: {
         plano: true,
@@ -193,7 +233,7 @@ router.post('/', authenticate, authorizeRole('ADMIN'), async (req: AuthRequest, 
     }
 
     // Verifica se CNPJ já existe
-    const mercadoExistente = await prisma.mercado.findUnique({
+    const mercadoExistente = await prisma.mercados.findUnique({
       where: { cnpj },
     });
 
@@ -218,7 +258,7 @@ router.post('/', authenticate, authorizeRole('ADMIN'), async (req: AuthRequest, 
       }
     }
 
-    const mercado = await prisma.mercado.create({
+    const mercado = await prisma.mercados.create({
       data: {
         nome,
         cnpj,
@@ -268,7 +308,7 @@ router.put('/:id', authenticate, canAccessMercado, async (req: AuthRequest, res)
       ativo,
     } = req.body;
 
-    const mercado = await prisma.mercado.update({
+    const mercado = await prisma.mercados.update({
       where: { id },
       data: {
         nome,
@@ -329,7 +369,7 @@ router.put('/:id/plano', authenticate, authorizeRole('ADMIN'), async (req: AuthR
       });
     }
 
-    const mercado = await prisma.mercado.update({
+    const mercado = await prisma.mercados.update({
       where: { id },
       data: { planoId },
       include: {
@@ -375,7 +415,7 @@ router.put('/:id/gestor', authenticate, authorizeRole('ADMIN'), async (req: Auth
       });
     }
 
-    const mercado = await prisma.mercado.update({
+    const mercado = await prisma.mercados.update({
       where: { id },
       data: { gestorId },
       include: {
@@ -407,7 +447,7 @@ router.delete('/:id', authenticate, authorizeRole('ADMIN'), async (req: AuthRequ
   try {
     const { id } = req.params;
 
-    await prisma.mercado.delete({
+    await prisma.mercados.delete({
       where: { id },
     });
 

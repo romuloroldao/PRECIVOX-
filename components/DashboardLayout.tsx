@@ -94,7 +94,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
               )}
               <button
                 onClick={handleLogout}
-                className="ml-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-300 ease-in-out"
               >
                 Sair
               </button>
@@ -104,7 +104,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ease-in-out">
         {children}
       </main>
     </div>

@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+
 import { prisma } from '@/lib/prisma';
+
 import { getServerSession } from 'next-auth';
+
 import { authOptions } from '@/lib/auth';
+
 import bcrypt from 'bcryptjs';
+
 import { z } from 'zod';
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 
 const createUserSchema = z.object({
   nome: z.string().min(2),

@@ -19,7 +19,7 @@ export default function PersonaSelector() {
 
     // Redirecionar baseado na escolha
     if (persona === 'cliente') {
-      router.push('/cliente/home');
+      router.push('/');
     } else if (persona === 'gestor') {
       router.push('/gestor/home');
     }

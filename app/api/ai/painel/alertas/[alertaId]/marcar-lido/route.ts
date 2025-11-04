@@ -1,8 +1,17 @@
 // API Route: Marcar alerta como lido
 import { getServerSession } from 'next-auth';
+
+
 import { authOptions } from '@/lib/auth';
+
 import { prisma } from '@/lib/prisma';
+
 import { NextResponse } from 'next/server';
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 
 export async function PUT(
   request: Request,
@@ -67,9 +76,3 @@ export async function PUT(
     );
   }
 }
-
-
-
-
-
-

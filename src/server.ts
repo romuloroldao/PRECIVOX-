@@ -33,9 +33,10 @@ app.get('/health', (req, res) => {
 
 // Rotas da API
 app.use('/api/mercados', mercadosRouter);
-app.use('/api', unidadesRouter);
+app.use('/api/unidades', unidadesRouter);
 app.use('/api/planos', planosRouter);
 app.use('/api/produtos', produtosRouter);
+app.use('/api/products', produtosRouter); // ✅ Alias em inglês para compatibilidade
 app.use('/api/auth', authRouter);
 
 // Tratamento de erros 404

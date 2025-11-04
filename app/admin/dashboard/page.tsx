@@ -99,11 +99,32 @@ export default function AdminDashboardPage() {
       setIsFetching(true);
       
       // ✅ Promise.all para buscar dados em paralelo (2 requisições simultâneas)
-      Promise.all([fetchStats(), fetchRecentUsers()]).finally(() => {
-        setIsFetching(false);
-      });
+      const fetchData = async () => {
+        try {
+          await Promise.all([fetchStats(), fetchRecentUsers()]);
+        } finally {
+          setIsFetching(false);
+        }
+      };
+      
+      fetchData();
     }
-  }, [status, user?.role, fetchStats, fetchRecentUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, user?.role]);
+
+  // ✅ Captura de ChunkLoadError específico para dashboard
+  useEffect(() => {
+    const handleChunkError = (e: ErrorEvent) => {
+      if (e.message && e.message.includes('Loading chunk')) {
+        console.error('Erro ao carregar chunk do dashboard:', e);
+        // Tentar recarregar a página
+        window.location.reload();
+      }
+    };
+    
+    window.addEventListener('error', handleChunkError);
+    return () => window.removeEventListener('error', handleChunkError);
+  }, []);
 
   // Verificar se está carregando ou não autenticado
   if (status === 'loading') {

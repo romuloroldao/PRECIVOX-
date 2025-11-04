@@ -902,11 +902,23 @@ router.post('/upload-smart/:marketId',
   authenticate,
   validateMarketIdParam,
   requireMarketAccess('manage'),
+  uploadConverter.single('file'), // Middleware multer para receber o arquivo
   async (req, res) => {
     try {
       const marketId = req.params.marketId;
       
       console.log(`📁 Upload recebido para mercado: ${marketId}`);
+
+      // Verificar se arquivo foi enviado
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'Arquivo não fornecido',
+          message: 'É necessário enviar um arquivo no campo "file"'
+        });
+      }
+
+      console.log(`📄 Arquivo recebido: ${req.file.originalname} (${req.file.size} bytes)`);
 
       // Por enquanto, retornar sucesso sem processar o arquivo
       // TODO: Implementar processamento real do arquivo
@@ -915,6 +927,8 @@ router.post('/upload-smart/:marketId',
         message: 'Upload recebido com sucesso',
         data: {
           marketId,
+          filename: req.file.originalname,
+          size: req.file.size,
           message: 'Endpoint funcionando corretamente'
         }
       });

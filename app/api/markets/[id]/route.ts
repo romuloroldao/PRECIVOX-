@@ -1,8 +1,17 @@
 // API Route: Detalhes, atualizar e deletar mercado específico
 import { getServerSession } from 'next-auth';
+
+
 import { authOptions } from '@/lib/auth';
+
 import { prisma } from '@/lib/prisma';
+
 import { NextResponse } from 'next/server';
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 
 export async function GET(
   request: Request,
@@ -211,9 +220,3 @@ export async function DELETE(
     );
   }
 }
-
-
-
-
-
-

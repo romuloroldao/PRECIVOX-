@@ -11,9 +11,9 @@ export function getDashboardUrl(role: Role): string {
     case 'GESTOR':
       return '/gestor/home';
     case 'CLIENTE':
-      return '/cliente/home';
+      return '/'; // Página principal de busca de produtos
     default:
-      return '/cliente/home';
+      return '/'; // Página principal de busca de produtos
   }
 }
 

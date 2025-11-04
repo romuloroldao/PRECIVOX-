@@ -54,7 +54,7 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
 
         if (signInResult?.ok) {
           setTimeout(() => {
-            router.push('/cliente/home');
+            router.push('/');
           }, 1000);
         } else {
           setSuccessMessage('Cadastro realizado! Redirecionando para login...');

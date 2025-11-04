@@ -29,7 +29,7 @@ export default function LoginPage() {
         const dashboardUrls: Record<string, string> = {
           ADMIN: '/admin/dashboard',
           GESTOR: '/gestor/home',
-          CLIENTE: '/cliente/home',
+          CLIENTE: '/', // Redirecionar clientes diretamente para a página de busca
         };
         
         const targetUrl = dashboardUrls[user.role];

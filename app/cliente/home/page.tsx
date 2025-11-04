@@ -1,17 +1,26 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 
 export default function ClienteHomePage() {
+  const router = useRouter();
+  
   return (
     <DashboardLayout role="CLIENTE">
       <div className="space-y-6">
         {/* Welcome */}
         <div className="bg-gradient-to-r from-precivox-blue to-blue-600 rounded-2xl p-8 text-white">
           <h1 className="text-3xl font-bold mb-2">Bem-vindo ao PRECIVOX!</h1>
-          <p className="text-lg opacity-90">
+          <p className="text-lg opacity-90 mb-6">
             Sua plataforma inteligente de comparação de preços
           </p>
+          <button 
+            onClick={() => router.push('/')}
+            className="bg-white text-precivox-blue px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors"
+          >
+            🔍 Buscar Produtos Agora
+          </button>
         </div>
 
         {/* Features Grid */}
@@ -29,7 +38,10 @@ export default function ClienteHomePage() {
             <p className="text-gray-600 text-sm">
               Compare preços de produtos em tempo real e economize nas suas compras
             </p>
-            <button className="mt-4 text-precivox-blue font-medium text-sm hover:underline">
+            <button 
+              onClick={() => router.push('/')}
+              className="mt-4 text-precivox-blue font-medium text-sm hover:underline"
+            >
               Começar agora →
             </button>
           </div>
@@ -47,7 +59,10 @@ export default function ClienteHomePage() {
             <p className="text-gray-600 text-sm">
               Receba notificações quando o preço dos seus produtos favoritos baixar
             </p>
-            <button className="mt-4 text-precivox-blue font-medium text-sm hover:underline">
+            <button 
+              onClick={() => router.push('/cliente/alertas')}
+              className="mt-4 text-precivox-blue font-medium text-sm hover:underline"
+            >
               Criar alerta →
             </button>
           </div>
@@ -66,7 +81,10 @@ export default function ClienteHomePage() {
             <p className="text-gray-600 text-sm">
               Visualize suas economias e histórico de comparações
             </p>
-            <button className="mt-4 text-precivox-blue font-medium text-sm hover:underline">
+            <button 
+              onClick={() => router.push('/cliente/relatorios')}
+              className="mt-4 text-precivox-blue font-medium text-sm hover:underline"
+            >
               Ver relatórios →
             </button>
           </div>

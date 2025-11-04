@@ -1,9 +1,11 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * Busca produtos com filtros avançados
@@ -76,7 +78,7 @@ router.get('/buscar', async (req, res) => {
       };
     }
 
-    const produtos = await prisma.estoque.findMany({
+    const produtos = await prisma.estoques.findMany({
       where,
       include: {
         produto: true,
@@ -107,7 +109,7 @@ router.get('/buscar', async (req, res) => {
  */
 router.get('/categorias', async (req, res) => {
   try {
-    const categorias = await prisma.produto.findMany({
+    const categorias = await prisma.produtos.findMany({
       where: {
         categoria: {
           not: null
@@ -139,7 +141,7 @@ router.get('/categorias', async (req, res) => {
  */
 router.get('/marcas', async (req, res) => {
   try {
-    const marcas = await prisma.produto.findMany({
+    const marcas = await prisma.produtos.findMany({
       where: {
         marca: {
           not: null
@@ -180,7 +182,7 @@ router.post('/comparar', async (req, res) => {
       });
     }
 
-    const produtos = await prisma.estoque.findMany({
+    const produtos = await prisma.estoques.findMany({
       where: {
         id: {
           in: produtoIds
@@ -222,13 +224,13 @@ router.post('/comparar', async (req, res) => {
 /**
  * Módulo de IA - Recomendações inteligentes
  */
-router.get('/recomendacoes', authenticateToken, async (req, res) => {
+router.get('/recomendacoes', authenticate, async (req, res) => {
   try {
     const userId = (req as any).user.id;
     
     // Busca histórico de compras do usuário (se existir)
     // Por enquanto, retorna produtos em promoção como recomendação
-    const recomendacoes = await prisma.estoque.findMany({
+    const recomendacoes = await prisma.estoques.findMany({
       where: {
         emPromocao: true,
         disponivel: true
@@ -269,7 +271,7 @@ router.get('/analise-precos/:produtoId', async (req, res) => {
     const { produtoId } = req.params;
     
     // Busca todos os estoques do produto
-    const estoques = await prisma.estoque.findMany({
+    const estoques = await prisma.estoques.findMany({
       where: {
         produtoId
       },
@@ -339,5 +341,101 @@ router.get('/analise-precos/:produtoId', async (req, res) => {
     });
   }
 });
+
+/**
+ * POST /api/produtos/upload-smart/:marketId - Upload inteligente com conversão automática
+ */
+
+// Configurar multer para upload de arquivos
+const storage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'uploads', 'json');
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error as Error);
+    }
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.originalname}`;
+    cb(null, uniqueName);
+  }
+});
+
+const uploadConverter = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = ['.csv', '.xlsx', '.xls', '.json', '.xml'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Formato não suportado: ${ext}. Use CSV, XLSX, XLS, JSON ou XML.`));
+    }
+  }
+});
+
+router.post(
+  '/upload-smart/:marketId',
+  authenticate,
+  uploadConverter.single('file'),
+  async (req, res) => {
+    try {
+      const { marketId } = req.params;
+
+      if (!marketId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Market ID ausente na rota.',
+        });
+      }
+
+      console.log(`📁 Upload recebido para mercado: ${marketId}`);
+
+      // Verificar se arquivo foi enviado
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'Arquivo não fornecido',
+          message: 'É necessário enviar um arquivo no campo "file"',
+        });
+      }
+
+      console.log(`📄 Arquivo recebido: ${req.file.originalname} (${req.file.size} bytes)`);
+
+      // Por enquanto, retornar sucesso sem processar o arquivo
+      // TODO: Implementar processamento real do arquivo
+      return res.json({
+        success: true,
+        message: 'Upload recebido com sucesso',
+        data: {
+          marketId,
+          filename: req.file.originalname,
+          size: req.file.size,
+          message: 'Endpoint funcionando corretamente',
+        },
+      });
+    } catch (error: any) {
+      console.error('❌ Erro no upload inteligente:', error);
+
+      // Remove arquivo em caso de erro
+      if (req.file?.path) {
+        await fs.unlink(req.file.path).catch(() => {});
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Erro interno do servidor',
+        message: error.message,
+      });
+    }
+  }
+);
 
 export default router;
