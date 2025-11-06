@@ -78,7 +78,7 @@ export default function UserDetailsPage() {
       reset({
         nome: data.nome || '',
         email: data.email,
-        role: data.role,
+        role: data.role as 'CLIENTE' | 'GESTOR' | 'ADMIN',
       });
     } catch (error) {
       console.error('Erro ao buscar usuário:', error);
@@ -115,7 +115,7 @@ export default function UserDetailsPage() {
       reset({
         nome: originalData.nome || '',
         email: originalData.email,
-        role: originalData.role,
+        role: originalData.role as 'CLIENTE' | 'GESTOR' | 'ADMIN',
       });
     }
     setIsEditing(false);
