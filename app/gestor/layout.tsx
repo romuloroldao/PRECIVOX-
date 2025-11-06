@@ -1,4 +1,5 @@
 import RouteGuard from '@/components/RouteGuard';
+import { ToastProvider } from '@/components/ToastContainer';
 
 export default function GestorLayout({
   children,
@@ -7,7 +8,9 @@ export default function GestorLayout({
 }) {
   return (
     <RouteGuard allowedRoles={['GESTOR', 'ADMIN']}>
-      {children}
+      <ToastProvider>
+        {children}
+      </ToastProvider>
     </RouteGuard>
   );
 }

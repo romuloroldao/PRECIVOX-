@@ -93,27 +93,63 @@ export default function HomePage() {
       setLoading(true);
       
       // Carrega mercados ativos
-      const mercadosRes = await fetch('/api/mercados/public?ativo=true');
-      if (mercadosRes.ok) {
-        const mercadosData = await mercadosRes.json();
-        setMercados(mercadosData);
+      try {
+        const mercadosRes = await fetch('/api/mercados?ativo=true', {
+          cache: 'no-store',
+        });
+        if (!mercadosRes.ok) {
+          console.error(`Erro ao carregar mercados: ${mercadosRes.status} ${mercadosRes.statusText}`);
+        } else {
+          const mercadosData = await mercadosRes.json();
+          setMercados(Array.isArray(mercadosData) ? mercadosData : []);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar mercados:', error);
+        // Continua carregando outros dados mesmo se mercados falhar
       }
 
       // Carrega categorias e marcas únicas
-      const categoriasRes = await fetch('/api/produtos/categorias');
-      if (categoriasRes.ok) {
-        setCategorias(await categoriasRes.json());
+      try {
+        const categoriasRes = await fetch('/api/produtos/categorias', {
+          cache: 'no-store',
+        });
+        if (!categoriasRes.ok) {
+          console.error(`Erro ao carregar categorias: ${categoriasRes.status} ${categoriasRes.statusText}`);
+        } else {
+          const categoriasData = await categoriasRes.json();
+          setCategorias(Array.isArray(categoriasData) ? categoriasData : []);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar categorias:', error);
       }
 
-      const marcasRes = await fetch('/api/produtos/marcas');
-      if (marcasRes.ok) {
-        setMarcas(await marcasRes.json());
+      try {
+        const marcasRes = await fetch('/api/produtos/marcas', {
+          cache: 'no-store',
+        });
+        if (!marcasRes.ok) {
+          console.error(`Erro ao carregar marcas: ${marcasRes.status} ${marcasRes.statusText}`);
+        } else {
+          const marcasData = await marcasRes.json();
+          setMarcas(Array.isArray(marcasData) ? marcasData : []);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar marcas:', error);
       }
 
       // Carrega cidades
-      const cidadesRes = await fetch('/api/unidades/cidades');
-      if (cidadesRes.ok) {
-        setCidades(await cidadesRes.json());
+      try {
+        const cidadesRes = await fetch('/api/unidades/cidades', {
+          cache: 'no-store',
+        });
+        if (!cidadesRes.ok) {
+          console.error(`Erro ao carregar cidades: ${cidadesRes.status} ${cidadesRes.statusText}`);
+        } else {
+          const cidadesData = await cidadesRes.json();
+          setCidades(Array.isArray(cidadesData) ? cidadesData : []);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar cidades:', error);
       }
 
     } catch (error) {
@@ -125,6 +161,7 @@ export default function HomePage() {
 
   const buscarProdutos = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       
       if (filtros.busca) params.append('busca', filtros.busca);
@@ -137,12 +174,31 @@ export default function HomePage() {
       if (filtros.mercado) params.append('mercado', filtros.mercado);
       if (filtros.cidade) params.append('cidade', filtros.cidade);
 
-      const response = await fetch(`/api/produtos/buscar?${params.toString()}`);
-      if (response.ok) {
-        setProdutos(await response.json());
+      const response = await fetch(`/api/produtos/buscar?${params.toString()}`, {
+        cache: 'no-store',
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Erro ${response.status}: ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch {
+          // Se não conseguir parsear, usa o texto original
+        }
+        console.error('Erro ao buscar produtos:', errorMessage);
+        setProdutos([]); // Define array vazio em caso de erro
+        return;
       }
+      
+      const data = await response.json();
+      setProdutos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao buscar produtos:', error);
+      setProdutos([]); // Define array vazio em caso de erro de rede
+    } finally {
+      setLoading(false);
     }
   };
 

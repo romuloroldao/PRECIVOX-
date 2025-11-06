@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'precivox-auth',
+      name: 'precivox-nextjs',
       script: 'npm',
       args: 'start',
       cwd: '/root',
@@ -15,8 +15,27 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3000
       },
-      error_file: '/root/logs/precivox-auth-error.log',
-      out_file: '/root/logs/precivox-auth-out.log',
+      error_file: '/root/logs/precivox-nextjs-error.log',
+      out_file: '/root/logs/precivox-nextjs-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+    {
+      name: 'precivox-backend',
+      script: 'npx',
+      args: 'tsx src/server.ts',
+      cwd: '/root',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      env_file: '/root/.env',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3001
+      },
+      error_file: '/root/logs/precivox-backend-error.log',
+      out_file: '/root/logs/precivox-backend-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
     // 🆕 Job de Processamento de IA (roda diariamente às 2h AM)

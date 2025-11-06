@@ -18,72 +18,103 @@ export async function GET(request: NextRequest) {
     const mercado = searchParams.get('mercado');
     const cidade = searchParams.get('cidade');
 
-    // Construir filtros para estoques
-    const where: any = {
-      produtos: {
-        ativo: true
-      }
-    };
+    // Construir filtros para produtos
+    const produtoWhereArray: any[] = [
+      { ativo: true }
+    ];
 
     // Filtro de busca por nome do produto
     if (busca) {
-      where.produtos = {
-        ...where.produtos,
-        nome: {
-          contains: busca,
-          mode: 'insensitive'
-        }
-      };
+      produtoWhereArray.push({
+        OR: [
+          {
+            nome: {
+              contains: busca,
+              mode: 'insensitive'
+            }
+          },
+          {
+            marca: {
+              contains: busca,
+              mode: 'insensitive'
+            }
+          },
+          {
+            codigoBarras: {
+              contains: busca,
+              mode: 'insensitive'
+            }
+          }
+        ]
+      });
     }
 
     // Filtro por categoria
     if (categoria) {
-      where.produtos = {
-        ...where.produtos,
-        categoria
-      };
+      produtoWhereArray.push({ categoria: categoria });
     }
 
-    // Filtro por marca
-    if (marca) {
-      where.produtos = {
-        ...where.produtos,
-        marca
-      };
+    // Filtro por marca (apenas se não houver busca, pois busca já inclui marca)
+    if (marca && !busca) {
+      produtoWhereArray.push({
+        marca: {
+          contains: marca,
+          mode: 'insensitive'
+        }
+      });
     }
+
+    // Combinar todos os filtros com AND
+    const produtoWhere = produtoWhereArray.length === 1 
+      ? produtoWhereArray[0] 
+      : { AND: produtoWhereArray };
+
+    // Construir filtros para estoques
+    const estoqueWhere: any = {
+      produtos: produtoWhere
+    };
 
     // Filtro de disponibilidade
     if (disponivel === 'true') {
-      where.quantidade = {
+      estoqueWhere.disponivel = true;
+      estoqueWhere.quantidade = {
         gt: 0
       };
     }
 
-    // Filtro por mercado
-    if (mercado) {
-      where.unidades = {
-        mercadoId: mercado
-      };
-    }
-
-    // Filtro por cidade
-    if (cidade) {
-      where.unidades = {
-        ...where.unidades,
-        cidade
-      };
+    // Filtro por promoção
+    if (emPromocao === 'true') {
+      estoqueWhere.emPromocao = true;
     }
 
     // Filtro de preço
     if (precoMin || precoMax) {
-      where.preco = {};
-      if (precoMin) where.preco.gte = parseFloat(precoMin);
-      if (precoMax) where.preco.lte = parseFloat(precoMax);
+      estoqueWhere.preco = {};
+      if (precoMin) estoqueWhere.preco.gte = parseFloat(precoMin);
+      if (precoMax) estoqueWhere.preco.lte = parseFloat(precoMax);
+    }
+
+    // Construir filtros para unidades
+    const unidadeWhere: any = {};
+
+    // Filtro por mercado
+    if (mercado) {
+      unidadeWhere.mercadoId = mercado;
+    }
+
+    // Filtro por cidade
+    if (cidade) {
+      unidadeWhere.cidade = cidade;
+    }
+
+    // Adicionar filtro de unidade se houver
+    if (Object.keys(unidadeWhere).length > 0) {
+      estoqueWhere.unidades = unidadeWhere;
     }
 
     // Buscar estoques (que representam produtos nas unidades)
     const estoques = await prisma.estoques.findMany({
-      where,
+      where: estoqueWhere,
       include: {
         produtos: true,
         unidades: {
@@ -92,10 +123,12 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      take: 100,
-      orderBy: {
-        preco: 'asc'
-      }
+      take: 500,
+      orderBy: [
+        { emPromocao: 'desc' },
+        { preco: 'asc' },
+        { atualizadoEm: 'desc' }
+      ]
     });
 
     // Transformar estoques em formato esperado pelo frontend
@@ -123,12 +156,23 @@ export async function GET(request: NextRequest) {
       produto: estoque.produtos
     }));
 
-    return NextResponse.json(produtos);
-  } catch (error) {
-    console.error('Erro ao buscar produtos:', error);
+    return NextResponse.json(Array.isArray(produtos) ? produtos : [], {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar produtos:', error);
+    // Retorna array vazio em caso de erro para não quebrar o frontend
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
-      { status: 500 }
+      [],
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 }

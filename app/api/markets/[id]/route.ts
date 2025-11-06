@@ -39,6 +39,13 @@ export async function GET(
           orderBy: { dataCriacao: 'desc' }
         },
         planos_de_pagamento: true,
+        users: {
+          select: {
+            id: true,
+            nome: true,
+            email: true
+          }
+        },
         _count: {
           select: {
             unidades: true,
@@ -116,7 +123,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { nome, cnpj, descricao, telefone, emailContato, horarioFuncionamento, logo } = body;
+    const { nome, cnpj, descricao, telefone, emailContato, horarioFuncionamento, logo, gestorId, planoId } = body;
 
     // Se estiver mudando o CNPJ, verificar se já existe
     if (cnpj && cnpj !== mercado.cnpj) {
@@ -132,6 +139,42 @@ export async function PUT(
       }
     }
 
+    // Se gestorId foi fornecido, validar se é um gestor válido
+    if (gestorId !== undefined) {
+      // Apenas ADMIN pode alterar gestor
+      if (userRole !== 'ADMIN') {
+        return NextResponse.json(
+          { success: false, error: 'Apenas administradores podem alterar o gestor' },
+          { status: 403 }
+        );
+      }
+
+      // Se gestorId for null ou string vazia, remover gestor
+      if (!gestorId || gestorId === '') {
+        // Permitir remover gestor
+      } else {
+        // Validar se o gestor existe e tem role GESTOR
+        const gestor = await prisma.usuarios.findUnique({
+          where: { id: gestorId },
+          select: { id: true, role: true }
+        });
+
+        if (!gestor) {
+          return NextResponse.json(
+            { success: false, error: 'Gestor não encontrado' },
+            { status: 404 }
+          );
+        }
+
+        if (gestor.role !== 'GESTOR') {
+          return NextResponse.json(
+            { success: false, error: 'Usuário selecionado não é um gestor' },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Atualizar mercado
     const mercadoAtualizado = await prisma.mercados.update({
       where: { id: mercadoId },
@@ -143,7 +186,19 @@ export async function PUT(
         ...(emailContato !== undefined && { emailContato }),
         ...(horarioFuncionamento !== undefined && { horarioFuncionamento }),
         ...(logo !== undefined && { logo }),
+        ...(gestorId !== undefined && { gestorId: gestorId || null }),
+        ...(planoId !== undefined && { planoId: planoId || null }),
         dataAtualizacao: new Date()
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            nome: true,
+            email: true
+          }
+        },
+        planos_de_pagamento: true
       }
     });
 

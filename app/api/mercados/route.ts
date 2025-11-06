@@ -12,26 +12,49 @@ export async function GET(request: NextRequest) {
 
     const where = ativo === 'true' ? { ativo: true } : {};
 
-    // Simular retorno de mercados vazios para página funcionar
     const mercados = await prisma.mercados.findMany({
       where,
-      select: {
-        id: true,
-        nome: true,
-        ativo: true,
-        dataCriacao: true,
+      include: {
+        unidades: {
+          where: {
+            ativa: true
+          },
+          select: {
+            id: true,
+            nome: true,
+            cidade: true,
+            estado: true,
+            endereco: true,
+            ativa: true
+          }
+        }
       },
       orderBy: {
         nome: 'asc',
       },
-      take: 20,
+      take: 100,
     });
 
-    // Retornar em formato esperado pelo frontend
-    return NextResponse.json(mercados);
-  } catch (error) {
-    console.error('Erro ao buscar mercados:', error);
-    // Retornar array vazio em caso de erro para não quebrar a página
-    return NextResponse.json([]);
+    // Sempre retorna array, mesmo que vazio
+    return NextResponse.json(Array.isArray(mercados) ? mercados : [], {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar mercados:', error);
+    
+    // Em caso de erro, retorna array vazio para não quebrar o frontend
+    // mas também loga o erro para debug
+    return NextResponse.json(
+      [],
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
   }
 }

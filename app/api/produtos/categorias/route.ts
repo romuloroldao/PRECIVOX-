@@ -7,6 +7,7 @@ export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
   try {
+    // Buscar categorias distintas dos produtos
     const categorias = await prisma.produtos.findMany({
       select: {
         categoria: true
@@ -14,7 +15,8 @@ export async function GET(request: NextRequest) {
       where: {
         categoria: {
           not: null
-        }
+        },
+        ativo: true
       },
       distinct: ['categoria'],
       orderBy: {
@@ -22,17 +24,30 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Extrair e filtrar categorias únicas
     const categoriasUnicas = categorias
       .map(p => p.categoria)
+      .filter((cat): cat is string => cat !== null && cat !== undefined)
       .filter((cat, index, arr) => arr.indexOf(cat) === index)
-      .filter(Boolean);
+      .sort();
 
-    return NextResponse.json(categoriasUnicas);
-  } catch (error) {
-    console.error('Erro ao buscar categorias:', error);
+    return NextResponse.json(Array.isArray(categoriasUnicas) ? categoriasUnicas : [], {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar categorias:', error);
+    // Retorna array vazio em caso de erro para não quebrar o frontend
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
-      { status: 500 }
+      [],
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 }

@@ -32,6 +32,20 @@ export async function GET(request: Request) {
       const mercados = await prisma.mercados.findMany({
         where: { ativo: true },
         include: {
+          users: {
+            select: {
+              id: true,
+              nome: true,
+              email: true
+            }
+          },
+          planos_de_pagamento: {
+            select: {
+              id: true,
+              nome: true,
+              valor: true
+            }
+          },
           _count: {
             select: { unidades: true }
           }
@@ -53,6 +67,20 @@ export async function GET(request: Request) {
           ativo: true
         },
         include: {
+          users: {
+            select: {
+              id: true,
+              nome: true,
+              email: true
+            }
+          },
+          planos_de_pagamento: {
+            select: {
+              id: true,
+              nome: true,
+              valor: true
+            }
+          },
           _count: {
             select: { unidades: true }
           }

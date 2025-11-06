@@ -7,6 +7,7 @@ export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
   try {
+    // Buscar cidades distintas das unidades
     const cidades = await prisma.unidades.findMany({
       select: {
         cidade: true
@@ -14,7 +15,8 @@ export async function GET(request: NextRequest) {
       where: {
         cidade: {
           not: null
-        }
+        },
+        ativa: true
       },
       distinct: ['cidade'],
       orderBy: {
@@ -22,17 +24,30 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Extrair e filtrar cidades únicas
     const cidadesUnicas = cidades
       .map(u => u.cidade)
+      .filter((cidade): cidade is string => cidade !== null && cidade !== undefined)
       .filter((cidade, index, arr) => arr.indexOf(cidade) === index)
-      .filter(Boolean);
+      .sort();
 
-    return NextResponse.json(cidadesUnicas);
-  } catch (error) {
-    console.error('Erro ao buscar cidades:', error);
+    return NextResponse.json(Array.isArray(cidadesUnicas) ? cidadesUnicas : [], {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar cidades:', error);
+    // Retorna array vazio em caso de erro para não quebrar o frontend
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
-      { status: 500 }
+      [],
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 }

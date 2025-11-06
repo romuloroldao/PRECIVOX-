@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, AuthRequest } from '../middleware/auth';
+import { canAccessMercado, checkPlanLimits } from '../middleware/permissions';
 import { prisma } from '../lib/prisma';
 import multer from 'multer';
 import path from 'path';
@@ -36,55 +37,58 @@ router.get('/buscar', async (req, res) => {
       if (precoMax) where.preco.lte = parseFloat(precoMax as string);
     }
 
+    // Construir filtros de produto dinamicamente
+    const produtoFilters: any = {};
+    
     // Filtro por busca (nome, marca, código de barras)
     if (busca) {
-      where.produto = {
-        OR: [
-          { nome: { contains: busca as string, mode: 'insensitive' } },
-          { marca: { contains: busca as string, mode: 'insensitive' } },
-          { codigoBarras: { contains: busca as string } },
-        ]
-      };
+      produtoFilters.OR = [
+        { nome: { contains: busca as string, mode: 'insensitive' } },
+        { marca: { contains: busca as string, mode: 'insensitive' } },
+        { codigoBarras: { contains: busca as string } },
+      ];
     }
 
     // Filtro por categoria
     if (categoria) {
-      where.produto = {
-        ...where.produto,
-        categoria: categoria as string
-      };
+      produtoFilters.categoria = categoria as string;
     }
 
     // Filtro por marca
     if (marca) {
-      where.produto = {
-        ...where.produto,
-        marca: marca as string
-      };
+      produtoFilters.marca = { contains: marca as string, mode: 'insensitive' };
     }
+
+    // Adiciona filtro de produto se houver
+    if (Object.keys(produtoFilters).length > 0) {
+      where.produtos = produtoFilters;
+    }
+
+    // Construir filtros de unidade dinamicamente
+    const unidadeFilters: any = {};
 
     // Filtro por mercado
     if (mercado) {
-      where.unidade = {
-        mercadoId: mercado as string
-      };
+      unidadeFilters.mercadoId = mercado as string;
     }
 
     // Filtro por cidade
     if (cidade) {
-      where.unidade = {
-        ...where.unidade,
-        cidade: cidade as string
-      };
+      unidadeFilters.cidade = { contains: cidade as string, mode: 'insensitive' };
+    }
+
+    // Adiciona filtro de unidade se houver
+    if (Object.keys(unidadeFilters).length > 0) {
+      where.unidades = unidadeFilters;
     }
 
     const produtos = await prisma.estoques.findMany({
       where,
       include: {
-        produto: true,
-        unidade: {
+        produtos: true,
+        unidades: {
           include: {
-            mercado: true
+            mercados: true
           }
         }
       },
@@ -189,10 +193,10 @@ router.post('/comparar', async (req, res) => {
         }
       },
       include: {
-        produto: true,
-        unidade: {
+        produtos: true,
+        unidades: {
           include: {
-            mercado: true
+            mercados: true
           }
         }
       }
@@ -200,10 +204,10 @@ router.post('/comparar', async (req, res) => {
 
     // Agrupa por produto
     const produtosAgrupados = produtos.reduce((acc, estoque) => {
-      const produtoId = estoque.produto.id;
+      const produtoId = estoque.produtos.id;
       if (!acc[produtoId]) {
         acc[produtoId] = {
-          produto: estoque.produto,
+          produto: estoque.produtos,
           estoques: []
         };
       }
@@ -236,10 +240,10 @@ router.get('/recomendacoes', authenticate, async (req, res) => {
         disponivel: true
       },
       include: {
-        produto: true,
-        unidade: {
+        produtos: true,
+        unidades: {
           include: {
-            mercado: true
+            mercados: true
           }
         }
       },
@@ -276,9 +280,9 @@ router.get('/analise-precos/:produtoId', async (req, res) => {
         produtoId
       },
       include: {
-        unidade: {
+        unidades: {
           include: {
-            mercado: true
+            mercados: true
           }
         }
       }
@@ -292,20 +296,20 @@ router.get('/analise-precos/:produtoId', async (req, res) => {
     }
 
     // Análise estatística
-    const precos = estoques.map(e => e.preco);
+    const precos = estoques.map(e => Number(e.preco));
     const precoMin = Math.min(...precos);
     const precoMax = Math.max(...precos);
     const precoMedio = precos.reduce((a, b) => a + b, 0) / precos.length;
     const precoMediano = precos.sort((a, b) => a - b)[Math.floor(precos.length / 2)];
 
     // Encontra o menor preço
-    const menorPreco = estoques.find(e => e.preco === precoMin);
+    const menorPreco = estoques.find(e => Number(e.preco) === precoMin);
     
     // Encontra promoções
     const promocoes = estoques.filter(e => e.emPromocao);
 
     res.json({
-      produto: estoques[0].produto,
+      produto: estoques[0].produtos,
       analise: {
         precoMin,
         precoMax,
@@ -314,23 +318,23 @@ router.get('/analise-precos/:produtoId', async (req, res) => {
         totalMercados: estoques.length,
         menorPreco: {
           preco: precoMin,
-          mercado: menorPreco?.unidade.mercado.nome,
-          unidade: menorPreco?.unidade.nome,
-          endereco: `${menorPreco?.unidade.endereco}, ${menorPreco?.unidade.cidade}`
+          mercado: menorPreco?.unidades.mercados.nome,
+          unidade: menorPreco?.unidades.nome,
+          endereco: `${menorPreco?.unidades.endereco}, ${menorPreco?.unidades.cidade}`
         },
         promocoes: promocoes.length,
         economia: precoMax - precoMin
       },
       estoques: estoques.map(e => ({
         id: e.id,
-        preco: e.preco,
-        precoPromocional: e.precoPromocional,
+        preco: Number(e.preco),
+        precoPromocional: e.precoPromocional ? Number(e.precoPromocional) : null,
         emPromocao: e.emPromocao,
         disponivel: e.disponivel,
         quantidade: e.quantidade,
-        mercado: e.unidade.mercado.nome,
-        unidade: e.unidade.nome,
-        endereco: `${e.unidade.endereco}, ${e.unidade.cidade} - ${e.unidade.estado}`
+        mercado: e.unidades.mercados.nome,
+        unidade: e.unidades.nome,
+        endereco: `${e.unidades.endereco}, ${e.unidades.cidade} - ${e.unidades.estado}`
       }))
     });
   } catch (error) {
@@ -384,8 +388,10 @@ const uploadConverter = multer({
 router.post(
   '/upload-smart/:marketId',
   authenticate,
+  canAccessMercado,
+  checkPlanLimits,
   uploadConverter.single('file'),
-  async (req, res) => {
+  async (req: AuthRequest, res) => {
     try {
       const { marketId } = req.params;
 
@@ -396,7 +402,24 @@ router.post(
         });
       }
 
-      console.log(`📁 Upload recebido para mercado: ${marketId}`);
+      console.log(`📁 Upload recebido para mercado: ${marketId} por usuário ${req.user?.email}`);
+
+      // Verificar limite de tamanho do plano
+      const planoInfo = (req.body as any)._planoInfo;
+      if (planoInfo && req.file) {
+        const fileSizeMb = req.file.size / (1024 * 1024);
+        if (fileSizeMb > planoInfo.limiteUploadMb) {
+          // Remove arquivo em caso de erro
+          if (req.file?.path) {
+            await fs.unlink(req.file.path).catch(() => {});
+          }
+          return res.status(400).json({
+            success: false,
+            error: 'Arquivo muito grande',
+            message: `O arquivo excede o limite de ${planoInfo.limiteUploadMb}MB do seu plano`,
+          });
+        }
+      }
 
       // Verificar se arquivo foi enviado
       if (!req.file) {
@@ -409,16 +432,70 @@ router.post(
 
       console.log(`📄 Arquivo recebido: ${req.file.originalname} (${req.file.size} bytes)`);
 
-      // Por enquanto, retornar sucesso sem processar o arquivo
-      // TODO: Implementar processamento real do arquivo
+      // Obter unidadeId do body (enviado via FormData)
+      const unidadeId = req.body?.unidadeId || req.query?.unidadeId;
+      
+      if (!unidadeId) {
+        // Remove arquivo em caso de erro
+        if (req.file?.path) {
+          await fs.unlink(req.file.path).catch(() => {});
+        }
+        return res.status(400).json({
+          success: false,
+          error: 'Unidade ID é obrigatória',
+          message: 'É necessário fornecer o ID da unidade de destino',
+        });
+      }
+
+      // Verificar se a unidade existe e pertence ao mercado
+      const unidade = await prisma.unidades.findFirst({
+        where: {
+          id: unidadeId,
+          mercadoId: marketId,
+        },
+      });
+
+      if (!unidade) {
+        // Remove arquivo em caso de erro
+        if (req.file?.path) {
+          await fs.unlink(req.file.path).catch(() => {});
+        }
+        return res.status(404).json({
+          success: false,
+          error: 'Unidade não encontrada',
+          message: 'A unidade especificada não existe ou não pertence a este mercado',
+        });
+      }
+
+      // Processar arquivo usando o handler
+      const { processarArquivoUpload } = await import('../lib/uploadHandler');
+      
+      console.log(`🔄 Iniciando processamento do arquivo...`);
+      const resultado = await processarArquivoUpload(
+        req.file.path,
+        req.file.originalname,
+        marketId,
+        unidadeId,
+        req.file.size
+      );
+
+      console.log(`✅ Upload processado: ${resultado.sucesso} sucesso, ${resultado.erros} erros, ${resultado.duplicados} duplicados`);
+
       return res.json({
         success: true,
-        message: 'Upload recebido com sucesso',
+        message: 'Upload processado com sucesso',
         data: {
           marketId,
+          unidadeId,
           filename: req.file.originalname,
           size: req.file.size,
-          message: 'Endpoint funcionando corretamente',
+          resultado: {
+            totalLinhas: resultado.totalLinhas,
+            sucesso: resultado.sucesso,
+            erros: resultado.erros,
+            duplicados: resultado.duplicados,
+            detalhesErros: resultado.detalhesErros,
+          },
         },
       });
     } catch (error: any) {

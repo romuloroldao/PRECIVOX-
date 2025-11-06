@@ -6,8 +6,10 @@ import { ProductCard } from '@/components/ProductCard';
 import { ProductList } from '@/components/ProductList';
 import { ListaLateral } from '@/components/ListaLateral';
 import { ToggleViewButton } from '@/components/ToggleViewButton';
+import { SearchAutocomplete } from '@/components/SearchAutocomplete';
+import { CategoryFilter } from '@/components/CategoryFilter';
 import { useProdutos } from '@/app/hooks/useProdutos';
-import { Search, Filter, X } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 
 export default function BuscaPage() {
   const [modo, setModo] = useState<'cards' | 'lista'>('cards');
@@ -40,9 +42,10 @@ export default function BuscaPage() {
     setPrecoMax('');
     setEmPromocao(undefined);
     setDisponivel(undefined);
+    setBusca('');
   };
 
-  const temFiltros = categoria || marca || precoMin || precoMax || emPromocao !== undefined || disponivel !== undefined;
+  const temFiltros = categoria || marca || precoMin || precoMax || emPromocao !== undefined || disponivel !== undefined || busca;
 
   return (
     <DashboardLayout role="CLIENTE">
@@ -53,28 +56,23 @@ export default function BuscaPage() {
             expandida ? 'md:mr-96' : 'mr-0'
           }`}
         >
-          <div className="max-w-7xl mx-auto p-6">
+          <div className="max-w-7xl mx-auto p-4 md:p-6">
             {/* Header */}
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
                 Buscar Produtos
               </h1>
 
-              {/* Barra de Busca */}
-              <div className="flex gap-4 mb-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                    placeholder="Digite o nome do produto, marca ou código de barras..."
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-precivox-blue focus:outline-none transition-colors"
-                  />
-                </div>
+              {/* Barra de Busca com Autocomplete */}
+              <div className="flex gap-2 md:gap-4 mb-4">
+                <SearchAutocomplete
+                  value={busca}
+                  onChange={setBusca}
+                  placeholder="Digite o nome do produto, marca ou código de barras..."
+                />
                 <button
                   onClick={() => setFiltrosAbertos(!filtrosAbertos)}
-                  className={`px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-4 md:px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                     filtrosAbertos || temFiltros
                       ? 'bg-precivox-blue text-white hover:bg-blue-700'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -91,36 +89,29 @@ export default function BuscaPage() {
                 <ToggleViewButton modo={modo} setModo={setModo} />
               </div>
 
-              {/* Painel de Filtros */}
+              {/* Filtro de Categorias - SEMPRE VISÍVEL */}
+              <CategoryFilter
+                categoriaSelecionada={categoria}
+                onCategoriaChange={setCategoria}
+              />
+
+              {/* Painel de Filtros Avançados */}
               {filtrosAbertos && (
                 <div className="bg-white border-2 border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Filtros</h3>
+                    <h3 className="font-semibold text-gray-900">Filtros Avançados</h3>
                     {temFiltros && (
                       <button
                         onClick={limparFiltros}
                         className="text-sm text-precivox-blue hover:underline flex items-center gap-1"
                       >
                         <X className="w-4 h-4" />
-                        Limpar filtros
+                        Limpar todos
                       </button>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Categoria
-                      </label>
-                      <input
-                        type="text"
-                        value={categoria}
-                        onChange={(e) => setCategoria(e.target.value)}
-                        placeholder="Ex: Alimentícios"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-precivox-blue focus:outline-none"
-                      />
-                    </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Marca
@@ -197,6 +188,12 @@ export default function BuscaPage() {
               {!loading && (
                 <div className="text-sm text-gray-600 mb-4">
                   {produtos.length} {produtos.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+                  {busca && (
+                    <span className="ml-2">para "{busca}"</span>
+                  )}
+                  {categoria && (
+                    <span className="ml-2">na categoria "{categoria}"</span>
+                  )}
                 </div>
               )}
             </div>
@@ -208,9 +205,35 @@ export default function BuscaPage() {
                 <span className="ml-4 text-gray-600">Carregando produtos...</span>
               </div>
             ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <p className="text-red-800 font-medium">Erro ao carregar produtos</p>
-                <p className="text-red-600 text-sm mt-1">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <div className="max-w-md mx-auto">
+                  <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-red-800 font-semibold text-lg mb-2">Erro ao carregar produtos</p>
+                  <p className="text-red-600 text-sm mb-4">
+                    {error.includes('Erro 500') || error.includes('Erro interno')
+                      ? 'O servidor está temporariamente indisponível. Por favor, tente novamente em alguns instantes.'
+                      : error.includes('Erro 404')
+                      ? 'Recurso não encontrado. Verifique sua conexão e tente novamente.'
+                      : error}
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2 bg-precivox-blue text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Tentar Novamente
+                  </button>
+                </div>
+              </div>
+            ) : produtos.length === 0 ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                <p className="text-gray-600 text-lg mb-2">Nenhum produto encontrado</p>
+                <p className="text-gray-500 text-sm">
+                  {busca || categoria || temFiltros
+                    ? 'Tente ajustar os filtros de busca'
+                    : 'Os produtos aparecerão aqui quando forem cadastrados'}
+                </p>
               </div>
             ) : (
               <>

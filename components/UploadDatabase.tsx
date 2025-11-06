@@ -27,10 +27,12 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
       'text/csv',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/json',
+      'text/json',
     ];
 
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(csv|xlsx|xls)$/i)) {
-      setError('Formato de arquivo inválido. Use CSV ou XLSX');
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(csv|xlsx|xls|json)$/i)) {
+      setError('Formato de arquivo inválido. Use CSV, XLSX ou JSON');
       return;
     }
 
@@ -120,6 +122,20 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
 
       const resultado = await response.json();
       console.log('Upload concluído:', resultado);
+      
+      // Mostra toast de sucesso
+      if (resultado.data?.resultado) {
+        const { sucesso, erros, duplicados, totalLinhas } = resultado.data.resultado;
+        const mensagem = `Upload concluído! ${sucesso} produtos importados${erros > 0 ? `, ${erros} erros` : ''}${duplicados > 0 ? `, ${duplicados} atualizados` : ''}`;
+        
+        // Usa toast se disponível, senão alert
+        if (typeof window !== 'undefined' && (window as any).toast) {
+          (window as any).toast.success(mensagem);
+        } else {
+          alert(mensagem);
+        }
+      }
+
       // Atualiza dados da página (histórico/listas) sem exigir callback do servidor
       try { router.refresh(); } catch (_) {}
 
@@ -129,6 +145,12 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+
+      // Redireciona para lista de produtos após 2 segundos (opcional)
+      // Descomente as linhas abaixo se quiser redirecionar automaticamente
+      // setTimeout(() => {
+      //   router.push(`/cliente/busca`);
+      // }, 2000);
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer upload');
       console.error('Erro no upload:', err);
@@ -143,7 +165,7 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
       <CardHeader>
         <CardTitle>Upload de Base de Dados</CardTitle>
         <CardDescription>
-          Envie um arquivo CSV ou XLSX com os produtos e estoque. O arquivo deve conter as colunas: 
+          Envie um arquivo CSV, XLSX ou JSON com os produtos e estoque. O arquivo deve conter os campos: 
           nome, preco, quantidade, categoria (opcional), codigo_barras (opcional).
         </CardDescription>
       </CardHeader>
@@ -165,7 +187,7 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
         {/* Upload de Arquivo */}
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">
-            Arquivo (CSV ou XLSX) <span className="text-error-600">*</span>
+            Arquivo (CSV, XLSX ou JSON) <span className="text-error-600">*</span>
           </label>
           <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-primary-500 transition-colors">
           <div className="space-y-1 text-center">
@@ -193,7 +215,7 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
                   id="file-upload"
                   name="file-upload"
                   type="file"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.xlsx,.xls,.json"
                   onChange={handleFileSelect}
                   disabled={loading}
                   className="sr-only"
@@ -201,7 +223,7 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
               </label>
               <p className="pl-1">ou arraste aqui</p>
             </div>
-            <p className="text-xs text-gray-500">CSV ou XLSX até 50MB</p>
+            <p className="text-xs text-gray-500">CSV, XLSX ou JSON até 50MB</p>
           </div>
         </div>
         {selectedFile && (
@@ -295,6 +317,11 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
               <li><code className="bg-primary-100 px-1 py-0.5 rounded">codigo_barras</code> ou <code className="bg-primary-100 px-1 py-0.5 rounded">ean</code> - Código de barras</li>
               <li><code className="bg-primary-100 px-1 py-0.5 rounded">marca</code> - Marca do produto</li>
               <li><code className="bg-primary-100 px-1 py-0.5 rounded">preco_promocional</code> - Preço em promoção</li>
+            </ul>
+            <p className="mt-2"><strong>Formato JSON:</strong></p>
+            <ul className="list-disc list-inside ml-4 space-y-1">
+              <li>Array direto: <code className="bg-primary-100 px-1 py-0.5 rounded">[{`{ "nome": "...", "preco": 10.50 }`}]</code></li>
+              <li>Ou objeto: <code className="bg-primary-100 px-1 py-0.5 rounded">{`{ "produtos": [...] }`}</code></li>
             </ul>
           </div>
         </div>

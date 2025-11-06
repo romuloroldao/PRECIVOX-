@@ -24,7 +24,7 @@ export const canAccessMercado = async (
 
     // Gestor só pode acessar mercados que gerencia
     if (user.role === 'GESTOR') {
-      const mercado = await prisma.mercado.findFirst({
+      const mercado = await prisma.mercados.findFirst({
         where: {
           id: mercadoId,
           gestorId: user.id,
@@ -73,10 +73,10 @@ export const canAccessUnidade = async (
 
     // Gestor só pode acessar unidades do seu mercado
     if (user.role === 'GESTOR') {
-      const unidade = await prisma.unidade.findFirst({
+      const unidade = await prisma.unidades.findFirst({
         where: {
           id: unidadeId,
-          mercado: {
+          mercados: {
             gestorId: user.id,
           },
         },
@@ -116,10 +116,10 @@ export const checkPlanLimits = async (
   try {
     const { id: mercadoId } = req.params;
 
-    const mercado = await prisma.mercado.findUnique({
+    const mercado = await prisma.mercados.findUnique({
       where: { id: mercadoId },
       include: {
-        plano: true,
+        planos_de_pagamento: true,
         unidades: true,
       },
     });
@@ -130,7 +130,7 @@ export const checkPlanLimits = async (
       });
     }
 
-    if (!mercado.plano) {
+    if (!mercado.planos_de_pagamento) {
       return res.status(400).json({
         error: 'Sem plano associado',
         message: 'Este mercado não possui um plano de pagamento associado',
@@ -139,18 +139,18 @@ export const checkPlanLimits = async (
 
     // Verifica limite de unidades ao criar nova unidade
     if (req.method === 'POST' && req.path.includes('/unidades')) {
-      if (mercado.unidades.length >= mercado.plano.limiteUnidades) {
+      if (mercado.unidades.length >= mercado.planos_de_pagamento.limiteUnidades) {
         return res.status(400).json({
           error: 'Limite de unidades atingido',
-          message: `Seu plano permite no máximo ${mercado.plano.limiteUnidades} unidades`,
+          message: `Seu plano permite no máximo ${mercado.planos_de_pagamento.limiteUnidades} unidades`,
         });
       }
     }
 
     // Adiciona informações do plano na request para uso posterior
     req.body._planoInfo = {
-      limiteUploadMb: mercado.plano.limiteUploadMb,
-      limiteUnidades: mercado.plano.limiteUnidades,
+      limiteUploadMb: mercado.planos_de_pagamento.limiteUploadMb,
+      limiteUnidades: mercado.planos_de_pagamento.limiteUnidades,
     };
 
     next();

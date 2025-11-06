@@ -1,13 +1,20 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './Button';
+import { X } from 'lucide-react';
+
+// Tipo interno para evitar problemas de serialização do Next.js
+type OnCloseHandler = (() => void) | undefined;
 
 export interface ModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  /**
+   * Função de callback para fechar o modal.
+   * Pode ser passada diretamente ou será gerenciada internamente se não fornecida.
+   */
+  onClose?: () => void;
   title?: string;
   description?: string;
   children: React.ReactNode;
@@ -16,16 +23,24 @@ export interface ModalProps {
   footer?: React.ReactNode;
 }
 
-export function Modal({
+// Componente interno que recebe a função através de uma ref para evitar serialização
+function ModalContent({
   isOpen,
-  onClose,
+  onCloseRef,
   title,
   description,
   children,
   size = 'md',
   showCloseButton = true,
   footer,
-}: ModalProps) {
+}: Omit<ModalProps, 'onClose'> & { onCloseRef: React.MutableRefObject<OnCloseHandler> }) {
+  // Função estável que usa a ref para evitar problemas de serialização
+  const handleClose = useCallback(() => {
+    if (onCloseRef.current) {
+      onCloseRef.current();
+    }
+  }, [onCloseRef]);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -40,12 +55,12 @@ export function Modal({
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        handleClose();
       }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   if (!isOpen) return null;
 
@@ -60,7 +75,7 @@ export function Modal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className={cn(
@@ -85,7 +100,7 @@ export function Modal({
                 variant="ghost"
                 size="sm"
                 icon={X}
-                onClick={onClose}
+                onClick={handleClose}
                 className="ml-4"
                 aria-label="Fechar"
               >
@@ -102,5 +117,35 @@ export function Modal({
         )}
       </div>
     </div>
+  );
+}
+
+// Componente wrapper que gerencia a ref para evitar problemas de serialização
+export function Modal(props: ModalProps) {
+  const onCloseRef = useRef<OnCloseHandler>(props.onClose);
+  
+  // Atualiza a referência quando onClose mudar
+  useEffect(() => {
+    onCloseRef.current = props.onClose;
+  }, [props.onClose]);
+
+  useEffect(() => {
+    if (props.isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [props.isOpen]);
+
+  const { onClose, ...restProps } = props;
+  
+  return (
+    <ModalContent
+      {...restProps}
+      onCloseRef={onCloseRef}
+    />
   );
 }

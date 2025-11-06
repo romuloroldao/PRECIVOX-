@@ -17,16 +17,33 @@ export default function MercadoDetailsPage() {
   const [mercado, setMercado] = useState<any>(null);
   const [unidades, setUnidades] = useState([]);
   const [importacoes, setImportacoes] = useState([]);
+  const [gestores, setGestores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'info' | 'unidades' | 'upload' | 'historico'>('info');
   const [showUnidadeForm, setShowUnidadeForm] = useState(false);
   const [editingUnidade, setEditingUnidade] = useState(null);
+  const [isEditingGestor, setIsEditingGestor] = useState(false);
+  const [selectedGestorId, setSelectedGestorId] = useState<string>('');
+  const [savingGestor, setSavingGestor] = useState(false);
 
   useEffect(() => {
     loadMercado();
     loadUnidades();
     loadImportacoes();
+    loadGestores();
   }, [mercadoId]);
+
+  const loadGestores = async () => {
+    try {
+      const response = await fetch('/api/admin/users?role=GESTOR');
+      if (response.ok) {
+        const data = await response.json();
+        setGestores(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar gestores:', error);
+    }
+  };
 
   const loadMercado = async () => {
     try {
@@ -164,6 +181,67 @@ export default function MercadoDetailsPage() {
     await loadImportacoes();
   };
 
+  const handleSaveGestor = async () => {
+    setSavingGestor(true);
+    try {
+      const response = await fetch(`/api/markets/${mercadoId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gestorId: selectedGestorId || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast.success('Gestor associado com sucesso!');
+        setIsEditingGestor(false);
+        await loadMercado();
+      } else {
+        toast.error(result.error || 'Erro ao associar gestor');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar gestor:', error);
+      toast.error('Erro ao salvar gestor');
+    } finally {
+      setSavingGestor(false);
+    }
+  };
+
+  const handleRemoveGestor = async () => {
+    if (!confirm('Tem certeza que deseja remover o gestor deste mercado?')) return;
+
+    setSavingGestor(true);
+    try {
+      const response = await fetch(`/api/markets/${mercadoId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gestorId: null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast.success('Gestor removido com sucesso!');
+        await loadMercado();
+      } else {
+        toast.error(result.error || 'Erro ao remover gestor');
+      }
+    } catch (error) {
+      console.error('Erro ao remover gestor:', error);
+      toast.error('Erro ao remover gestor');
+    } finally {
+      setSavingGestor(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const badges = {
       PROCESSANDO: 'bg-yellow-100 text-yellow-800',
@@ -249,9 +327,69 @@ export default function MercadoDetailsPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Gestor</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {mercado.gestor?.nome || 'Sem gestor'}
-              </p>
+              {isEditingGestor ? (
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={selectedGestorId}
+                    onChange={(e) => setSelectedGestorId(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={savingGestor}
+                  >
+                    <option value="">Selecione um gestor</option>
+                    {gestores.map((gestor) => (
+                      <option key={gestor.id} value={gestor.id}>
+                        {gestor.nome} ({gestor.email})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleSaveGestor}
+                    disabled={savingGestor}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {savingGestor ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingGestor(false);
+                      setSelectedGestorId(mercado.gestorId || mercado.users?.id || '');
+                    }}
+                    disabled={savingGestor}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <p className="text-lg font-semibold text-gray-900">
+                    {mercado.users?.nome || mercado.gestor?.nome || 'Sem gestor'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIsEditingGestor(true);
+                      setSelectedGestorId(mercado.gestorId || mercado.users?.id || '');
+                    }}
+                    className="ml-2 px-2 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                    title="Editar gestor"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  {mercado.gestorId || mercado.users?.id ? (
+                    <button
+                      onClick={handleRemoveGestor}
+                      className="ml-1 px-2 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                      title="Remover gestor"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  ) : null}
+                </div>
+              )}
             </div>
             <div>
               <p className="text-sm text-gray-600">Unidades</p>

@@ -4,13 +4,16 @@ import React from 'react';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'className'> {
   variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'outline' | 'gradient' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   icon?: LucideIcon;
   iconPosition?: 'left' | 'right';
   isLoading?: boolean;
   children: React.ReactNode;
+  className?: string;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export function Button({

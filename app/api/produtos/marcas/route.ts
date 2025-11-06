@@ -7,6 +7,7 @@ export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
   try {
+    // Buscar marcas distintas dos produtos
     const marcas = await prisma.produtos.findMany({
       select: {
         marca: true
@@ -14,7 +15,8 @@ export async function GET(request: NextRequest) {
       where: {
         marca: {
           not: null
-        }
+        },
+        ativo: true
       },
       distinct: ['marca'],
       orderBy: {
@@ -22,17 +24,30 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Extrair e filtrar marcas únicas
     const marcasUnicas = marcas
       .map(p => p.marca)
+      .filter((marca): marca is string => marca !== null && marca !== undefined)
       .filter((marca, index, arr) => arr.indexOf(marca) === index)
-      .filter(Boolean);
+      .sort();
 
-    return NextResponse.json(marcasUnicas);
-  } catch (error) {
-    console.error('Erro ao buscar marcas:', error);
+    return NextResponse.json(Array.isArray(marcasUnicas) ? marcasUnicas : [], {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar marcas:', error);
+    // Retorna array vazio em caso de erro para não quebrar o frontend
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
-      { status: 500 }
+      [],
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 }

@@ -43,8 +43,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Buscar todos os usuários
+    // Buscar parâmetro de filtro por role
+    const { searchParams } = new URL(request.url);
+    const roleFilter = searchParams.get('role');
+
+    // Construir where clause
+    const where: any = {};
+    if (roleFilter) {
+      where.role = roleFilter;
+    }
+
+    // Buscar usuários
     const users = await prisma.usuarios.findMany({
+      where,
       orderBy: { data_criacao: 'desc' },
       select: {
         id: true,
