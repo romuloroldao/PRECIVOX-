@@ -53,7 +53,24 @@ export async function GET(request: NextRequest) {
       where.role = roleFilter;
     }
 
-    // Buscar usuários
+    // IMPORTANTE: Se for buscar GESTOR, buscar da tabela users (para compatibilidade com mercados.gestorId)
+    // Caso contrário, buscar da tabela usuarios (NextAuth)
+    if (roleFilter === 'GESTOR') {
+      const gestores = await prisma.users.findMany({
+        where,
+        orderBy: { dataCriacao: 'desc' },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          role: true,
+          dataCriacao: true
+        }
+      });
+      return NextResponse.json(gestores);
+    }
+
+    // Buscar usuários da tabela usuarios (NextAuth)
     const users = await prisma.usuarios.findMany({
       where,
       orderBy: { data_criacao: 'desc' },

@@ -154,7 +154,8 @@ export async function PUT(
         // Permitir remover gestor
       } else {
         // Validar se o gestor existe e tem role GESTOR
-        const gestor = await prisma.usuarios.findUnique({
+        // IMPORTANTE: O schema relaciona gestorId com users, não usuarios
+        const gestor = await prisma.users.findUnique({
           where: { id: gestorId },
           select: { id: true, role: true }
         });
