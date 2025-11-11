@@ -354,7 +354,7 @@ export async function processarArquivoUpload(
         });
 
         if (estoqueExistente) {
-          // Atualiza estoque existente
+          // Atualiza estoque existente para a mesma unidade
           await prisma.estoques.update({
             where: { id: estoqueExistente.id },
             data: {
@@ -367,6 +367,7 @@ export async function processarArquivoUpload(
             },
           });
           resultado.duplicados++;
+          resultado.sucesso++;
         } else {
           // Cria novo estoque
           await prisma.estoques.create({

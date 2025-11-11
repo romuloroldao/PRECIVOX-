@@ -26,18 +26,18 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Buscar usuário
-        const usuario = await prisma.usuarios.findUnique({
+        const usuario = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!usuario || !usuario.senha_hash) {
+        if (!usuario || !usuario.senhaHash) {
           throw new Error('Credenciais inválidas');
         }
 
         // Verificar senha
         const senhaValida = await bcrypt.compare(
           credentials.senha,
-          usuario.senha_hash
+          usuario.senhaHash
         );
 
         if (!senhaValida) {
@@ -45,9 +45,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Atualizar último login
-        await prisma.usuarios.update({
+        await prisma.user.update({
           where: { id: usuario.id },
-          data: { ultimo_login: new Date() },
+          data: { ultimoLogin: new Date() },
         });
 
         return {
@@ -117,21 +117,21 @@ export const authOptions: NextAuthOptions = {
       try {
         // Para login social, criar ou atualizar usuário
         if (account?.provider !== 'credentials') {
-          const existingUser = await prisma.usuarios.findUnique({
+          const existingUser = await prisma.user.findUnique({
             where: { email: user.email },
           });
 
           if (!existingUser) {
-            await prisma.usuarios.create({
+            await prisma.user.create({
               data: {
                 id: `user-${Date.now()}-${Math.random().toString(36).substring(7)}`,
                 email: user.email,
                 nome: user.name || 'Usuário',
                 imagem: user.image,
-                email_verified: new Date(),
-                senha_hash: null,
+                emailVerified: new Date(),
+                senhaHash: null,
                 role: 'CLIENTE',
-                data_atualizacao: new Date(),
+                dataAtualizacao: new Date(),
               },
             });
           }
@@ -149,7 +149,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         try {
           // Buscar dados completos do usuário na nossa tabela usuarios
-          const usuario = await prisma.usuarios.findUnique({
+          const usuario = await prisma.user.findUnique({
             where: { email: user.email! },
           });
 
@@ -226,9 +226,9 @@ export const authOptions: NextAuthOptions = {
       // Atualizar último login na nossa tabela usuarios
       if (user.email) {
         try {
-          await prisma.usuarios.update({
+          await prisma.user.update({
             where: { email: user.email },
-            data: { ultimo_login: new Date() },
+            data: { ultimoLogin: new Date() },
           });
         } catch (error) {
           console.log('Usuário não encontrado na tabela usuarios:', user.email);

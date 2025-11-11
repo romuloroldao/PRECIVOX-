@@ -36,7 +36,7 @@ export async function PATCH(
     const { role } = updateRoleSchema.parse(body);
 
     // Verificar se usuário existe
-    const user = await prisma.usuarios.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: params.id }
     });
 
@@ -48,7 +48,7 @@ export async function PATCH(
     }
 
     // Atualizar role
-    const updatedUser = await prisma.usuarios.update({
+    const updatedUser = await prisma.user.update({
       where: { id: params.id },
       data: { role },
       select: {

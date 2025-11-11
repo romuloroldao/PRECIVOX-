@@ -39,7 +39,7 @@ export async function GET(
           orderBy: { dataCriacao: 'desc' }
         },
         planos_de_pagamento: true,
-        users: {
+        gestor: {
           select: {
             id: true,
             nome: true,
@@ -154,8 +154,7 @@ export async function PUT(
         // Permitir remover gestor
       } else {
         // Validar se o gestor existe e tem role GESTOR
-        // IMPORTANTE: O schema relaciona gestorId com users, não usuarios
-        const gestor = await prisma.users.findUnique({
+        const gestor = await prisma.user.findUnique({
           where: { id: gestorId },
           select: { id: true, role: true }
         });
@@ -192,7 +191,7 @@ export async function PUT(
         dataAtualizacao: new Date()
       },
       include: {
-        users: {
+        gestor: {
           select: {
             id: true,
             nome: true,

@@ -83,19 +83,17 @@ export default function MercadoCard({ mercado, isAdmin = false, onEdit, onDelete
         )}
       </div>
 
-      {(mercado.users || mercado.gestor) && (
-        <div className="py-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500 mb-1">Gestor Responsável</p>
-          <p className="text-sm font-medium text-gray-900">
-            {mercado.users?.nome || mercado.gestor?.nome || 'Sem gestor'}
+      <div className="py-4 border-t border-gray-200">
+        <p className="text-xs text-gray-500 mb-1">Gestor Responsável</p>
+        <p className="text-sm font-medium text-gray-900">
+          {mercado.gestor?.nome || 'Sem gestor'}
+        </p>
+        {mercado.gestor?.email && (
+          <p className="text-xs text-gray-600">
+            {mercado.gestor?.email}
           </p>
-          {(mercado.users?.email || mercado.gestor?.email) && (
-            <p className="text-xs text-gray-600">
-              {mercado.users?.email || mercado.gestor?.email}
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Botões de Ação */}
       <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-200">

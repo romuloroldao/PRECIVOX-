@@ -10,19 +10,19 @@ async function main() {
   const senhaHash = await bcrypt.hash('senha123', 10);
 
   // Verifica se já existem usuários
-  const existingAdmin = await prisma.usuarios.findUnique({
+  const existingAdmin = await prisma.user.findUnique({
     where: { email: 'admin@precivox.com' }
   });
 
   if (!existingAdmin) {
-    await prisma.usuarios.create({
+    await prisma.user.create({
       data: {
         id: `admin-${Date.now()}`,
         email: 'admin@precivox.com',
         nome: 'Administrador',
-        senha_hash: senhaHash,
+        senhaHash: senhaHash,
         role: 'ADMIN',
-        data_atualizacao: new Date(),
+        dataAtualizacao: new Date(),
       },
     });
     console.log('✅ Admin criado');
@@ -30,19 +30,19 @@ async function main() {
     console.log('⏭️ Admin já existe');
   }
 
-  const existingGestor = await prisma.usuarios.findUnique({
+  const existingGestor = await prisma.user.findUnique({
     where: { email: 'gestor@precivox.com' }
   });
 
   if (!existingGestor) {
-    await prisma.usuarios.create({
+    await prisma.user.create({
       data: {
         id: `gestor-${Date.now()}`,
         email: 'gestor@precivox.com',
         nome: 'Gestor Teste',
-        senha_hash: senhaHash,
+        senhaHash: senhaHash,
         role: 'GESTOR',
-        data_atualizacao: new Date(),
+        dataAtualizacao: new Date(),
       },
     });
     console.log('✅ Gestor criado');
@@ -50,19 +50,19 @@ async function main() {
     console.log('⏭️ Gestor já existe');
   }
 
-  const existingCliente = await prisma.usuarios.findUnique({
+  const existingCliente = await prisma.user.findUnique({
     where: { email: 'cliente@precivox.com' }
   });
 
   if (!existingCliente) {
-    await prisma.usuarios.create({
+    await prisma.user.create({
       data: {
         id: `cliente-${Date.now()}`,
         email: 'cliente@precivox.com',
         nome: 'Cliente Teste',
-        senha_hash: senhaHash,
+        senhaHash: senhaHash,
         role: 'CLIENTE',
-        data_atualizacao: new Date(),
+        dataAtualizacao: new Date(),
       },
     });
     console.log('✅ Cliente criado');

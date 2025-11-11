@@ -94,14 +94,31 @@ export default function HomePage() {
       
       // Carrega mercados ativos
       try {
-        const mercadosRes = await fetch('/api/mercados?ativo=true', {
+        const mercadosRes = await fetch('/api/public/mercados?ativo=true', {
           cache: 'no-store',
         });
         if (!mercadosRes.ok) {
           console.error(`Erro ao carregar mercados: ${mercadosRes.status} ${mercadosRes.statusText}`);
         } else {
           const mercadosData = await mercadosRes.json();
-          setMercados(Array.isArray(mercadosData) ? mercadosData : []);
+          const listaBruta = Array.isArray(mercadosData)
+            ? mercadosData
+            : Array.isArray(mercadosData?.mercados)
+              ? mercadosData.mercados
+              : Array.isArray(mercadosData?.data?.markets)
+                ? mercadosData.data.markets
+                : [];
+
+          const mercadosNormalizados = listaBruta
+            .map((mercado: any) => ({
+              id: mercado?.id ?? mercado?.slug ?? null,
+              nome: mercado?.nome ?? mercado?.name ?? 'Mercado sem nome',
+              cidade: mercado?.cidade ?? mercado?.address_city ?? null,
+              estado: mercado?.estado ?? mercado?.address_state ?? null,
+            }))
+            .filter((mercado: any) => Boolean(mercado.id));
+
+          setMercados(mercadosNormalizados);
         }
       } catch (error) {
         console.error('Erro ao carregar mercados:', error);
@@ -451,9 +468,16 @@ export default function HomePage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Todos os mercados</option>
-                      {mercados.map((mercado: any) => (
-                        <option key={mercado.id} value={mercado.id}>{mercado.nome}</option>
-                      ))}
+                      {mercados.map((mercado: any) => {
+                        const optionId = mercado?.id ?? mercado?.slug;
+                        if (!optionId) return null;
+                        const optionLabel = mercado?.nome ?? mercado?.name ?? 'Mercado';
+                        return (
+                          <option key={optionId} value={optionId}>
+                            {optionLabel}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 

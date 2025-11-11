@@ -352,7 +352,7 @@ export default function MercadoDetailsPage() {
                   <button
                     onClick={() => {
                       setIsEditingGestor(false);
-                      setSelectedGestorId(mercado.gestorId || mercado.users?.id || '');
+                      setSelectedGestorId(mercado.gestorId || mercado.gestor?.id || '');
                     }}
                     disabled={savingGestor}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
@@ -363,12 +363,12 @@ export default function MercadoDetailsPage() {
               ) : (
                 <div className="flex items-center space-x-2">
                   <p className="text-lg font-semibold text-gray-900">
-                    {mercado.users?.nome || mercado.gestor?.nome || 'Sem gestor'}
+                    {mercado.gestor?.nome || 'Sem gestor'}
                   </p>
                   <button
                     onClick={() => {
                       setIsEditingGestor(true);
-                      setSelectedGestorId(mercado.gestorId || mercado.users?.id || '');
+                      setSelectedGestorId(mercado.gestorId || mercado.gestor?.id || '');
                     }}
                     className="ml-2 px-2 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                     title="Editar gestor"
@@ -377,7 +377,7 @@ export default function MercadoDetailsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
-                  {mercado.gestorId || mercado.users?.id ? (
+                  {mercado.gestorId || mercado.gestor?.id ? (
                     <button
                       onClick={handleRemoveGestor}
                       className="ml-1 px-2 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"

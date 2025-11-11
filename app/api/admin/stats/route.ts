@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
 
     // Buscar estatísticas com timeout
     const statsPromise = Promise.all([
-      prisma.usuarios.count(),
-      prisma.usuarios.count({ where: { role: 'CLIENTE' } }),
-      prisma.usuarios.count({ where: { role: 'GESTOR' } }),
-      prisma.usuarios.count({ where: { role: 'ADMIN' } })
+      prisma.user.count(),
+      prisma.user.count({ where: { role: 'CLIENTE' } }),
+      prisma.user.count({ where: { role: 'GESTOR' } }),
+      prisma.user.count({ where: { role: 'ADMIN' } })
     ]);
 
     const [total, clientes, gestores, admins] = await Promise.race([

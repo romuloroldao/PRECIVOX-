@@ -53,10 +53,8 @@ export async function GET(request: NextRequest) {
       where.role = roleFilter;
     }
 
-    // IMPORTANTE: Se for buscar GESTOR, buscar da tabela users (para compatibilidade com mercados.gestorId)
-    // Caso contrário, buscar da tabela usuarios (NextAuth)
     if (roleFilter === 'GESTOR') {
-      const gestores = await prisma.users.findMany({
+      const gestores = await prisma.user.findMany({
         where,
         orderBy: { dataCriacao: 'desc' },
         select: {
@@ -64,23 +62,23 @@ export async function GET(request: NextRequest) {
           nome: true,
           email: true,
           role: true,
-          dataCriacao: true
+          dataCriacao: true,
+          ultimoLogin: true
         }
       });
       return NextResponse.json(gestores);
     }
 
-    // Buscar usuários da tabela usuarios (NextAuth)
-    const users = await prisma.usuarios.findMany({
+    const users = await prisma.user.findMany({
       where,
-      orderBy: { data_criacao: 'desc' },
+      orderBy: { dataCriacao: 'desc' },
       select: {
         id: true,
         nome: true,
         email: true,
         role: true,
-        data_criacao: true,
-        ultimo_login: true
+        dataCriacao: true,
+        ultimoLogin: true
       }
     });
 
@@ -120,7 +118,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createUserSchema.parse(body);
 
     // Verificar se email já existe
-    const existingUser = await prisma.usuarios.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email }
     });
 
@@ -135,21 +133,21 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(validatedData.senha, 12);
 
     // Criar usuário
-    const newUser = await prisma.usuarios.create({
+    const newUser = await prisma.user.create({
       data: {
         id: `user-${Date.now()}`,
         nome: validatedData.nome,
         email: validatedData.email,
-        senha_hash: hashedPassword,
+        senhaHash: hashedPassword,
         role: validatedData.role,
-        data_atualizacao: new Date()
+        dataAtualizacao: new Date()
       },
       select: {
         id: true,
         nome: true,
         email: true,
         role: true,
-        data_criacao: true
+        dataCriacao: true
       }
     });
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPublicMarkets } from '@/lib/publicMarkets';
 
-// Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
@@ -18,8 +17,8 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
       },
     });
-  } catch (error: any) {
-    console.error('❌ Erro ao buscar mercados:', error);
+  } catch (error) {
+    console.error('❌ Erro ao buscar mercados públicos:', error);
 
     return NextResponse.json([], {
       status: 500,
@@ -29,3 +28,4 @@ export async function GET(request: NextRequest) {
     });
   }
 }
+

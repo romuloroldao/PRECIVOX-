@@ -14,11 +14,11 @@ interface User {
   nome: string | null;
   email: string;
   role: string;
-  data_criacao: string;
-  data_atualizacao: string;
-  ultimo_login: string | null;
+  dataCriacao: string;
+  dataAtualizacao: string;
+  ultimoLogin: string | null;
   imagem: string | null;
-  email_verified: string | null;
+  emailVerified: string | null;
 }
 
 const updateUserSchema = z.object({
@@ -330,7 +330,7 @@ export default function UserDetailsPage() {
                   Data de criação
                 </label>
                 <p className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {new Date(user.data_criacao).toLocaleString('pt-BR', {
+                  {new Date(user.dataCriacao).toLocaleString('pt-BR', {
                     dateStyle: 'long',
                     timeStyle: 'short',
                   })}
@@ -343,8 +343,8 @@ export default function UserDetailsPage() {
                   Último login
                 </label>
                 <p className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {user.ultimo_login
-                    ? new Date(user.ultimo_login).toLocaleString('pt-BR', {
+                  {user.ultimoLogin
+                    ? new Date(user.ultimoLogin).toLocaleString('pt-BR', {
                         dateStyle: 'long',
                         timeStyle: 'short',
                       })
@@ -358,7 +358,7 @@ export default function UserDetailsPage() {
                   Email verificado
                 </label>
                 <p className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {user.email_verified ? (
+                  {user.emailVerified ? (
                     <span className="text-green-600 font-medium">✓ Verificado</span>
                   ) : (
                     <span className="text-gray-500">Não verificado</span>

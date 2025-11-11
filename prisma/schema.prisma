@@ -9,7 +9,7 @@ datasource db {
 
 model accounts {
   id                  String   @id
-  user_id             String
+  userId              String   @map("user_id")
   type                String
   provider            String
   provider_account_id String
@@ -20,7 +20,7 @@ model accounts {
   scope               String?
   id_token            String?
   session_state       String?
-  usuarios            usuarios @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, provider_account_id])
 }
@@ -38,7 +38,7 @@ model acoes_gestor {
   avaliadaEm        DateTime?
   analises_ia       analises_ia? @relation(fields: [analiseId], references: [id])
   mercados          mercados     @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
-  users             users        @relation(fields: [userId], references: [id])
+  user              User         @relation(fields: [userId], references: [id])
 
   @@index([mercadoId, executadaEm])
   @@index([userId, tipo])
@@ -147,7 +147,7 @@ model mercados {
   alertas_ia           alertas_ia[]
   analises_ia          analises_ia[]
   logs_importacao      logs_importacao[]
-  users                users?               @relation(fields: [gestorId], references: [id])
+  gestor               User?                @relation(fields: [gestorId], references: [id])
   planos_de_pagamento  planos_de_pagamento? @relation(fields: [planoId], references: [id])
   metricas_dashboard   metricas_dashboard[]
   unidades             unidades[]
@@ -245,11 +245,11 @@ model produtos_relacionados {
 }
 
 model sessions {
-  id            String   @id
-  session_token String   @unique
-  user_id       String
-  expires       DateTime
-  usuarios      usuarios @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id           String   @id
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model unidades {
@@ -275,35 +275,23 @@ model unidades {
   mercados             mercados             @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
 }
 
-model users {
-  id              String         @id
-  email           String         @unique
-  nome            String
-  senha           String
-  role            Role           @default(CLIENTE)
-  telefone        String?
-  cpf             String?        @unique
-  avatar          String?
-  ativo           Boolean        @default(true)
-  dataCriacao     DateTime       @default(now())
-  dataAtualizacao DateTime
+model User {
+  id              String       @id
+  nome            String?
+  email           String       @unique
+  emailVerified   DateTime?    @map("email_verified")
+  imagem          String?
+  senhaHash       String?      @map("senha_hash")
+  role            Role         @default(CLIENTE)
+  dataCriacao     DateTime     @default(now()) @map("data_criacao")
+  dataAtualizacao DateTime     @map("data_atualizacao")
+  ultimoLogin     DateTime?    @map("ultimo_login")
+  accounts        accounts[]
+  sessions        sessions[]
   acoes_gestor    acoes_gestor[]
   mercados        mercados[]
-}
 
-model usuarios {
-  id               String     @id
-  nome             String?
-  email            String     @unique
-  email_verified   DateTime?
-  imagem           String?
-  senha_hash       String?
-  role             Role       @default(CLIENTE)
-  data_criacao     DateTime   @default(now())
-  data_atualizacao DateTime
-  ultimo_login     DateTime?
-  accounts         accounts[]
-  sessions         sessions[]
+  @@map("usuarios")
 }
 
 model verification_tokens {

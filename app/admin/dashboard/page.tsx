@@ -16,7 +16,7 @@ interface RecentUser {
   nome: string;
   email: string;
   role: string;
-  data_criacao: string;
+  dataCriacao: string;
 }
 
 export default function AdminDashboardPage() {
@@ -497,7 +497,7 @@ export default function AdminDashboardPage() {
                       {user.role}
                     </span>
                     <p className="text-xs text-gray-500 mt-1">
-                      {new Date(user.data_criacao).toLocaleDateString('pt-BR')}
+                      {new Date(user.dataCriacao).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                 </div>

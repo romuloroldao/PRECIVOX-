@@ -14,11 +14,16 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# 1. Instalar dependências
+# 1. Parar processos antes de atualizar dependências/build
+echo "🛑 Parando processos existentes..."
+pkill -f "next start" || true
+pkill -f "node.*server.js" || true
+
+# 2. Instalar dependências
 echo "📦 Instalando dependências..."
 npm ci --production=false
 
-# 2. Fazer build do projeto
+# 3. Fazer build do projeto
 echo "🔨 Fazendo build do projeto..."
 npm run build
 
@@ -29,11 +34,6 @@ if [ ! -d ".next" ]; then
 fi
 
 echo "✅ Build concluído com sucesso!"
-
-# 3. Parar processos existentes
-echo "🛑 Parando processos existentes..."
-pkill -f "next start" || true
-pkill -f "node.*server.js" || true
 
 # 4. Iniciar Next.js em produção
 echo "🚀 Iniciando Next.js em produção..."

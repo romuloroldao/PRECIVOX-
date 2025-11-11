@@ -9,8 +9,8 @@ interface User {
   nome: string;
   email: string;
   role: string;
-  data_criacao: string;
-  ultimo_login?: string;
+  dataCriacao: string;
+  ultimoLogin?: string;
 }
 
 export default function UsersPage() {
@@ -198,11 +198,11 @@ export default function UsersPage() {
                         </select>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(user.data_criacao).toLocaleDateString('pt-BR')}
+                        {new Date(user.dataCriacao).toLocaleDateString('pt-BR')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.ultimo_login 
-                          ? new Date(user.ultimo_login).toLocaleDateString('pt-BR')
+                        {user.ultimoLogin 
+                          ? new Date(user.ultimoLogin).toLocaleDateString('pt-BR')
                           : 'Nunca'
                         }
                       </td>

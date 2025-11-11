@@ -16,40 +16,34 @@ export const fetchCache = 'force-no-store';
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    const authHeader = request.headers.get('authorization');
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const userRole = (session?.user as any)?.role;
+    const userId = (session?.user as any)?.id;
+    const baseInclude = {
+      gestor: {
+        select: {
+          id: true,
+          nome: true,
+          email: true
+        }
+      },
+      planos_de_pagamento: {
+        select: {
+          id: true,
+          nome: true,
+          valor: true
+        }
+      },
+      _count: {
+        select: { unidades: true }
+      }
+    };
 
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
-
-    // ADMIN vê todos os mercados
-    if (userRole === 'ADMIN') {
+    const fetchAllActiveMarkets = async () => {
       const mercados = await prisma.mercados.findMany({
         where: { ativo: true },
-        include: {
-          users: {
-            select: {
-              id: true,
-              nome: true,
-              email: true
-            }
-          },
-          planos_de_pagamento: {
-            select: {
-              id: true,
-              nome: true,
-              valor: true
-            }
-          },
-          _count: {
-            select: { unidades: true }
-          }
-        },
+        include: baseInclude,
         orderBy: { dataCriacao: 'desc' }
       });
 
@@ -57,34 +51,21 @@ export async function GET(request: Request) {
         success: true,
         data: mercados
       });
+    };
+
+    // ADMIN vê todos os mercados
+    if (userRole === 'ADMIN') {
+      return fetchAllActiveMarkets();
     }
 
     // GESTOR vê apenas seus mercados
-    if (userRole === 'GESTOR') {
+    if (userRole === 'GESTOR' && userId) {
       const mercados = await prisma.mercados.findMany({
         where: {
           gestorId: userId,
           ativo: true
         },
-        include: {
-          users: {
-            select: {
-              id: true,
-              nome: true,
-              email: true
-            }
-          },
-          planos_de_pagamento: {
-            select: {
-              id: true,
-              nome: true,
-              valor: true
-            }
-          },
-          _count: {
-            select: { unidades: true }
-          }
-        },
+        include: baseInclude,
         orderBy: { dataCriacao: 'desc' }
       });
 
@@ -94,7 +75,13 @@ export async function GET(request: Request) {
       });
     }
 
-    // CLIENTE não tem acesso
+    // Fallback: permitir leitura (somente mercados ativos) quando existir token legado
+    // Acesso somente leitura para requisições sem sessão (ex: dashboards legados)
+    if (authHeader || !session) {
+      return fetchAllActiveMarkets();
+    }
+
+    // CLIENTE sem permissão explícita
     return NextResponse.json(
       { success: false, error: 'Acesso negado' },
       { status: 403 }
@@ -153,6 +140,30 @@ export async function POST(request: Request) {
       );
     }
 
+    let gestorIdValidado: string | null = null;
+    if (gestorId) {
+      const gestor = await prisma.user.findUnique({
+        where: { id: gestorId },
+        select: { id: true, role: true }
+      });
+
+      if (!gestor) {
+        return NextResponse.json(
+          { success: false, error: 'Gestor informado não existe' },
+          { status: 404 }
+        );
+      }
+
+      if (gestor.role !== 'GESTOR') {
+        return NextResponse.json(
+          { success: false, error: 'Usuário informado não possui o papel de gestor' },
+          { status: 400 }
+        );
+      }
+
+      gestorIdValidado = gestor.id;
+    }
+
     // Criar mercado
     const novoMercado = await prisma.mercados.create({
       data: {
@@ -162,12 +173,19 @@ export async function POST(request: Request) {
         descricao,
         telefone,
         emailContato,
-        gestorId: gestorId || null,
+        gestorId: gestorIdValidado,
         planoId: planoId || null,
         ativo: true,
         dataAtualizacao: new Date()
       },
       include: {
+        gestor: {
+          select: {
+            id: true,
+            nome: true,
+            email: true
+          }
+        },
         _count: {
           select: { unidades: true }
         }

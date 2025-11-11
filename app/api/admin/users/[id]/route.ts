@@ -39,18 +39,18 @@ export async function GET(
     }
 
     // Buscar usuário
-    const user = await prisma.usuarios.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: params.id },
       select: {
         id: true,
         nome: true,
         email: true,
         role: true,
-        data_criacao: true,
-        data_atualizacao: true,
-        ultimo_login: true,
+        dataCriacao: true,
+        dataAtualizacao: true,
+        ultimoLogin: true,
         imagem: true,
-        email_verified: true,
+        emailVerified: true,
       }
     });
 
@@ -97,7 +97,7 @@ export async function PUT(
     }
 
     // Verificar se usuário existe
-    const existingUser = await prisma.usuarios.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: { id: params.id }
     });
 
@@ -114,7 +114,7 @@ export async function PUT(
 
     // Se email foi alterado, verificar se já existe
     if (validatedData.email && validatedData.email !== existingUser.email) {
-      const emailExists = await prisma.usuarios.findUnique({
+      const emailExists = await prisma.user.findUnique({
         where: { email: validatedData.email }
       });
 
@@ -127,24 +127,24 @@ export async function PUT(
     }
 
     // Atualizar usuário
-    const updatedUser = await prisma.usuarios.update({
+    const updatedUser = await prisma.user.update({
       where: { id: params.id },
       data: {
         ...(validatedData.nome && { nome: validatedData.nome }),
         ...(validatedData.email && { email: validatedData.email }),
         ...(validatedData.role && { role: validatedData.role }),
-        data_atualizacao: new Date(),
+        dataAtualizacao: new Date(),
       },
       select: {
         id: true,
         nome: true,
         email: true,
         role: true,
-        data_criacao: true,
-        data_atualizacao: true,
-        ultimo_login: true,
+        dataCriacao: true,
+        dataAtualizacao: true,
+        ultimoLogin: true,
         imagem: true,
-        email_verified: true,
+        emailVerified: true,
       }
     });
 
@@ -195,7 +195,7 @@ export async function DELETE(
     }
 
     // Verificar se usuário existe
-    const user = await prisma.usuarios.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: params.id }
     });
 
@@ -215,7 +215,7 @@ export async function DELETE(
     }
 
     // Excluir usuário (isso também excluirá as sessões relacionadas devido ao cascade)
-    await prisma.usuarios.delete({
+    await prisma.user.delete({
       where: { id: params.id }
     });
 

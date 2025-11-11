@@ -132,29 +132,41 @@ export async function GET(request: NextRequest) {
     });
 
     // Transformar estoques em formato esperado pelo frontend
-    const produtos = estoques.map(estoque => ({
-      id: estoque.id,
-      nome: estoque.produtos.nome,
-      preco: estoque.preco.toNumber(),
-      precoPromocional: estoque.precoPromocional?.toNumber(),
-      emPromocao: estoque.emPromocao || false,
-      disponivel: estoque.quantidade > 0,
-      quantidade: estoque.quantidade,
-      categoria: estoque.produtos.categoria,
-      marca: estoque.produtos.marca,
-      unidade: {
-        id: estoque.unidades.id,
-        nome: estoque.unidades.nome,
-        endereco: estoque.unidades.endereco,
-        cidade: estoque.unidades.cidade,
-        estado: estoque.unidades.estado,
-        mercado: {
-          id: estoque.unidades.mercados.id,
-          nome: estoque.unidades.mercados.nome
-        }
-      },
-      produto: estoque.produtos
-    }));
+    const produtos = estoques
+      .filter((estoque) => {
+        if (!estoque?.produtos) return false;
+        if (!estoque?.unidades) return false;
+        if (!estoque.unidades?.mercados) return false;
+        return Boolean(estoque.unidades.mercados.id);
+      })
+      .map((estoque) => {
+        const unidade = estoque.unidades;
+        const mercado = unidade.mercados;
+
+        return {
+          id: estoque.id,
+          nome: estoque.produtos.nome ?? 'Produto',
+          preco: estoque.preco?.toNumber() ?? 0,
+          precoPromocional: estoque.precoPromocional?.toNumber() ?? null,
+          emPromocao: estoque.emPromocao || false,
+          disponivel: (estoque.quantidade ?? 0) > 0,
+          quantidade: estoque.quantidade ?? 0,
+          categoria: estoque.produtos.categoria,
+          marca: estoque.produtos.marca,
+          unidade: {
+            id: unidade.id,
+            nome: unidade.nome ?? 'Unidade',
+            endereco: unidade.endereco,
+            cidade: unidade.cidade,
+            estado: unidade.estado,
+            mercado: {
+              id: mercado.id,
+              nome: mercado.nome ?? 'Mercado',
+            }
+          },
+          produto: estoque.produtos
+        };
+      });
 
     return NextResponse.json(Array.isArray(produtos) ? produtos : [], {
       status: 200,

@@ -62,15 +62,15 @@ export async function GET(request: NextRequest) {
 
     // Buscar usuários recentes (últimos 10) com timeout
     const recentUsers = await Promise.race([
-      prisma.usuarios.findMany({
+      prisma.user.findMany({
         take: 10,
-        orderBy: { data_criacao: 'desc' },
+        orderBy: { dataCriacao: 'desc' },
         select: {
           id: true,
           nome: true,
           email: true,
           role: true,
-          data_criacao: true
+          dataCriacao: true
         }
       }),
       new Promise((_, reject) => 
