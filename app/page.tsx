@@ -210,7 +210,40 @@ export default function HomePage() {
       }
       
       const data = await response.json();
-      setProdutos(Array.isArray(data) ? data : []);
+      const listaNormalizada = (Array.isArray(data) ? data : []).map((item: any) => {
+        const produto = item?.produto ?? {};
+        const unidade = item?.unidade ?? {};
+        const mercado = unidade?.mercado ?? {};
+
+        return {
+          ...item,
+          produto: {
+            ...produto,
+            id: produto?.id ?? '',
+            nome: produto?.nome ?? 'Produto sem nome',
+            marca: produto?.marca ?? null,
+            categoria: produto?.categoria ?? null,
+          },
+          unidade: {
+            ...unidade,
+            id: unidade?.id ?? '',
+            nome: unidade?.nome ?? 'Unidade',
+            cidade: unidade?.cidade ?? null,
+            estado: unidade?.estado ?? null,
+            mercado: {
+              ...mercado,
+              id: mercado?.id ?? '',
+              nome: mercado?.nome ?? 'Mercado',
+            },
+          },
+          emPromocao: Boolean(item?.emPromocao),
+          disponivel: Boolean(item?.disponivel),
+          quantidade: Number.isFinite(item?.quantidade) ? item.quantidade : 0,
+          preco: typeof item?.preco === 'number' ? item.preco : 0,
+          precoPromocional: typeof item?.precoPromocional === 'number' ? item.precoPromocional : null,
+        };
+      });
+      setProdutos(listaNormalizada);
     } catch (error) {
       console.error('Erro ao buscar produtos:', error);
       setProdutos([]); // Define array vazio em caso de erro de rede
