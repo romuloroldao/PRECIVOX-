@@ -419,7 +419,7 @@ export default function HomePage() {
           
           <div className="mb-6 space-y-4">
             <div>
-              <div className="flex items-center gap-2 text-red-600">
+              <div className="flex items-center gap-2 text-promo-600">
                 <Sparkles className="h-4 w-4" strokeWidth={2} />
                 <span className="text-xs font-semibold uppercase tracking-wide">Ofertas inteligentes para sua lista</span>
               </div>
@@ -434,11 +434,11 @@ export default function HomePage() {
                 onClick={() => setShowFiltros(true)}
                 whileHover={{ y: -2, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 font-medium text-red-700 shadow-sm transition-all hover:shadow-md"
+                className="inline-flex items-center gap-2 rounded-full border border-promo-200 bg-promo-50 px-4 py-2 font-medium text-promo-700 shadow-sm transition-all hover:shadow-md"
               >
                 <MapPin className="h-4 w-4" strokeWidth={2.5} />
                 <span>Buscando em Franco da Rocha, SP</span>
-                <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">
+                <span className="flex items-center gap-1 rounded-full bg-promo-100 px-2 py-0.5 text-xs font-semibold text-promo-600">
                   Mudar local
                   <ArrowRight className="h-3 w-3" />
                 </span>
@@ -790,11 +790,11 @@ export default function HomePage() {
                     key={produtoDestaque.id}
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden rounded-3xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-orange-50 p-6 shadow-lg"
+                    className="relative overflow-hidden rounded-3xl border border-promo-200 bg-gradient-to-r from-promo-50 via-white to-orange-50 p-6 shadow-lg"
                   >
                     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                       <div className="max-w-xl space-y-4">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-1 text-xs font-bold uppercase tracking-wide text-white shadow">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-promo-500 px-4 py-1 text-xs font-bold uppercase tracking-wide text-white shadow">
                           Melhor preço da cidade
                         </span>
                         <h2 className="text-2xl font-bold text-gray-900 md:text-3xl">
@@ -805,19 +805,19 @@ export default function HomePage() {
                         </p>
                         <div className="flex flex-wrap items-center gap-4">
                           <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-red-600">
+                            <span className="text-4xl font-black text-success-600">
                               R$ {produtoDestaque.emPromocao && produtoDestaque.precoPromocional
                                 ? produtoDestaque.precoPromocional.toFixed(2)
                                 : produtoDestaque.preco.toFixed(2)}
                             </span>
                             {produtoDestaque.emPromocao && produtoDestaque.precoPromocional && (
-                              <span className="text-lg text-red-400 line-through">
+                              <span className="text-lg text-gray-500 line-through">
                                 R$ {produtoDestaque.preco.toFixed(2)}
                               </span>
                             )}
                           </div>
                           {produtoDestaque.emPromocao && produtoDestaque.precoPromocional && produtoDestaque.preco > 0 && (
-                            <div className="inline-flex items-center rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-red-600 shadow-inner">
+                            <div className="inline-flex items-center rounded-full bg-promo-100 px-3 py-1 text-xs font-semibold text-promo-700 shadow-inner">
                               {Math.round(((produtoDestaque.preco - produtoDestaque.precoPromocional) / produtoDestaque.preco) * 100)}% OFF
                             </div>
                           )}
@@ -869,13 +869,13 @@ export default function HomePage() {
                       <motion.div
                         key={produto.id}
                         whileHover={{ y: -6 }}
-                        className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white/90 shadow-sm transition-all duration-300 hover:border-red-200 hover:shadow-2xl"
+                        className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white/90 shadow-sm transition-all duration-300 hover:border-promo-200 hover:shadow-2xl"
                       >
                         <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                          <div className="h-full w-full bg-gradient-to-br from-red-50 via-white to-transparent" />
+                          <div className="h-full w-full bg-gradient-to-br from-promo-50 via-white to-transparent" />
                         </div>
                         {produto.emPromocao && (
-                          <span className="absolute left-0 top-4 -rotate-3 rounded-r-lg bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-md">
+                          <span className="absolute left-0 top-4 -rotate-3 rounded-r-lg bg-promo-500 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-md">
                             Promoção
                           </span>
                         )}
@@ -885,7 +885,7 @@ export default function HomePage() {
                               {produto.nome}
                             </h3>
                             {percentualPromocao > 0 && (
-                              <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-bold text-red-600">
+                              <span className="rounded-full bg-promo-100 px-2 py-1 text-xs font-bold text-promo-700">
                                 {percentualPromocao}% OFF
                               </span>
                             )}
@@ -923,7 +923,7 @@ export default function HomePage() {
                             <div>
                               {possuiPromocao ? (
                                 <>
-                                  <div className="text-3xl font-black text-red-600">
+                                  <div className="text-3xl font-black text-success-600">
                                     R$ {(produto.precoPromocional ?? produto.preco).toFixed(2)}
                                   </div>
                                   <div className="text-sm font-semibold text-gray-400 line-through">
