@@ -7,8 +7,10 @@ import ComparacaoProdutos from '@/components/ComparacaoProdutos';
 import ModuloIA from '@/components/ModuloIA';
 import Header from '@/components/Header';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
+import { Drawer, Card, Button } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Sparkles, TrendingUp, MapPin, ArrowRight, Plus } from 'lucide-react';
+import { CheckCircle2, Sparkles, TrendingUp, MapPin, ArrowRight, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { useToast } from '@/components/ToastContainer';
 
 interface Produto {
   id: string;
@@ -55,6 +57,7 @@ interface Filtros {
 
 export default function HomePage() {
   const router = useRouter();
+  const { success, error } = useToast();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [mercados, setMercados] = useState([]);
   const [categorias, setCategorias] = useState<string[]>([]);
@@ -351,30 +354,46 @@ export default function HomePage() {
   };
 
   const salvarLista = () => {
-    if (!nomeLista.trim()) {
-      alert('Digite um nome para a lista');
+    if (listaProdutos.length === 0) {
+      error('Adicione produtos à lista antes de salvar.');
       return;
     }
 
-    const lista = {
-      nome: nomeLista,
-      produtos: listaProdutos.map(p => ({
-        produtoId: p.produto.id,
-        unidadeId: p.unidade.id,
-        quantidade: 1
-      })),
-      dataCriacao: new Date().toISOString()
-    };
+    if (!nomeLista.trim()) {
+      error('Informe um nome para salvar sua lista.');
+      return;
+    }
 
-    // Salvar no localStorage por enquanto
-    const listasSalvas = JSON.parse(localStorage.getItem('listas') || '[]');
-    listasSalvas.push({ ...lista, id: Date.now().toString() });
-    localStorage.setItem('listas', JSON.stringify(listasSalvas));
+    if (typeof window === 'undefined') {
+      error('Salvamento disponível apenas no navegador.');
+      return;
+    }
 
-    alert('Lista salva com sucesso!');
-    setListaProdutos([]);
-    setNomeLista('');
-    setShowLista(false);
+    try {
+      const lista = {
+        id: Date.now().toString(),
+        nome: nomeLista.trim(),
+        produtos: listaProdutos.map(p => ({
+          produtoId: p.produto.id,
+          unidadeId: p.unidade.id,
+          quantidade: 1
+        })),
+        total: calcularTotalLista(),
+        dataCriacao: new Date().toISOString()
+      };
+
+      // Salvar no localStorage
+      const listasSalvas = JSON.parse(localStorage.getItem('precivox_listas_salvas') || '[]');
+      localStorage.setItem('precivox_listas_salvas', JSON.stringify([lista, ...listasSalvas]));
+
+      success('Lista salva com sucesso!');
+      setListaProdutos([]);
+      setNomeLista('');
+      setShowLista(false);
+    } catch (storageError) {
+      console.error('Erro ao salvar lista:', storageError);
+      error('Não foi possível salvar a lista. Tente novamente.');
+    }
   };
 
   const calcularTotalLista = () => {
@@ -398,11 +417,12 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="relative min-h-screen bg-gray-50">
       {/* Header */}
       <Header title="PRECIVOX - Buscar Produtos" />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={`transition-all duration-300 ${showLista ? 'md:mr-96' : 'mr-0'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Título e Navegação */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -536,29 +556,6 @@ export default function HomePage() {
             </span>
           </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setShowLista(!showLista)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <span>Minha Lista</span>
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={listaProdutos.length}
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 220, damping: 16 }}
-                className="inline-flex h-6 min-w-[2rem] items-center justify-center rounded-full bg-white/20 px-2 text-xs font-bold text-white"
-              >
-                {listaProdutos.length}
-              </motion.span>
-            </AnimatePresence>
-          </motion.button>
         </div>
 
         {economiaEstimativa && (
@@ -1006,98 +1003,165 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Modal da Lista */}
-        {showLista && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
-              <div className="p-6 border-b">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-gray-900">Minha Lista de Compras</h3>
-                  <button
-                    onClick={() => setShowLista(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+        </div>
+      </main>
 
-              <div className="p-6 max-h-96 overflow-y-auto">
-                {listaProdutos.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Sua lista está vazia</p>
-                    <p className="text-sm text-gray-400">Adicione produtos para começar</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {listaProdutos.map((produto) => (
-                      <div key={produto.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">{produto.produto.nome}</h4>
-                          <p className="text-sm text-gray-600">{produto.unidade.mercado.nome}</p>
-                          <p className="text-sm text-gray-600">{produto.unidade.cidade}</p>
+      {/* Botão flutuante para abrir lista quando fechada */}
+      {!showLista && (
+        <button
+          onClick={() => setShowLista(true)}
+          className="fixed right-4 bottom-6 z-40 bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 hover:shadow-md transition-all duration-200 flex items-center justify-center relative"
+          title="Minha Lista de Compras"
+          aria-label="Abrir lista de compras"
+        >
+          <ShoppingCart className="w-6 h-6" />
+          {listaProdutos.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-success-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+              {listaProdutos.length > 99 ? '99+' : listaProdutos.length}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* Drawer lateral da Lista */}
+      <Drawer
+        isOpen={showLista}
+        onClose={() => setShowLista(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5 text-text-primary" />
+            <span className="font-semibold text-text-primary">Minha Lista de Compras</span>
+            {listaProdutos.length > 0 && (
+              <span className="bg-success-100 text-success-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                {listaProdutos.length}
+              </span>
+            )}
+          </div>
+        }
+        position="right"
+        size="lg"
+      >
+        <div className="flex h-full flex-col">
+          {/* Lista de itens */}
+          <div className="flex-1 overflow-y-auto pr-1">
+            {listaProdutos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center text-text-secondary py-12 px-4">
+                <ShoppingCart className="w-16 h-16 mb-4 text-gray-300" />
+                <p className="text-lg font-medium text-text-primary mb-2">Sua lista está vazia</p>
+                <p className="text-sm text-text-secondary">Adicione produtos à sua lista de compras.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 pb-28">
+                {listaProdutos.map((produto) => {
+                  const precoFinal = produto.emPromocao && produto.precoPromocional ? produto.precoPromocional : produto.preco;
+                  
+                  return (
+                    <Card key={produto.id} variant="default" className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <span className="text-gray-400 text-2xl">📦</span>
                         </div>
-                        <div className="flex items-center space-x-4">
-                          <span className="font-bold text-gray-900">
-                            R$ {produto.emPromocao && produto.precoPromocional 
-                              ? produto.precoPromocional.toFixed(2)
-                              : produto.preco.toFixed(2)
-                            }
-                          </span>
-                          <button
+
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-text-primary text-sm line-clamp-2 mb-1">
+                            {produto.produto.nome}
+                          </h4>
+                          <p className="text-xs text-text-secondary mb-2">
+                            {produto.unidade.mercado.nome} - {produto.unidade.cidade}
+                          </p>
+
+                          <div className="mb-2">
+                            {produto.emPromocao && produto.precoPromocional ? (
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-sm font-bold text-success-600">
+                                  R$ {produto.precoPromocional.toFixed(2).replace('.', ',')}
+                                </span>
+                                <span className="text-xs text-text-tertiary line-through">
+                                  R$ {produto.preco.toFixed(2).replace('.', ',')}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-sm font-bold text-text-primary">
+                                R$ {produto.preco.toFixed(2).replace('.', ',')}
+                              </span>
+                            )}
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={Trash2}
                             onClick={() => removerDaLista(produto.id)}
-                            className="text-red-600 hover:text-red-800"
+                            className="w-full text-error-600 hover:text-error-700 hover:bg-error-50"
+                            title="Remover item"
+                            aria-label="Remover item"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                            Remover
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </Card>
+                  );
+                })}
               </div>
+            )}
+          </div>
 
-              {listaProdutos.length > 0 && (
-                <div className="p-6 border-t bg-gray-50">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-lg font-semibold text-gray-900">
-                      Total: R$ {calcularTotalLista().toFixed(2)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex space-x-4">
-                    <input
-                      type="text"
-                      value={nomeLista}
-                      onChange={(e) => setNomeLista(e.target.value)}
-                      placeholder="Nome da lista"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
+          {/* Rodapé fixo com total e botão salvar */}
+          <div className="pointer-events-none">
+            <div className="pointer-events-auto sticky bottom-0 -mx-4 -mb-4 border-t border-gray-200 bg-bg-paper px-4 py-4">
+              <div className="space-y-3">
+                {listaProdutos.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm text-text-secondary block">Total estimado</span>
+                        <span className="text-2xl font-bold text-success-600">
+                          R$ {calcularTotalLista().toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                      <span className="rounded-full bg-success-100 px-3 py-1 text-xs font-semibold text-success-700">
+                        {listaProdutos.length} {listaProdutos.length === 1 ? 'item' : 'itens'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="nome-lista" className="text-xs font-medium text-text-secondary">
+                        Nome da lista
+                      </label>
+                      <input
+                        id="nome-lista"
+                        type="text"
+                        value={nomeLista}
+                        onChange={(e) => setNomeLista(e.target.value)}
+                        placeholder="Ex: Compras do mês"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-2 focus:ring-success-200"
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="success"
+                      className="w-full"
                       onClick={salvarLista}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       Salvar Lista
-                    </button>
-                  </div>
-                </div>
-              )}
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        )}
+        </div>
+      </Drawer>
 
-        {/* Modal de Comparação */}
-        {showComparacao && (
-          <ComparacaoProdutos
-            produtos={produtosComparacao}
-            onClose={() => setShowComparacao(false)}
-          />
-        )}
-      </div>
+      {/* Modal de Comparação */}
+      {showComparacao && (
+        <ComparacaoProdutos
+          produtos={produtosComparacao}
+          onClose={() => setShowComparacao(false)}
+        />
+      )}
     </div>
   );
 }
