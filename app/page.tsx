@@ -510,6 +510,28 @@ export default function HomePage() {
             </span>
           </div>
 
+          {/* Botão Minha Lista - ao lado do botão Filtros */}
+          <div className="relative group">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowLista(!showLista)}
+              aria-expanded={showLista}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              <span>Minha Lista</span>
+              {listaProdutos.length > 0 && (
+                <span className="bg-blue-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                  {listaProdutos.length > 99 ? '99+' : listaProdutos.length}
+                </span>
+              )}
+            </motion.button>
+            <span className="pointer-events-none absolute -top-12 left-1/2 w-max -translate-x-1/2 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-all duration-200 group-hover:-translate-y-1 group-hover:opacity-100">
+              Ver sua lista de compras
+            </span>
+          </div>
+
           <div className="relative group">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -1006,36 +1028,18 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Botão fixo no topo direito */}
-      <button
-        id="shopping-list-top-btn"
-        onClick={() => setShowLista(!showLista)}
-        title="Minha Lista de Compras"
-        aria-label="Abrir lista de compras"
-        className="flex items-center gap-2"
-      >
-        <ShoppingCart className="w-5 h-5" />
-        <span className="hidden sm:inline">Minha Lista</span>
-        {listaProdutos.length > 0 && (
-          <span className="bg-white/20 text-white text-xs font-bold rounded-full px-2 py-0.5">
-            {listaProdutos.length > 99 ? '99+' : listaProdutos.length}
-          </span>
-        )}
-      </button>
-
-      {/* Botão flutuante lateral (meio da página) - Desktop / Canto inferior direito - Mobile */}
+      {/* Botão flutuante lateral (meio da página) - Desktop / Canto inferior direito - Mobile - Apenas ícone */}
       {!showLista && (
         <button
           id="shopping-list-float-btn"
           onClick={() => setShowLista(true)}
           title="Minha Lista de Compras"
           aria-label="Abrir lista de compras"
-          className="flex items-center gap-2"
+          className="flex items-center justify-center relative"
         >
           <ShoppingCart className="w-5 h-5" />
-          <span className="hidden md:inline">Minha Lista</span>
           {listaProdutos.length > 0 && (
-            <span className="bg-white/20 text-white text-xs font-bold rounded-full px-2 py-0.5">
+            <span className="absolute -top-1 -right-1 bg-white/90 text-blue-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
               {listaProdutos.length > 99 ? '99+' : listaProdutos.length}
             </span>
           )}
