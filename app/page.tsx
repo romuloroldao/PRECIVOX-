@@ -7,9 +7,9 @@ import ComparacaoProdutos from '@/components/ComparacaoProdutos';
 import ModuloIA from '@/components/ModuloIA';
 import Header from '@/components/Header';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
-import { Drawer, Card, Button } from '@/components/ui';
+import { Card, Button } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Sparkles, TrendingUp, MapPin, ArrowRight, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { CheckCircle2, Sparkles, TrendingUp, MapPin, ArrowRight, Plus, ShoppingCart, Trash2, X } from 'lucide-react';
 import { useToast } from '@/components/ToastContainer';
 
 interface Produto {
@@ -421,7 +421,7 @@ export default function HomePage() {
       {/* Header */}
       <Header title="PRECIVOX - Buscar Produtos" />
       
-      <main className={`transition-all duration-300 ${showLista ? 'md:mr-96' : 'mr-0'}`}>
+      <main className={`transition-all duration-300 ease-in-out ${showLista ? 'md:mr-96' : 'mr-0'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Título e Navegação */}
         <div className="mb-8">
@@ -1042,29 +1042,38 @@ export default function HomePage() {
         </button>
       )}
 
-      {/* Drawer lateral da Lista */}
-      <Drawer
-        isOpen={showLista}
-        onClose={() => setShowLista(false)}
-        title={
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-text-primary" />
-            <span className="font-semibold text-text-primary">Minha Lista de Compras</span>
-            {listaProdutos.length > 0 && (
-              <span className="bg-success-100 text-success-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                {listaProdutos.length}
-              </span>
-            )}
+      {/* Sidebar lateral da Lista - Funciona igual ao painel de Filtros */}
+      {showLista && (
+        <aside
+          className={`
+            fixed top-0 right-0 h-full w-full md:w-96 z-50
+            bg-white shadow-lg
+            transition-transform duration-300 ease-in-out
+            flex flex-col
+          `}
+        >
+          {/* Header da Sidebar */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-text-primary" />
+              <span className="font-semibold text-text-primary">Minha Lista de Compras</span>
+              {listaProdutos.length > 0 && (
+                <span className="bg-success-100 text-success-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                  {listaProdutos.length}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowLista(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Fechar lista"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
-        }
-        position="right"
-        size="lg"
-        overlayClassName="shopping-list-sidebar-overlay"
-        drawerClassName="shopping-list-sidebar"
-      >
-        <div className="flex h-full flex-col">
-          {/* Lista de itens */}
-          <div className="flex-1 overflow-y-auto pr-1">
+
+          {/* Conteúdo da Sidebar */}
+          <div className="flex-1 overflow-y-auto p-4">
             {listaProdutos.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center text-text-secondary py-12 px-4">
                 <ShoppingCart className="w-16 h-16 mb-4 text-gray-300" />
@@ -1129,52 +1138,48 @@ export default function HomePage() {
           </div>
 
           {/* Rodapé fixo com total e botão salvar */}
-          <div className="pointer-events-none">
-            <div className="pointer-events-auto sticky bottom-0 -mx-4 -mb-4 border-t border-gray-200 bg-bg-paper px-4 py-4">
+          {listaProdutos.length > 0 && (
+            <div className="border-t border-gray-200 bg-white p-4">
               <div className="space-y-3">
-                {listaProdutos.length > 0 && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-sm text-text-secondary block">Total estimado</span>
-                        <span className="text-2xl font-bold text-success-600">
-                          R$ {calcularTotalLista().toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                      <span className="rounded-full bg-success-100 px-3 py-1 text-xs font-semibold text-success-700">
-                        {listaProdutos.length} {listaProdutos.length === 1 ? 'item' : 'itens'}
-                      </span>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-secondary block">Total estimado</span>
+                    <span className="text-2xl font-bold text-success-600">
+                      R$ {calcularTotalLista().toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                  <span className="rounded-full bg-success-100 px-3 py-1 text-xs font-semibold text-success-700">
+                    {listaProdutos.length} {listaProdutos.length === 1 ? 'item' : 'itens'}
+                  </span>
+                </div>
 
-                    <div className="space-y-2">
-                      <label htmlFor="nome-lista" className="text-xs font-medium text-text-secondary">
-                        Nome da lista
-                      </label>
-                      <input
-                        id="nome-lista"
-                        type="text"
-                        value={nomeLista}
-                        onChange={(e) => setNomeLista(e.target.value)}
-                        placeholder="Ex: Compras do mês"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-2 focus:ring-success-200"
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <label htmlFor="nome-lista" className="text-xs font-medium text-text-secondary">
+                    Nome da lista
+                  </label>
+                  <input
+                    id="nome-lista"
+                    type="text"
+                    value={nomeLista}
+                    onChange={(e) => setNomeLista(e.target.value)}
+                    placeholder="Ex: Compras do mês"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-2 focus:ring-success-200"
+                  />
+                </div>
 
-                    <Button
-                      type="button"
-                      variant="success"
-                      className="w-full"
-                      onClick={salvarLista}
-                    >
-                      Salvar Lista
-                    </Button>
-                  </>
-                )}
+                <Button
+                  type="button"
+                  variant="success"
+                  className="w-full"
+                  onClick={salvarLista}
+                >
+                  Salvar Lista
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
-      </Drawer>
+          )}
+        </aside>
+      )}
 
       {/* Modal de Comparação */}
       {showComparacao && (
