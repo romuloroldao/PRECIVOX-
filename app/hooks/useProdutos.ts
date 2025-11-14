@@ -38,6 +38,7 @@ interface UseProdutosParams {
   emPromocao?: boolean;
   mercado?: string;
   cidade?: string;
+  debounceDelay?: number;
 }
 
 // Hook para debounce
@@ -45,6 +46,11 @@ function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
+    if (delay <= 0) {
+      setDebouncedValue(value);
+      return;
+    }
+
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
@@ -62,8 +68,21 @@ export function useProdutos(params: UseProdutosParams = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Debounce na busca (400ms)
-  const buscaDebounced = useDebounce(params.busca, 400);
+  const {
+    busca,
+    categoria,
+    marca,
+    precoMin,
+    precoMax,
+    disponivel,
+    emPromocao,
+    mercado,
+    cidade,
+    debounceDelay = 400,
+  } = params;
+
+  // Debounce na busca
+  const buscaDebounced = useDebounce(busca, debounceDelay);
 
   const buscarProdutos = useCallback(async () => {
     try {
@@ -72,14 +91,14 @@ export function useProdutos(params: UseProdutosParams = {}) {
 
       const queryParams = new URLSearchParams();
       if (buscaDebounced) queryParams.append('busca', buscaDebounced);
-      if (params.categoria) queryParams.append('categoria', params.categoria);
-      if (params.marca) queryParams.append('marca', params.marca);
-      if (params.precoMin) queryParams.append('precoMin', params.precoMin.toString());
-      if (params.precoMax) queryParams.append('precoMax', params.precoMax.toString());
-      if (params.disponivel !== undefined) queryParams.append('disponivel', params.disponivel.toString());
-      if (params.emPromocao !== undefined) queryParams.append('emPromocao', params.emPromocao.toString());
-      if (params.mercado) queryParams.append('mercado', params.mercado);
-      if (params.cidade) queryParams.append('cidade', params.cidade);
+      if (categoria) queryParams.append('categoria', categoria);
+      if (marca) queryParams.append('marca', marca);
+      if (precoMin) queryParams.append('precoMin', precoMin.toString());
+      if (precoMax) queryParams.append('precoMax', precoMax.toString());
+      if (disponivel !== undefined) queryParams.append('disponivel', disponivel.toString());
+      if (emPromocao !== undefined) queryParams.append('emPromocao', emPromocao.toString());
+      if (mercado) queryParams.append('mercado', mercado);
+      if (cidade) queryParams.append('cidade', cidade);
 
       // Adicionar timestamp para evitar cache
       queryParams.append('_t', Date.now().toString());
@@ -146,14 +165,14 @@ export function useProdutos(params: UseProdutosParams = {}) {
     }
   }, [
     buscaDebounced,
-    params.categoria,
-    params.marca,
-    params.precoMin,
-    params.precoMax,
-    params.disponivel,
-    params.emPromocao,
-    params.mercado,
-    params.cidade,
+    categoria,
+    marca,
+    precoMin,
+    precoMax,
+    disponivel,
+    emPromocao,
+    mercado,
+    cidade,
   ]);
 
   useEffect(() => {

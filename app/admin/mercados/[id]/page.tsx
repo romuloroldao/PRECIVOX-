@@ -7,6 +7,7 @@ import UnidadeForm from '@/components/UnidadeForm';
 import UploadDatabase from '@/components/UploadDatabase';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { useToast } from '@/components/ToastContainer';
+import { Button } from '@/components/ui/Button';
 
 export default function MercadoDetailsPage() {
   const params = useParams();
@@ -184,9 +185,17 @@ export default function MercadoDetailsPage() {
   const handleSaveGestor = async () => {
     setSavingGestor(true);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Token de autenticação não encontrado');
+        setSavingGestor(false);
+        return;
+      }
+
       const response = await fetch(`/api/markets/${mercadoId}`, {
         method: 'PUT',
         headers: {
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -216,9 +225,17 @@ export default function MercadoDetailsPage() {
 
     setSavingGestor(true);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Token de autenticação não encontrado');
+        setSavingGestor(false);
+        return;
+      }
+
       const response = await fetch(`/api/markets/${mercadoId}`, {
         method: 'PUT',
         headers: {
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -342,13 +359,13 @@ export default function MercadoDetailsPage() {
                       </option>
                     ))}
                   </select>
-                  <button
+                  <Button
                     onClick={handleSaveGestor}
                     disabled={savingGestor}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    type="button"
                   >
                     {savingGestor ? 'Salvando...' : 'Salvar'}
-                  </button>
+                  </Button>
                   <button
                     onClick={() => {
                       setIsEditingGestor(false);

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { useProductSuggestions } from '@/app/hooks/useProductSuggestions';
-import { cn } from '@/lib/utils';
+import debounce from 'lodash.debounce';
 
 interface SearchAutocompleteProps {
   value: string;
@@ -18,12 +18,31 @@ export function SearchAutocomplete({
   placeholder = 'Digite o nome do produto, marca ou código de barras...',
   onSuggestionSelect,
 }: SearchAutocompleteProps) {
+  const [internalValue, setInternalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { suggestions, loading } = useProductSuggestions(value);
+  const debouncedOnChange = useMemo(
+    () =>
+      debounce((term: string) => {
+        onChange(term);
+      }, 600),
+    [onChange]
+  );
+
+  useEffect(() => {
+    setInternalValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      debouncedOnChange.cancel();
+    };
+  }, [debouncedOnChange]);
+
+  const { suggestions, loading } = useProductSuggestions(internalValue);
 
   // Fechar sugestões ao clicar fora
   useEffect(() => {
@@ -38,11 +57,15 @@ export function SearchAutocomplete({
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    const nextValue = e.target.value;
+    setInternalValue(nextValue);
     setShowSuggestions(true);
+    debouncedOnChange(nextValue);
   };
 
   const handleSuggestionClick = (suggestion: { id: string; name: string }) => {
+    debouncedOnChange.cancel();
+    setInternalValue(suggestion.name);
     onChange(suggestion.name);
     setShowSuggestions(false);
     if (onSuggestionSelect) {
@@ -52,11 +75,20 @@ export function SearchAutocomplete({
   };
 
   const handleClear = () => {
+    debouncedOnChange.cancel();
+    setInternalValue('');
     onChange('');
     inputRef.current?.focus();
   };
 
-  const shouldShowSuggestions = showSuggestions && isFocused && value.length >= 2 && suggestions.length > 0;
+  useEffect(() => {
+    if (isFocused && inputRef.current && document.activeElement !== inputRef.current) {
+      inputRef.current.focus({ preventScroll: true });
+    }
+  }, [isFocused, internalValue]);
+
+  const shouldShowSuggestions =
+    showSuggestions && isFocused && internalValue.length >= 2 && suggestions.length > 0;
 
   return (
     <div ref={wrapperRef} className="relative flex-1">
@@ -64,23 +96,29 @@ export function SearchAutocomplete({
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         <input
           ref={inputRef}
-          type="text"
-          value={value}
+          type="search"
+          value={internalValue}
           onChange={handleInputChange}
           onFocus={() => {
             setIsFocused(true);
-            if (value.length >= 2) {
+            if (internalValue.length >= 2) {
               setShowSuggestions(true);
             }
           }}
           onBlur={() => {
-            // Delay para permitir clique nas sugestões
-            setTimeout(() => setIsFocused(false), 200);
+            setTimeout(() => {
+              const active = document.activeElement;
+              if (active && wrapperRef.current?.contains(active)) {
+                return;
+              }
+              setIsFocused(false);
+              setShowSuggestions(false);
+            }, 150);
           }}
           placeholder={placeholder}
           className="w-full pl-10 pr-10 py-3 border-2 border-gray-300 rounded-lg focus:border-precivox-blue focus:outline-none transition-colors"
         />
-        {value && (
+        {internalValue && (
           <button
             onClick={handleClear}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"

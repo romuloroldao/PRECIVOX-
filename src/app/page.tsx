@@ -445,8 +445,8 @@ export default function HomePage() {
                           {produto.produto.nome}
                         </h3>
                         {produto.emPromocao && (
-                          <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded">
-                            PROMOÇÃO
+                          <span className="rounded-full bg-promo-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-promo-700">
+                            Promoção
                           </span>
                         )}
                       </div>

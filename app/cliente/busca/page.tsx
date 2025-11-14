@@ -33,6 +33,7 @@ export default function BuscaPage() {
     precoMax: precoMax ? parseFloat(precoMax) : undefined,
     emPromocao,
     disponivel,
+    debounceDelay: 0,
   });
 
   const limparFiltros = () => {

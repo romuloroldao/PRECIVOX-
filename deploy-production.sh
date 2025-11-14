@@ -33,7 +33,11 @@ if [ ! -d ".next" ]; then
     exit 1
 fi
 
-echo "✅ Build concluído com sucesso!"
+echo "📁 Sincronizando assets do bundle standalone..."
+rm -rf .next/standalone/.next/static
+mkdir -p .next/standalone/.next
+cp -R .next/static .next/standalone/.next/static
+echo "✅ Build concluído e assets atualizados!"
 
 # 4. Iniciar Next.js em produção
 echo "🚀 Iniciando Next.js em produção..."

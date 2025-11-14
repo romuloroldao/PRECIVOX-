@@ -60,8 +60,8 @@ export function ProductCard({ produtos }: ProductCardProps) {
               <div className="text-gray-400 text-4xl">📦</div>
             )}
             {produto.emPromocao && (
-              <div className="absolute top-2 right-2 bg-error-600 text-white px-2 py-1 rounded-lg text-xs font-bold">
-                PROMOÇÃO
+              <div className="absolute top-2 right-2 rounded-full bg-promo-500 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm">
+                Promoção
               </div>
             )}
           </div>
@@ -85,7 +85,7 @@ export function ProductCard({ produtos }: ProductCardProps) {
               <div className="flex items-baseline gap-2">
                 {produto.emPromocao && produto.precoPromocional ? (
                   <>
-                    <span className="text-xl md:text-2xl font-bold text-primary-600">
+                    <span className="text-xl md:text-2xl font-bold text-success-600">
                       R$ {produto.precoPromocional.toFixed(2).replace('.', ',')}
                     </span>
                     <span className="text-sm text-text-tertiary line-through">

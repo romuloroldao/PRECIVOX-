@@ -1,9 +1,11 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useLista } from '@/app/context/ListaContext';
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { Drawer, Button, Card } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ToastContainer';
 
 interface ListaLateralProps {
   expandida: boolean;
@@ -12,6 +14,56 @@ interface ListaLateralProps {
 
 export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
   const { itens, removerItem, atualizarQuantidade, limparLista, total, totalItens } = useLista();
+  const { success, error } = useToast();
+  const [nomeLista, setNomeLista] = useState('');
+
+  useEffect(() => {
+    if (!expandida) {
+      setNomeLista('');
+    }
+  }, [expandida]);
+
+  const handleSalvarLista = () => {
+    if (itens.length === 0) {
+      error('Adicione produtos à lista antes de salvar.');
+      return;
+    }
+
+    if (!nomeLista.trim()) {
+      error('Informe um nome para salvar sua lista.');
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      error('Salvamento disponível apenas no navegador.');
+      return;
+    }
+
+    try {
+      const listasSalvas = JSON.parse(
+        window.localStorage.getItem('precivox_listas_salvas') || '[]'
+      );
+
+      const novaLista = {
+        id: Date.now().toString(),
+        nome: nomeLista.trim(),
+        criadaEm: new Date().toISOString(),
+        total,
+        itens,
+      };
+
+      window.localStorage.setItem(
+        'precivox_listas_salvas',
+        JSON.stringify([novaLista, ...listasSalvas])
+      );
+
+      success('Lista salva com sucesso!');
+      setNomeLista('');
+    } catch (storageError) {
+      console.error('Erro ao salvar lista:', storageError);
+      error('Não foi possível salvar a lista. Tente novamente.');
+    }
+  };
 
   // Versão retraída (apenas ícone)
   if (!expandida) {
@@ -24,7 +76,7 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
       >
         <ShoppingCart className="w-6 h-6" />
         {totalItens > 0 && (
-          <span className="absolute -top-1 -right-1 bg-error-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-success-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
             {totalItens > 99 ? '99+' : totalItens}
           </span>
         )}
@@ -40,42 +92,40 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
         onClose={onToggle}
         title={
           <div className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5" />
-            <span>Minha Lista</span>
+            <ShoppingCart className="w-5 h-5 text-text-primary" />
+            <span className="font-semibold text-text-primary">Minha Lista</span>
             {totalItens > 0 && (
-              <span className="bg-primary-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
+              <span className="bg-success-100 text-success-700 px-2 py-0.5 rounded-full text-xs font-bold">
                 {totalItens}
               </span>
             )}
           </div>
         }
-        position="responsive"
-        size="md"
+        position="right"
+        size="lg"
       >
+        <div className="flex h-full flex-col">
         {/* Lista de itens */}
-        <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pr-1">
           {itens.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-text-secondary py-12 px-4">
+              <div className="flex flex-col items-center justify-center text-center text-text-secondary py-12 px-4">
               <ShoppingCart className="w-16 h-16 mb-4 text-gray-300" />
               <p className="text-lg font-medium text-text-primary mb-2">Sua lista está vazia</p>
-              <p className="text-sm text-text-secondary">Adicione produtos à sua lista de compras</p>
+                <p className="text-sm text-text-secondary">
+                  Adicione produtos à sua lista de compras.
+                </p>
             </div>
           ) : (
-            <div className="space-y-3">
+              <div className="space-y-3 pb-28">
             {itens.map((item) => {
-              const precoFinal = item.emPromocao && item.precoPromocional 
-                ? item.precoPromocional 
-                : item.preco;
+                  const precoFinal =
+                    item.emPromocao && item.precoPromocional ? item.precoPromocional : item.preco;
               
               return (
-                <Card
-                  key={item.id}
-                  variant="default"
-                  className="p-4"
-                >
+                    <Card key={item.id} variant="default" className="p-4">
                   <div className="flex items-start gap-4">
                     {/* Imagem */}
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       {item.imagem ? (
                         <img
                           src={item.imagem}
@@ -100,12 +150,15 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
                       <div className="mb-2">
                         {item.emPromocao && item.precoPromocional ? (
                           <div className="flex items-baseline gap-1">
-                            <span className="text-sm font-bold text-primary-600">
+                                <span className="text-sm font-bold text-success-600">
                               R$ {item.precoPromocional.toFixed(2).replace('.', ',')}
                             </span>
                             <span className="text-xs text-text-tertiary line-through">
                               R$ {item.preco.toFixed(2).replace('.', ',')}
                             </span>
+                                <span className="ml-2 inline-flex items-center rounded-full bg-promo-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-promo-700">
+                                  Promoção
+                                </span>
                           </div>
                         ) : (
                           <span className="text-sm font-bold text-text-primary">
@@ -166,26 +219,64 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
           )}
         </div>
 
-        {/* Footer com total */}
-        {itens.length > 0 && (
-          <div className="border-t border-gray-200 p-4 bg-bg">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-lg font-bold text-text-primary">Total:</span>
-              <span className="text-2xl font-bold text-primary-600">
+          {/* Footer com total e ações */}
+          <div className="pointer-events-none">
+            <div className="pointer-events-auto sticky bottom-0 -mx-4 -mb-4 border-t border-gray-200 bg-bg-paper px-4 py-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-secondary block">Total estimado</span>
+                    <span className="text-2xl font-bold text-success-600">
                 R$ {total.toFixed(2).replace('.', ',')}
               </span>
+                  </div>
+                  {itens.length > 0 && (
+                    <span className="rounded-full bg-success-100 px-3 py-1 text-xs font-semibold text-success-700">
+                      {totalItens} {totalItens === 1 ? 'item' : 'itens'}
+                    </span>
+                  )}
+                </div>
+
+                {itens.length > 0 && (
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="nome-lista" className="text-xs font-medium text-text-secondary">
+                        Nome da lista
+                      </label>
+                      <input
+                        id="nome-lista"
+                        type="text"
+                        value={nomeLista}
+                        onChange={(event) => setNomeLista(event.target.value)}
+                        placeholder="Ex: Compras do mês"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-2 focus:ring-success-200"
+                      />
             </div>
             
+                    <div className="flex flex-col gap-2 sm:flex-row">
             <Button
-              variant="error"
-              size="md"
+                        type="button"
+                        variant="ghost"
+                        className="w-full border border-transparent text-error-600 hover:bg-error-50 hover:text-error-700"
               onClick={limparLista}
-              className="w-full"
             >
               Limpar Lista
             </Button>
+                      <Button
+                        type="button"
+                        variant="success"
+                        className="w-full"
+                        onClick={handleSalvarLista}
+                      >
+                        Salvar Lista
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </Drawer>
     </>
   );

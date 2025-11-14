@@ -149,24 +149,24 @@ export default function ComparacaoProdutos({ produtos, onClose }: ComparacaoProp
             <div className="space-y-6">
               {/* Resumo da Comparação */}
               {menorPreco && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="rounded-lg border border-success-200 bg-success-50 p-4">
                   <div className="flex items-center">
-                    <svg className="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="mr-3 h-6 w-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                      <h3 className="font-semibold text-green-800">Melhor Preço Encontrado!</h3>
-                      <p className="text-green-700">
+                      <h3 className="font-semibold text-success-700">Melhor Preço Encontrado!</h3>
+                      <p className="text-success-600">
                         {menorPreco.unidade.mercado.nome} - {menorPreco.unidade.nome}
                       </p>
-                      <p className="text-green-700">
+                      <p className="text-success-600">
                         R$ {menorPreco.emPromocao && menorPreco.precoPromocional 
                           ? menorPreco.precoPromocional.toFixed(2)
                           : menorPreco.preco.toFixed(2)
                         }
                         {menorPreco.emPromocao && (
-                          <span className="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded">
-                            PROMOÇÃO
+                          <span className="ml-2 rounded-full bg-promo-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-promo-700">
+                            Promoção
                           </span>
                         )}
                       </p>
@@ -256,19 +256,19 @@ export default function ComparacaoProdutos({ produtos, onClose }: ComparacaoProp
                                 )}
                               </div>
                               {produto.emPromocao && (
-                                <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded">
-                                  PROMOÇÃO
+                                <span className="ml-2 rounded-full bg-promo-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-promo-700">
+                                  Promoção
                                 </span>
                               )}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {economia > 0 ? (
-                              <div className="text-sm text-red-600 font-semibold">
+                              <div className="text-sm font-semibold text-success-600">
                                 +R$ {economia.toFixed(2)}
                               </div>
                             ) : economia === 0 ? (
-                              <div className="text-sm text-green-600 font-semibold">
+                              <div className="text-sm font-semibold text-success-600">
                                 Melhor preço!
                               </div>
                             ) : null}
@@ -277,7 +277,7 @@ export default function ComparacaoProdutos({ produtos, onClose }: ComparacaoProp
                             <div className="flex flex-col space-y-1">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded ${
                                 produto.disponivel 
-                                  ? 'bg-green-100 text-green-800' 
+                                  ? 'bg-success-100 text-success-700' 
                                   : 'bg-red-100 text-red-800'
                               }`}>
                                 {produto.disponivel ? 'Disponível' : 'Indisponível'}

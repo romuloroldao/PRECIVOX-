@@ -87,8 +87,8 @@ export function ProductList({ produtos }: ProductListProps) {
                         {produto.categoria && `Categoria: ${produto.categoria}`}
                       </div>
                       {produto.emPromocao && (
-                        <span className="inline-block mt-1 px-2 py-0.5 text-xs font-bold text-red-600 bg-red-50 rounded">
-                          PROMOÇÃO
+                        <span className="mt-2 inline-block rounded-full bg-promo-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-promo-700">
+                          Promoção
                         </span>
                       )}
                     </div>
@@ -109,7 +109,7 @@ export function ProductList({ produtos }: ProductListProps) {
                   <div className="flex flex-col">
                     {produto.emPromocao && produto.precoPromocional ? (
                       <>
-                        <span className="text-lg font-bold text-precivox-blue">
+                        <span className="text-lg font-bold text-success-600">
                           R$ {produto.precoPromocional.toFixed(2).replace('.', ',')}
                         </span>
                         <span className="text-xs text-gray-500 line-through">
@@ -125,7 +125,7 @@ export function ProductList({ produtos }: ProductListProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {produto.disponivel ? (
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success-100 text-success-700">
                       Disponível
                     </span>
                   ) : (
