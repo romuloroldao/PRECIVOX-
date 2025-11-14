@@ -12,6 +12,8 @@ export interface DrawerProps {
   children: React.ReactNode;
   position?: 'left' | 'right' | 'bottom' | 'responsive';
   size?: 'sm' | 'md' | 'lg';
+  overlayClassName?: string;
+  drawerClassName?: string;
 }
 
 export function Drawer({
@@ -21,6 +23,8 @@ export function Drawer({
   children,
   position = 'right',
   size = 'md',
+  overlayClassName,
+  drawerClassName,
 }: DrawerProps) {
   useEffect(() => {
     if (isOpen) {
@@ -77,7 +81,10 @@ export function Drawer({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in"
+        className={cn(
+          'fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in',
+          overlayClassName
+        )}
         onClick={onClose}
       />
       
@@ -98,6 +105,7 @@ export function Drawer({
           // Desktop size overrides
           size === 'sm' && effectivePosition !== 'bottom' && 'md:w-80',
           size === 'lg' && effectivePosition !== 'bottom' && 'md:w-[32rem]',
+          drawerClassName
         )}
       >
         {title && (

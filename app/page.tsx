@@ -1006,17 +1006,36 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Botão flutuante para abrir lista quando fechada */}
+      {/* Botão fixo no topo direito */}
+      <button
+        id="shopping-list-top-btn"
+        onClick={() => setShowLista(!showLista)}
+        title="Minha Lista de Compras"
+        aria-label="Abrir lista de compras"
+        className="flex items-center gap-2"
+      >
+        <ShoppingCart className="w-5 h-5" />
+        <span className="hidden sm:inline">Minha Lista</span>
+        {listaProdutos.length > 0 && (
+          <span className="bg-white/20 text-white text-xs font-bold rounded-full px-2 py-0.5">
+            {listaProdutos.length > 99 ? '99+' : listaProdutos.length}
+          </span>
+        )}
+      </button>
+
+      {/* Botão flutuante lateral (meio da página) - Desktop / Canto inferior direito - Mobile */}
       {!showLista && (
         <button
+          id="shopping-list-float-btn"
           onClick={() => setShowLista(true)}
-          className="fixed right-4 bottom-6 z-40 bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 hover:shadow-md transition-all duration-200 flex items-center justify-center relative"
           title="Minha Lista de Compras"
           aria-label="Abrir lista de compras"
+          className="flex items-center gap-2"
         >
-          <ShoppingCart className="w-6 h-6" />
+          <ShoppingCart className="w-5 h-5" />
+          <span className="hidden md:inline">Minha Lista</span>
           {listaProdutos.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-success-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+            <span className="bg-white/20 text-white text-xs font-bold rounded-full px-2 py-0.5">
               {listaProdutos.length > 99 ? '99+' : listaProdutos.length}
             </span>
           )}
@@ -1040,6 +1059,8 @@ export default function HomePage() {
         }
         position="right"
         size="lg"
+        overlayClassName="shopping-list-sidebar-overlay"
+        drawerClassName="shopping-list-sidebar"
       >
         <div className="flex h-full flex-col">
           {/* Lista de itens */}
