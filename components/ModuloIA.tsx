@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/api-client';
 
 interface Recomendacao {
   id: string;
@@ -14,13 +15,17 @@ interface Recomendacao {
 }
 
 interface AnalisePreco {
+  id: string;
   produtoId: string;
   produtoNome: string;
+  data: string;
+  preco: number;
   precoMedio: number;
   precoMin: number;
   precoMax: number;
   tendencia: 'alta' | 'baixa' | 'estavel';
   recomendacao: string;
+  moeda: string;
 }
 
 interface ModuloIAProps {
@@ -31,6 +36,7 @@ export default function ModuloIA({ onRecomendacaoClick }: ModuloIAProps) {
   const [recomendacoes, setRecomendacoes] = useState<Recomendacao[]>([]);
   const [analises, setAnalises] = useState<AnalisePreco[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'recomendacoes' | 'analises' | 'tendencias'>('recomendacoes');
 
   useEffect(() => {
@@ -40,22 +46,49 @@ export default function ModuloIA({ onRecomendacaoClick }: ModuloIAProps) {
   const carregarDadosIA = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Carrega recomendações
-      const recomendacoesRes = await fetch('/api/produtos/recomendacoes');
-      if (recomendacoesRes.ok) {
-        const dados = await recomendacoesRes.json();
-        setRecomendacoes(dados.recomendacoes || []);
+      const recomendacoesRes = await apiFetch<{ recomendacoes?: Recomendacao[] }>('/api/produtos/recomendacoes');
+      if (recomendacoesRes.data) {
+        setRecomendacoes(recomendacoesRes.data.recomendacoes || []);
       }
 
       // Carrega análises de preços
-      const analisesRes = await fetch('/api/produtos/analises-precos');
-      if (analisesRes.ok) {
-        setAnalises(await analisesRes.json());
+      const analisesRes = await apiFetch<{ items?: AnalisePreco[]; count?: number }>('/api/produtos/analises-precos');
+      
+      if (analisesRes.error) {
+        if (analisesRes.status === 404) {
+          setError('Nenhum dado encontrado para análises de preços.');
+          console.warn('Análises de preços não encontradas:', analisesRes.error);
+        } else {
+          setError(`Erro ao carregar análises: ${analisesRes.error}`);
+          console.error('Erro ao carregar análises:', analisesRes.error);
+        }
+      } else if (analisesRes.data) {
+        // Suporta tanto o formato novo (items) quanto o antigo (array direto)
+        const items = analisesRes.data.items || (Array.isArray(analisesRes.data) ? analisesRes.data : []);
+        setAnalises(items);
+        
+        // Log de telemetria em dev mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Análises carregadas: ${items.length} itens`);
+        }
       }
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
+      setError(errorMessage);
       console.error('Erro ao carregar dados de IA:', error);
+      
+      // Telemetria para produção (pode ser expandido para serviço externo)
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'api_request_failed', {
+          event_category: 'API',
+          event_label: 'analises-precos',
+          value: 1,
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -208,7 +241,30 @@ export default function ModuloIA({ onRecomendacaoClick }: ModuloIAProps) {
         {/* Tab: Análises */}
         {activeTab === 'analises' && (
           <div className="space-y-4">
-            {analises.length === 0 ? (
+            {error ? (
+              <div className="text-center py-8 bg-red-50 border border-red-200 rounded-lg">
+                <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-red-600 font-medium mb-2">{error}</p>
+                <p className="text-sm text-red-500 mb-4">
+                  {process.env.NODE_ENV === 'development' && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs">Detalhes técnicos</summary>
+                      <pre className="mt-2 text-left text-xs bg-red-100 p-2 rounded overflow-auto">
+                        {error}
+                      </pre>
+                    </details>
+                  )}
+                </p>
+                <button
+                  onClick={carregarDadosIA}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Tentar Novamente
+                </button>
+              </div>
+            ) : analises.length === 0 ? (
               <div className="text-center py-8">
                 <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
