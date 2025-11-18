@@ -35,8 +35,24 @@ fi
 
 echo "📁 Sincronizando assets do bundle standalone..."
 rm -rf .next/standalone/.next/static
+rm -rf .next/standalone/.next/server/app/*.html  # Remover HTML pré-renderizado que pode ter referências antigas
 mkdir -p .next/standalone/.next
 cp -R .next/static .next/standalone/.next/static
+
+# Garantir que todos os chunks estejam presentes
+if [ -d ".next/static/chunks" ]; then
+    echo "📦 Verificando chunks..."
+    find .next/static/chunks -type f | wc -l | xargs echo "   Total de chunks:"
+fi
+
+# Verificar sincronização do BUILD_ID
+if [ -f ".next/BUILD_ID" ] && [ -f ".next/standalone/.next/BUILD_ID" ]; then
+    if ! diff -q .next/BUILD_ID .next/standalone/.next/BUILD_ID > /dev/null 2>&1; then
+        echo "⚠️  BUILD_IDs diferentes - copiando BUILD_ID..."
+        cp .next/BUILD_ID .next/standalone/.next/BUILD_ID
+    fi
+fi
+
 echo "✅ Build concluído e assets atualizados!"
 
 # 4. Iniciar Next.js em produção

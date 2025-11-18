@@ -74,6 +74,7 @@ export async function apiFetch<T = any>(
   try {
     const response = await fetch(url, {
       ...options,
+      credentials: 'include', // Incluir cookies de autenticação (NextAuth)
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,

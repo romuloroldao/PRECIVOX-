@@ -50,7 +50,19 @@ export default function ModuloIA({ onRecomendacaoClick }: ModuloIAProps) {
       
       // Carrega recomendações
       const recomendacoesRes = await apiFetch<{ recomendacoes?: Recomendacao[] }>('/api/produtos/recomendacoes');
-      if (recomendacoesRes.data) {
+      
+      if (recomendacoesRes.error) {
+        if (recomendacoesRes.status === 401) {
+          console.warn('Não autenticado para recomendações. Verifique a sessão.');
+          // Não definir erro fatal, apenas logar
+        } else if (recomendacoesRes.status === 404) {
+          console.warn('Endpoint de recomendações não encontrado');
+          // Não definir erro fatal, apenas logar
+        } else {
+          console.error('Erro ao carregar recomendações:', recomendacoesRes.error);
+        }
+        setRecomendacoes([]);
+      } else if (recomendacoesRes.data) {
         setRecomendacoes(recomendacoesRes.data.recomendacoes || []);
       }
 
@@ -58,13 +70,17 @@ export default function ModuloIA({ onRecomendacaoClick }: ModuloIAProps) {
       const analisesRes = await apiFetch<{ items?: AnalisePreco[]; count?: number }>('/api/produtos/analises-precos');
       
       if (analisesRes.error) {
-        if (analisesRes.status === 404) {
+        if (analisesRes.status === 401) {
+          setError('Sessão expirada. Por favor, faça login novamente.');
+          console.warn('Não autenticado para análises de preços');
+        } else if (analisesRes.status === 404) {
           setError('Nenhum dado encontrado para análises de preços.');
           console.warn('Análises de preços não encontradas:', analisesRes.error);
         } else {
           setError(`Erro ao carregar análises: ${analisesRes.error}`);
           console.error('Erro ao carregar análises:', analisesRes.error);
         }
+        setAnalises([]);
       } else if (analisesRes.data) {
         // Suporta tanto o formato novo (items) quanto o antigo (array direto)
         const items = analisesRes.data.items || (Array.isArray(analisesRes.data) ? analisesRes.data : []);

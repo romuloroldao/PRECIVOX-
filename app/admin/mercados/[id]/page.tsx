@@ -3,11 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import UnidadeForm from '@/components/UnidadeForm';
 import UploadDatabase from '@/components/UploadDatabase';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { useToast } from '@/components/ToastContainer';
 import { Button } from '@/components/ui/Button';
+import { apiFetch } from '@/lib/api-client';
 
 export default function MercadoDetailsPage() {
   const params = useParams();
@@ -48,16 +50,12 @@ export default function MercadoDetailsPage() {
 
   const loadMercado = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/markets/${mercadoId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setMercado(result.data || result);
-      } else {
-        toast.error('Erro ao carregar mercado');
+      const result = await apiFetch(`/api/markets/${mercadoId}`);
+      
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.data) {
+        setMercado(result.data.data || result.data);
       }
     } catch (error) {
       console.error('Erro ao carregar mercado:', error);
@@ -69,14 +67,10 @@ export default function MercadoDetailsPage() {
 
   const loadUnidades = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/markets/${mercadoId}/unidades`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setUnidades(result.data || []);
+      const result = await apiFetch(`/api/markets/${mercadoId}/unidades`);
+      
+      if (!result.error && result.data) {
+        setUnidades(result.data.data || result.data || []);
       }
     } catch (error) {
       console.error('Erro ao carregar unidades:', error);
@@ -85,14 +79,10 @@ export default function MercadoDetailsPage() {
 
   const loadImportacoes = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/markets/${mercadoId}/importacoes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setImportacoes(result.data || []);
+      const result = await apiFetch(`/api/markets/${mercadoId}/importacoes`);
+      
+      if (!result.error && result.data) {
+        setImportacoes(result.data.data || result.data || []);
       }
     } catch (error) {
       console.error('Erro ao carregar importações:', error);
@@ -101,23 +91,17 @@ export default function MercadoDetailsPage() {
 
   const handleCreateUnidade = async (data: any) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/markets/${mercadoId}/unidades`, {
+      const result = await apiFetch(`/api/markets/${mercadoId}/unidades`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(data),
       });
 
-      if (response.ok) {
+      if (result.error) {
+        toast.error(result.error);
+      } else {
         await loadUnidades();
         setShowUnidadeForm(false);
         toast.success('Unidade criada com sucesso!');
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Erro ao criar unidade');
       }
     } catch (error) {
       console.error('Erro ao criar unidade:', error);
@@ -127,24 +111,18 @@ export default function MercadoDetailsPage() {
 
   const handleUpdateUnidade = async (data: any) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/unidades/${editingUnidade.id}`, {
+      const result = await apiFetch(`/api/unidades/${editingUnidade.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(data),
       });
 
-      if (response.ok) {
+      if (result.error) {
+        toast.error(result.error);
+      } else {
         await loadUnidades();
         setEditingUnidade(null);
         setShowUnidadeForm(false);
         toast.success('Unidade atualizada com sucesso!');
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Erro ao atualizar unidade');
       }
     } catch (error) {
       console.error('Erro ao atualizar unidade:', error);
@@ -156,18 +134,15 @@ export default function MercadoDetailsPage() {
     if (!confirm('Tem certeza que deseja excluir esta unidade?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/unidades/${unidadeId}`, {
+      const result = await apiFetch(`/api/unidades/${unidadeId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.ok) {
+      if (result.error) {
+        toast.error(result.error);
+      } else {
         await loadUnidades();
         toast.success('Unidade excluída com sucesso!');
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Erro ao excluir unidade');
       }
     } catch (error) {
       console.error('Erro ao excluir unidade:', error);
@@ -185,32 +160,21 @@ export default function MercadoDetailsPage() {
   const handleSaveGestor = async () => {
     setSavingGestor(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Token de autenticação não encontrado');
-        setSavingGestor(false);
-        return;
-      }
-
-      const response = await fetch(`/api/markets/${mercadoId}`, {
+      const result = await apiFetch(`/api/markets/${mercadoId}`, {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           gestorId: selectedGestorId || null,
         }),
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.data?.success) {
         toast.success('Gestor associado com sucesso!');
         setIsEditingGestor(false);
         await loadMercado();
       } else {
-        toast.error(result.error || 'Erro ao associar gestor');
+        toast.error('Erro ao associar gestor');
       }
     } catch (error) {
       console.error('Erro ao salvar gestor:', error);
@@ -225,31 +189,20 @@ export default function MercadoDetailsPage() {
 
     setSavingGestor(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Token de autenticação não encontrado');
-        setSavingGestor(false);
-        return;
-      }
-
-      const response = await fetch(`/api/markets/${mercadoId}`, {
+      const result = await apiFetch(`/api/markets/${mercadoId}`, {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           gestorId: null,
         }),
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.data?.success) {
         toast.success('Gestor removido com sucesso!');
         await loadMercado();
       } else {
-        toast.error(result.error || 'Erro ao remover gestor');
+        toast.error('Erro ao remover gestor');
       }
     } catch (error) {
       console.error('Erro ao remover gestor:', error);
