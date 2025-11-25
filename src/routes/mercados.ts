@@ -25,7 +25,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowedExtensions = ['.csv', '.xlsx', '.xls'];
     const ext = path.extname(file.originalname).toLowerCase();
-    
+
     if (allowedExtensions.includes(ext)) {
       cb(null, true);
     } else {
@@ -49,14 +49,14 @@ router.get('/public', async (req, res) => {
   try {
     // Debug logs (podem ser removidos depois)
     // console.log('Rota pública de mercados chamada');
-    
+
     const { ativo } = req.query;
-    
+
     const where: any = {};
     if (ativo === 'true') {
       where.ativo = true;
     }
-    
+
     const mercados = await prisma.mercados.findMany({
       where,
       select: {
@@ -69,7 +69,7 @@ router.get('/public', async (req, res) => {
       },
       orderBy: { nome: 'asc' }
     });
-    
+
     res.json(mercados);
   } catch (error: any) {
     console.error('Erro ao buscar mercados públicos:', error);
@@ -85,22 +85,41 @@ router.get('/public', async (req, res) => {
 /**
  * GET /mercados
  * Lista todos os mercados (com filtros para gestores)
+ * Autenticação opcional - sem auth retorna todos os mercados ativos
  */
-router.get('/', authenticate, async (req: AuthRequest, res) => {
+router.get('/', async (req: any, res) => {
   try {
-    const { role, id: userId } = req.user!;
     const { busca, ativo, planoId } = req.query;
+
+    // Tentar obter usuário autenticado (opcional)
+    let user = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'precivox-secret-2024');
+        user = decoded;
+      } catch (error) {
+        // Token inválido, continuar sem autenticação
+      }
+    }
 
     let where: any = {};
 
-    // Gestor só vê seus mercados
-    if (role === 'GESTOR') {
-      where.gestorId = userId;
-    }
-
-    // Cliente só vê mercados ativos
-    if (role === 'CLIENTE') {
+    // Se não autenticado, mostrar apenas mercados ativos
+    if (!user) {
       where.ativo = true;
+    } else {
+      // Gestor só vê seus mercados
+      if (user.role === 'GESTOR') {
+        where.gestorId = user.id;
+      }
+
+      // Cliente só vê mercados ativos
+      if (user.role === 'CLIENTE') {
+        where.ativo = true;
+      }
     }
 
     // Filtros opcionais
@@ -140,10 +159,11 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       orderBy: { dataCriacao: 'desc' },
     });
 
-    return res.json(mercados);
+    return res.json({ success: true, data: mercados });
   } catch (error) {
     console.error('Erro ao listar mercados:', error);
     return res.status(500).json({
+      success: false,
       error: 'Erro ao listar mercados',
       message: 'Ocorreu um erro ao buscar os mercados',
     });

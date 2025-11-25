@@ -33,6 +33,7 @@ app.get('/health', (req, res) => {
 
 // Rotas da API
 app.use('/api/mercados', mercadosRouter);
+app.use('/api/markets', mercadosRouter); // ✅ Alias em inglês para compatibilidade com frontend
 app.use('/api/unidades', unidadesRouter);
 app.use('/api/planos', planosRouter);
 app.use('/api/produtos', produtosRouter);
@@ -50,7 +51,7 @@ app.use((req, res) => {
 // Tratamento de erros globais
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Erro não tratado:', err);
-  
+
   res.status(err.status || 500).json({
     error: err.message || 'Erro interno do servidor',
     message: process.env.NODE_ENV === 'development' ? err.stack : undefined,

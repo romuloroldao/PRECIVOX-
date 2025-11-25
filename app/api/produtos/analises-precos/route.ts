@@ -2,10 +2,36 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import {
+  calcularRota,
+  calcularScoreCustoBeneficio,
+  COORDENADAS_PADRAO,
+  type Coordenadas,
+  type RotaInfo,
+  type ScoreCustoBeneficio
+} from '@/lib/geolocation';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+
+interface MelhorOferta {
+  preco: number;
+  economia: number;
+  mercado: {
+    id: string;
+    nome: string;
+  };
+  unidade: {
+    id: string;
+    nome: string;
+    endereco: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  };
+  rota?: RotaInfo;
+  score?: ScoreCustoBeneficio;
+}
 
 interface AnalisePrecoResponse {
   id: string;
@@ -19,6 +45,7 @@ interface AnalisePrecoResponse {
   tendencia: 'alta' | 'baixa' | 'estavel';
   recomendacao: string;
   moeda: string;
+  melhorOferta?: MelhorOferta;
 }
 
 /**
@@ -28,18 +55,18 @@ interface AnalisePrecoResponse {
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
+
   try {
     console.log(`[${requestId}] GET /api/produtos/analises-precos - Iniciando`);
 
     // Verificar autenticação
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user) {
       console.warn(`[${requestId}] Não autenticado`);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Não autenticado',
           code: 'UNAUTHORIZED'
         },
@@ -55,8 +82,8 @@ export async function GET(request: NextRequest) {
     if (!allowedRoles.includes(userRole)) {
       console.warn(`[${requestId}] Acesso negado para role: ${userRole}`);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Acesso negado',
           code: 'FORBIDDEN'
         },
@@ -86,7 +113,7 @@ export async function GET(request: NextRequest) {
       });
 
       const mercadoIds = mercadosDoGestor.map((m) => m.id);
-      
+
       if (mercadoIds.length === 0) {
         console.log(`[${requestId}] Gestor sem mercados associados`);
         return NextResponse.json({
@@ -120,7 +147,17 @@ export async function GET(request: NextRequest) {
         unidades: {
           select: {
             id: true,
+            nome: true,
+            endereco: true,
+            latitude: true,
+            longitude: true,
             mercadoId: true,
+            mercados: {
+              select: {
+                id: true,
+                nome: true,
+              },
+            },
           },
         },
       },
@@ -138,12 +175,13 @@ export async function GET(request: NextRequest) {
       precos: number[];
       precosPromocionais: number[];
       atualizacoes: Date[];
+      estoques: typeof estoques;
     }>();
 
     estoques.forEach((estoque) => {
       const produtoId = estoque.produtoId;
       const produtoNome = estoque.produtos?.nome || 'Produto desconhecido';
-      
+
       if (!analisesPorProduto.has(produtoId)) {
         analisesPorProduto.set(produtoId, {
           produtoId,
@@ -151,15 +189,17 @@ export async function GET(request: NextRequest) {
           precos: [],
           precosPromocionais: [],
           atualizacoes: [],
+          estoques: [],
         });
       }
 
       const analise = analisesPorProduto.get(produtoId)!;
       const preco = Number(estoque.preco);
-      
+
       analise.precos.push(preco);
       analise.atualizacoes.push(estoque.atualizadoEm);
-      
+      analise.estoques.push(estoque);
+
       if (estoque.emPromocao && estoque.precoPromocional) {
         analise.precosPromocionais.push(Number(estoque.precoPromocional));
       }
@@ -176,14 +216,14 @@ export async function GET(request: NextRequest) {
         const precoMedio = todosPrecos.length > 0
           ? todosPrecos.reduce((sum, p) => sum + p, 0) / todosPrecos.length
           : analise.precos.length > 0
-          ? analise.precos.reduce((sum, p) => sum + p, 0) / analise.precos.length
-          : 0;
+            ? analise.precos.reduce((sum, p) => sum + p, 0) / analise.precos.length
+            : 0;
 
         const precoMin = todosPrecos.length > 0
           ? Math.min(...todosPrecos)
           : analise.precos.length > 0
-          ? Math.min(...analise.precos)
-          : 0;
+            ? Math.min(...analise.precos)
+            : 0;
 
         const precoMax = todosPrecos.length > 0
           ? Math.max(...todosPrecos)
@@ -197,14 +237,14 @@ export async function GET(request: NextRequest) {
             preco,
             data: analise.atualizacoes[idx] || new Date(),
           }));
-          
+
           // Ordenar por data (mais antigo primeiro)
           precosComData.sort((a, b) => a.data.getTime() - b.data.getTime());
-          
+
           const maisAntigo = precosComData[0].preco;
           const maisRecente = precosComData[precosComData.length - 1].preco;
           const variacao = ((maisRecente - maisAntigo) / maisAntigo) * 100;
-          
+
           if (variacao > 5) {
             tendencia = 'alta';
           } else if (variacao < -5) {
@@ -224,6 +264,82 @@ export async function GET(request: NextRequest) {
           recomendacao = 'Preço estável. Compare com outras opções antes de decidir.';
         }
 
+        // Encontrar a melhor oferta (menor preço) com informações de rota
+        let melhorOferta: MelhorOferta | undefined;
+
+        if (analise.estoques.length > 0) {
+          // Encontrar o estoque com menor preço
+          const estoqueComMelhorPreco = analise.estoques.reduce((melhor, estoque) => {
+            const precoAtual = estoque.emPromocao && estoque.precoPromocional
+              ? Number(estoque.precoPromocional)
+              : Number(estoque.preco);
+
+            const precoMelhor = melhor.emPromocao && melhor.precoPromocional
+              ? Number(melhor.precoPromocional)
+              : Number(melhor.preco);
+
+            return precoAtual < precoMelhor ? estoque : melhor;
+          });
+
+          const precoMelhorOferta = estoqueComMelhorPreco.emPromocao && estoqueComMelhorPreco.precoPromocional
+            ? Number(estoqueComMelhorPreco.precoPromocional)
+            : Number(estoqueComMelhorPreco.preco);
+
+          const economia = precoMedio - precoMelhorOferta;
+
+          // Calcular rota se houver coordenadas
+          let rota: RotaInfo | undefined;
+          let score: ScoreCustoBeneficio | undefined;
+
+          if (estoqueComMelhorPreco.unidades?.latitude && estoqueComMelhorPreco.unidades?.longitude) {
+            // Obter coordenadas do usuário dos query params ou usar padrão
+            const userLat = searchParams.get('lat');
+            const userLng = searchParams.get('lng');
+
+            let origem: Coordenadas = COORDENADAS_PADRAO;
+
+            if (userLat && userLng) {
+              const lat = parseFloat(userLat);
+              const lng = parseFloat(userLng);
+              if (!isNaN(lat) && !isNaN(lng)) {
+                origem = { latitude: lat, longitude: lng };
+              }
+            }
+
+            const destino: Coordenadas = {
+              latitude: estoqueComMelhorPreco.unidades.latitude,
+              longitude: estoqueComMelhorPreco.unidades.longitude,
+            };
+
+            rota = calcularRota(origem, destino, economia);
+            score = calcularScoreCustoBeneficio(
+              economia,
+              precoMedio,
+              rota.distanciaKm,
+              rota.tempoEstimadoMin,
+              estoqueComMelhorPreco.disponivel
+            );
+          }
+
+          melhorOferta = {
+            preco: precoMelhorOferta,
+            economia,
+            mercado: {
+              id: estoqueComMelhorPreco.unidades?.mercados?.id || '',
+              nome: estoqueComMelhorPreco.unidades?.mercados?.nome || 'Mercado',
+            },
+            unidade: {
+              id: estoqueComMelhorPreco.unidades?.id || '',
+              nome: estoqueComMelhorPreco.unidades?.nome || 'Unidade',
+              endereco: estoqueComMelhorPreco.unidades?.endereco || null,
+              latitude: estoqueComMelhorPreco.unidades?.latitude || null,
+              longitude: estoqueComMelhorPreco.unidades?.longitude || null,
+            },
+            rota,
+            score,
+          };
+        }
+
         return {
           id: `ap-${analise.produtoId}-${index}`,
           produtoId: analise.produtoId,
@@ -236,6 +352,7 @@ export async function GET(request: NextRequest) {
           tendencia,
           recomendacao,
           moeda: 'BRL',
+          melhorOferta,
         };
       });
 
@@ -264,15 +381,15 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error(`[${requestId}] GET /api/produtos/analises-precos - Erro:`, error);
-    
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Erro ao buscar análises de preços',
         code: 'INTERNAL_SERVER_ERROR',
         message: error instanceof Error ? error.message : 'Erro desconhecido'
       },
-      { 
+      {
         status: 500,
         headers: {
           'X-Request-ID': requestId,

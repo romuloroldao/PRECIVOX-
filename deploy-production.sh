@@ -16,14 +16,32 @@ fi
 
 # 1. Parar processos antes de atualizar dependências/build
 echo "🛑 Parando processos existentes..."
-pkill -f "next start" || true
-pkill -f "node.*server.js" || true
+pkill -9 -f "next start" || true
+pkill -9 -f "next-server" || true
+pkill -9 -f "npm.*start" || true
+pkill -9 -f "node.*server.js" || true
+
+# Aguardar processos terminarem
+sleep 2
+
+# Verificar se porta 3000 está livre
+if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "⚠️  Porta 3000 ainda em uso, forçando liberação..."
+    fuser -k 3000/tcp || true
+    sleep 1
+fi
 
 # 2. Instalar dependências
 echo "📦 Instalando dependências..."
 npm ci --production=false
 
 # 3. Fazer build do projeto
+echo "🧹 Limpando build anterior..."
+rm -rf .next
+
+echo  # Remove Next.js cache to avoid stale HTML references
+rm -rf .next/cache
+
 echo "🔨 Fazendo build do projeto..."
 npm run build
 
@@ -33,25 +51,24 @@ if [ ! -d ".next" ]; then
     exit 1
 fi
 
-echo "📁 Sincronizando assets do bundle standalone..."
-rm -rf .next/standalone/.next/static
-rm -rf .next/standalone/.next/server/app/*.html  # Remover HTML pré-renderizado que pode ter referências antigas
-mkdir -p .next/standalone/.next
-cp -R .next/static .next/standalone/.next/static
+echo "📁 Sincronizando assets estáticos para Nginx..."
+# Criar diretório se não existir
+sudo mkdir -p /var/www/precivox/_next/static
+sudo mkdir -p /var/www/precivox/public
 
-# Garantir que todos os chunks estejam presentes
-if [ -d ".next/static/chunks" ]; then
-    echo "📦 Verificando chunks..."
-    find .next/static/chunks -type f | wc -l | xargs echo "   Total de chunks:"
-fi
+# Limpar assets antigos
+sudo rm -rf /var/www/precivox/_next/static/*
+sudo rm -rf /var/www/precivox/public/*
 
-# Verificar sincronização do BUILD_ID
-if [ -f ".next/BUILD_ID" ] && [ -f ".next/standalone/.next/BUILD_ID" ]; then
-    if ! diff -q .next/BUILD_ID .next/standalone/.next/BUILD_ID > /dev/null 2>&1; then
-        echo "⚠️  BUILD_IDs diferentes - copiando BUILD_ID..."
-        cp .next/BUILD_ID .next/standalone/.next/BUILD_ID
-    fi
-fi
+# Copiar novos assets
+sudo cp -R .next/static/* /var/www/precivox/_next/static/
+sudo cp -R public/* /var/www/precivox/public/
+
+# Ajustar permissões para o Nginx (www-data)
+sudo chown -R www-data:www-data /var/www/precivox
+sudo chmod -R 755 /var/www/precivox
+
+echo "✅ Assets sincronizados em /var/www/precivox"
 
 echo "✅ Build concluído e assets atualizados!"
 
@@ -71,12 +88,24 @@ cd ..
 
 # 6. Configurar Nginx (se necessário)
 echo "⚙️ Configurando Nginx..."
-if [ -f "/etc/nginx/sites-available/precivox" ]; then
-    sudo cp nginx/nextjs-production.conf /etc/nginx/sites-available/precivox
+if [ -f "/etc/nginx/sites-available/precivox.conf" ]; then
+    sudo cp nginx/nextjs-production.conf /etc/nginx/sites-available/precivox.conf
     sudo nginx -t && sudo systemctl reload nginx
     echo "✅ Nginx configurado e recarregado"
+elif [ -f "/etc/nginx/sites-available/precivox" ]; then
+    # Fallback para nome antigo
+    sudo cp nginx/nextjs-production.conf /etc/nginx/sites-available/precivox
+    sudo nginx -t && sudo systemctl reload nginx
+    echo "✅ Nginx configurado e recarregado (arquivo antigo)"
 else
-    echo "⚠️ Configuração do Nginx não encontrada - configure manualmente"
+    # Criar novo se não existir
+    sudo cp nginx/nextjs-production.conf /etc/nginx/sites-available/precivox.conf
+    # Criar symlink se não existir
+    if [ ! -f "/etc/nginx/sites-enabled/precivox.conf" ]; then
+        sudo ln -s /etc/nginx/sites-available/precivox.conf /etc/nginx/sites-enabled/precivox.conf
+    fi
+    sudo nginx -t && sudo systemctl reload nginx
+    echo "✅ Nginx configurado e recarregado (novo arquivo)"
 fi
 
 # 7. Verificar status

@@ -11,6 +11,7 @@ import userRoutes from './routes/users.js';
 import marketRoutes from './routes/markets.js';
 import productRoutes from './routes/products.js';
 import aiRoutes from './routes/ai.js';
+import aiEnginesRoutes from './routes/ai-engines.js';
 import analyticsRoutes from './routes/analytics.js';
 // import loginSimplesRoutes from './routes/login-simples.js';
 
@@ -92,7 +93,7 @@ const authLimiter = rateLimit({
 
 // CORS configurado
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
+  origin: process.env.NODE_ENV === 'production'
     ? ['https://precivox.com.br', 'https://www.precivox.com.br']
     : ['http://localhost:3000', 'http://localhost:5176', 'http://localhost:8080', 'http://127.0.0.1:8080'],
   credentials: true,
@@ -129,18 +130,18 @@ app.use((req, res, next) => {
   const start = Date.now();
   const { method, url, ip } = req;
   const userAgent = req.get('User-Agent');
-  
+
   console.log(`🔵 ${method} ${url} - ${ip} - ${userAgent}`);
-  
+
   // Log da resposta
   res.on('finish', () => {
     const duration = Date.now() - start;
     const { statusCode } = res;
     const statusEmoji = statusCode >= 400 ? '❌' : statusCode >= 300 ? '🟡' : '✅';
-    
+
     console.log(`${statusEmoji} ${method} ${url} - ${statusCode} - ${duration}ms - ${ip}`);
   });
-  
+
   next();
 });
 
@@ -153,7 +154,7 @@ app.get('/api/health', async (req, res) => {
   try {
     // Verificar conexão com banco
     const dbStatus = await testConnection();
-    
+
     res.json({
       success: true,
       message: 'PRECIVOX API v5.0 - Online',
@@ -243,6 +244,7 @@ app.use('/api/auth', userRoutes); // ✅ ALIAS PARA COMPATIBILIDADE COM FRONTEND
 app.use('/api/markets', marketRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/ai-engines', aiEnginesRoutes); // ✅ ROTAS DOS ENGINES DE IA TYPESCRIPT
 app.use('/api/analytics', analyticsRoutes);
 app.use('/analytics', analyticsRoutes); // Para compatibilidade com frontend
 
@@ -254,7 +256,7 @@ app.use('/analytics', analyticsRoutes); // Para compatibilidade com frontend
 app.get('/api/produtos', async (req, res) => {
   try {
     const { search, categoria, mercado, page = 1, limit = 50 } = req.query;
-    
+
     // Usar a nova rota de busca de produtos - apenas produtos uploadados
     let sql = `
       SELECT 
@@ -435,7 +437,7 @@ app.use((error, req, res, next) => {
   // Erro do PostgreSQL
   if (error.code) {
     let message = 'Erro de banco de dados';
-    
+
     switch (error.code) {
       case '23505': // unique_violation
         message = 'Dados duplicados - registro já existe';
@@ -474,7 +476,7 @@ const startServer = async () => {
     // Testar conexão com banco
     console.log('🔍 Testando conexão com PostgreSQL...');
     const dbConnected = await testConnection();
-    
+
     if (!dbConnected) {
       console.error('❌ Falha na conexão com PostgreSQL');
       process.exit(1);
@@ -482,7 +484,7 @@ const startServer = async () => {
 
     // ✅ VERIFICAR PORTA DISPONÍVEL E INICIAR SERVIDOR
     console.log(`🔍 Verificando disponibilidade da porta ${PORT}...`);
-    
+
     let finalPort;
     try {
       const portAvailable = await isPortAvailable(PORT);
@@ -517,17 +519,17 @@ const startServer = async () => {
     // Graceful shutdown
     const gracefulShutdown = async (signal) => {
       console.log(`\n🔄 Recebido ${signal}. Iniciando shutdown graceful...`);
-      
+
       server.close(async () => {
         console.log('🔒 Servidor HTTP fechado');
-        
+
         try {
           await closePool();
           console.log('🔒 Pool de conexões PostgreSQL fechado');
         } catch (error) {
           console.error('❌ Erro ao fechar pool:', error);
         }
-        
+
         console.log('✅ Shutdown concluído');
         process.exit(0);
       });

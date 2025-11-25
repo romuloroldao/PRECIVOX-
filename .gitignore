@@ -48,6 +48,8 @@ ecosystem.config.js.backup
 *.swo
 .cursor/
 .cursor-server/
+.antigravity-server/
+.gemini/
 .claude/
 .claude.json
 .claude.json.backup
