@@ -2,7 +2,7 @@
  * Stock Data Service - Serviço para acesso a dados de estoque
  */
 
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '../lib/prisma-compat';
 import { logger } from '../utils/logger';
 import { ProductData, StockRecord } from '../types/common';
 
@@ -114,33 +114,58 @@ export class StockDataService {
     }
 
     /**
-     * Busca histórico de movimentação de estoque (MOCK - será implementado)
-     * TODO: Criar tabela de movimentações no banco
+     * Busca histórico de movimentação de estoque (DADOS REAIS)
      */
     async getStockHistory(produtoId: string, unidadeId: string, days: number = 30): Promise<StockRecord[]> {
-        logger.warn('StockDataService', 'getStockHistory retornando dados MOCK - implementar tabela de movimentações');
+        const startTime = Date.now();
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
 
-        // Mock: gerar dados aleatórios de movimentação
-        const history: StockRecord[] = [];
-        const today = new Date();
+        try {
+            logger.info('StockDataService', 'Buscando histórico de movimentações (REAL)', {
+                produtoId,
+                unidadeId,
+                days
+            });
 
-        for (let i = days; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
+            // Buscar movimentações reais do banco
+            const movimentacoes = await prisma.movimentacoes_estoque.findMany({
+                where: {
+                    produtoId,
+                    unidadeId,
+                    dataMovimentacao: {
+                        gte: cutoffDate
+                    }
+                },
+                orderBy: {
+                    dataMovimentacao: 'asc'
+                }
+            });
 
-            // Simular 1-3 movimentações por dia
-            const movimentacoesDia = Math.floor(Math.random() * 3) + 1;
+            // Converter para formato StockRecord
+            const history: StockRecord[] = movimentacoes.map(mov => ({
+                data: mov.dataMovimentacao,
+                quantidade: mov.quantidade,
+                movimentacao: mov.tipo === 'ENTRADA' || mov.tipo === 'VENDA' ? 'ENTRADA' : 'SAIDA'
+            }));
 
-            for (let j = 0; j < movimentacoesDia; j++) {
-                history.push({
-                    data: date,
-                    quantidade: Math.floor(Math.random() * 20) + 5,
-                    movimentacao: Math.random() > 0.5 ? 'ENTRADA' : 'SAIDA'
-                });
-            }
+            const executionTime = Date.now() - startTime;
+            logger.info('StockDataService', 'Histórico de movimentações carregado (REAL)', {
+                produtoId,
+                unidadeId,
+                totalMovimentacoes: history.length,
+                executionTime
+            });
+
+            return history;
+        } catch (error: any) {
+            logger.error('StockDataService', 'Erro ao buscar histórico de movimentações', {
+                produtoId,
+                unidadeId,
+                error: error.message
+            });
+            return [];
         }
-
-        return history;
     }
 
     /**

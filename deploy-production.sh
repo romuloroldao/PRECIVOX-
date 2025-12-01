@@ -43,6 +43,7 @@ echo  # Remove Next.js cache to avoid stale HTML references
 rm -rf .next/cache
 
 echo "🔨 Fazendo build do projeto..."
+echo "🤖 Compilando engines de IA..."\nnpm run build:ai\necho "✅ Engines de IA compilados!"\n
 npm run build
 
 # Verificar se o build foi bem-sucedido

@@ -1,7 +1,6 @@
 /**
  * Demand Calculator - Cálculos de previsão de demanda
- * Implementação MOCK usando média móvel simples
- * TODO: Substituir por modelos ARIMA, Prophet ou LSTM
+ * Implementação usando dados reais de vendas com média móvel
  */
 
 import { DemandPredictionInput, DemandPredictionOutput, DailyDemand, SeasonalityPattern } from './types';
@@ -12,7 +11,7 @@ export class DemandCalculator {
     private readonly ENGINE_NAME = 'DemandPredictor';
 
     /**
-     * Calcula previsão de demanda usando média móvel simples (MOCK)
+     * Calcula previsão de demanda usando média móvel simples (DADOS REAIS)
      */
     async calculate(input: DemandPredictionInput, historicalSales: SalesRecord[]): Promise<DemandPredictionOutput> {
         const startTime = Date.now();
@@ -208,7 +207,7 @@ export class DemandCalculator {
      * Detecta padrões de sazonalidade
      */
     private detectSeasonality(historical: SalesRecord[], forecasts: DailyDemand[]): SeasonalityPattern {
-        // Mock: análise simplificada de sazonalidade
+        // Análise de sazonalidade baseada em dados reais
         const allQuantities = historical.map(s => s.quantidade);
         const avg = allQuantities.reduce((a, b) => a + b, 0) / allQuantities.length;
         const variance = allQuantities.reduce((sum, q) => sum + Math.pow(q - avg, 2), 0) / allQuantities.length;

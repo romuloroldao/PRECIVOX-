@@ -8,8 +8,8 @@ datasource db {
 }
 
 model accounts {
-  id                  String   @id
-  userId              String   @map("user_id")
+  id                  String  @id
+  userId              String  @map("user_id")
   type                String
   provider            String
   provider_account_id String
@@ -20,7 +20,7 @@ model accounts {
   scope               String?
   id_token            String?
   session_state       String?
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, provider_account_id])
 }
@@ -96,20 +96,67 @@ model analises_ia {
 }
 
 model estoques {
-  id               String   @id
-  quantidade       Int      @default(0)
-  preco            Decimal  @db.Decimal(10, 2)
-  precoPromocional Decimal? @db.Decimal(10, 2)
-  emPromocao       Boolean  @default(false)
-  disponivel       Boolean  @default(true)
+  id               String                  @id
+  quantidade       Int                     @default(0)
+  preco            Decimal                 @db.Decimal(10, 2)
+  precoPromocional Decimal?                @db.Decimal(10, 2)
+  emPromocao       Boolean                 @default(false)
+  disponivel       Boolean                 @default(true)
   atualizadoEm     DateTime
-  dataCriacao      DateTime @default(now())
+  dataCriacao      DateTime                @default(now())
   unidadeId        String
   produtoId        String
-  produtos         produtos @relation(fields: [produtoId], references: [id], onDelete: Cascade)
-  unidades         unidades @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  produtos         produtos                @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  unidades         unidades                @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  movimentacoes    movimentacoes_estoque[]
 
   @@unique([unidadeId, produtoId])
+}
+
+model vendas {
+  id             String   @id @default(uuid())
+  produtoId      String
+  unidadeId      String
+  quantidade     Int
+  precoUnitario  Decimal  @db.Decimal(10, 2)
+  precoTotal     Decimal  @db.Decimal(10, 2)
+  desconto       Decimal? @default(0) @db.Decimal(10, 2)
+  formaPagamento String? // DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, PIX, etc
+  clienteId      String? // Para rastrear compras de clientes recorrentes
+  dataVenda      DateTime @default(now())
+  criadoEm       DateTime @default(now())
+  produtos       produtos @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  unidades       unidades @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@index([produtoId, dataVenda])
+  @@index([unidadeId, dataVenda])
+  @@index([dataVenda])
+  @@index([produtoId, unidadeId, dataVenda])
+}
+
+model movimentacoes_estoque {
+  id                 String   @id @default(uuid())
+  estoqueId          String
+  produtoId          String
+  unidadeId          String
+  tipo               String // ENTRADA, SAIDA, AJUSTE, VENDA, DEVOLUCAO
+  quantidade         Int
+  quantidadeAnterior Int
+  quantidadeNova     Int
+  motivo             String? // COMPRA, VENDA, AJUSTE_INVENTARIO, PERDA, VENCIMENTO, etc
+  observacao         String?
+  responsavelId      String? // ID do usuário que fez a movimentação
+  dataMovimentacao   DateTime @default(now())
+  criadoEm           DateTime @default(now())
+  estoques           estoques @relation(fields: [estoqueId], references: [id], onDelete: Cascade)
+  produtos           produtos @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  unidades           unidades @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@index([produtoId, dataMovimentacao])
+  @@index([unidadeId, dataMovimentacao])
+  @@index([estoqueId, dataMovimentacao])
+  @@index([tipo, dataMovimentacao])
+  @@index([dataMovimentacao])
 }
 
 model logs_importacao {
@@ -224,6 +271,8 @@ model produtos {
   alertas_ia                                                                 alertas_ia[]
   analises_ia                                                                analises_ia[]
   estoques                                                                   estoques[]
+  vendas                                                                     vendas[]
+  movimentacoes_estoque                                                      movimentacoes_estoque[]
   produtos_relacionados_produtos_relacionados_produtoIdToprodutos            produtos_relacionados[] @relation("produtos_relacionados_produtoIdToprodutos")
   produtos_relacionados_produtos_relacionados_produtoRelacionadoIdToprodutos produtos_relacionados[] @relation("produtos_relacionados_produtoRelacionadoIdToprodutos")
 }
@@ -253,39 +302,41 @@ model sessions {
 }
 
 model unidades {
-  id                   String               @id
-  nome                 String
-  endereco             String?
-  bairro               String?
-  cidade               String?
-  estado               String?
-  cep                  String?
-  telefone             String?
-  horarioFuncionamento String?
-  latitude             Float?
-  longitude            Float?
-  ativa                Boolean              @default(true)
-  dataCriacao          DateTime             @default(now())
-  dataAtualizacao      DateTime
-  mercadoId            String
-  alertas_ia           alertas_ia[]
-  analises_ia          analises_ia[]
-  estoques             estoques[]
-  metricas_dashboard   metricas_dashboard[]
-  mercados             mercados             @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+  id                    String                  @id
+  nome                  String
+  endereco              String?
+  bairro                String?
+  cidade                String?
+  estado                String?
+  cep                   String?
+  telefone              String?
+  horarioFuncionamento  String?
+  latitude              Float?
+  longitude             Float?
+  ativa                 Boolean                 @default(true)
+  dataCriacao           DateTime                @default(now())
+  dataAtualizacao       DateTime
+  mercadoId             String
+  alertas_ia            alertas_ia[]
+  analises_ia           analises_ia[]
+  estoques              estoques[]
+  vendas                vendas[]
+  movimentacoes_estoque movimentacoes_estoque[]
+  metricas_dashboard    metricas_dashboard[]
+  mercados              mercados                @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id              String       @id
+  id              String         @id
   nome            String?
-  email           String       @unique
-  emailVerified   DateTime?    @map("email_verified")
+  email           String         @unique
+  emailVerified   DateTime?      @map("email_verified")
   imagem          String?
-  senhaHash       String?      @map("senha_hash")
-  role            Role         @default(CLIENTE)
-  dataCriacao     DateTime     @default(now()) @map("data_criacao")
-  dataAtualizacao DateTime     @map("data_atualizacao")
-  ultimoLogin     DateTime?    @map("ultimo_login")
+  senhaHash       String?        @map("senha_hash")
+  role            Role           @default(CLIENTE)
+  dataCriacao     DateTime       @default(now()) @map("data_criacao")
+  dataAtualizacao DateTime       @map("data_atualizacao")
+  ultimoLogin     DateTime?      @map("ultimo_login")
   accounts        accounts[]
   sessions        sessions[]
   acoes_gestor    acoes_gestor[]

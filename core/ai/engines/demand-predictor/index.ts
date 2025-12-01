@@ -15,7 +15,7 @@ export class DemandPredictor {
     private salesService: SalesDataService;
     private stockService: StockDataService;
     private readonly ENGINE_NAME = 'DemandPredictor';
-    private readonly VERSION = '1.0.0-mock';
+    private readonly VERSION = '1.0.0';
 
     constructor() {
         this.calculator = new DemandCalculator();

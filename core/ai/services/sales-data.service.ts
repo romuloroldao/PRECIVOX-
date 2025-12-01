@@ -2,55 +2,95 @@
  * Sales Data Service - Serviço para acesso a dados de vendas
  */
 
+import { prisma } from '../lib/prisma-compat';
 import { logger } from '../utils/logger';
 import { SalesRecord } from '../types/common';
 
 export class SalesDataService {
     /**
-     * Busca histórico de vendas de um produto
-     * MOCK - Será implementado quando houver tabela de vendas
-     * TODO: Criar tabela de vendas no banco de dados
+     * Busca histórico de vendas de um produto (DADOS REAIS)
      */
     async getSalesHistory(produtoId: string, unidadeId: string, days: number = 30): Promise<SalesRecord[]> {
-        logger.warn('SalesDataService', 'getSalesHistory retornando dados MOCK - implementar tabela de vendas');
+        const startTime = Date.now();
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
 
-        // Mock: gerar vendas aleatórias baseadas em padrões realistas
-        const sales: SalesRecord[] = [];
-        const today = new Date();
-
-        // Simular padrão semanal (mais vendas no fim de semana)
-        for (let i = days; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-
-            const dayOfWeek = date.getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-            // Multiplicador de vendas (fim de semana vende mais)
-            const weekendMultiplier = isWeekend ? 1.5 : 1.0;
-
-            // Quantidade base com variação aleatória
-            const baseQuantity = Math.floor(Math.random() * 10) + 5;
-            const quantidade = Math.floor(baseQuantity * weekendMultiplier);
-
-            // Preço unitário com pequena variação
-            const precoUnitario = 10 + Math.random() * 20;
-
-            sales.push({
-                data: date,
-                quantidade,
-                valor: quantidade * precoUnitario
+        try {
+            logger.info('SalesDataService', 'Buscando histórico de vendas real', {
+                produtoId,
+                unidadeId,
+                days,
+                cutoffDate
             });
+
+            // Buscar vendas reais do banco de dados
+            const vendas = await prisma.vendas.findMany({
+                where: {
+                    produtoId,
+                    unidadeId,
+                    dataVenda: {
+                        gte: cutoffDate
+                    }
+                },
+                orderBy: {
+                    dataVenda: 'asc'
+                }
+            });
+
+            // Agrupar vendas por data (pode haver múltiplas vendas no mesmo dia)
+            const salesByDate = new Map<string, { quantidade: number; valor: number }>();
+
+            vendas.forEach(venda => {
+                const dateKey = venda.dataVenda.toISOString().split('T')[0];
+                const existing = salesByDate.get(dateKey) || { quantidade: 0, valor: 0 };
+                salesByDate.set(dateKey, {
+                    quantidade: existing.quantidade + venda.quantidade,
+                    valor: existing.valor + Number(venda.precoTotal)
+                });
+            });
+
+            // Converter para formato SalesRecord
+            const sales: SalesRecord[] = Array.from(salesByDate.entries()).map(([dateStr, data]) => ({
+                data: new Date(dateStr),
+                quantidade: data.quantidade,
+                valor: data.valor
+            }));
+
+            // Preencher dias sem vendas com zero (opcional, para análise mais precisa)
+            const filledSales: SalesRecord[] = [];
+            for (let i = 0; i <= days; i++) {
+                const date = new Date(cutoffDate);
+                date.setDate(cutoffDate.getDate() + i);
+                const dateKey = date.toISOString().split('T')[0];
+                
+                const sale = sales.find(s => s.data.toISOString().split('T')[0] === dateKey);
+                filledSales.push(sale || {
+                    data: date,
+                    quantidade: 0,
+                    valor: 0
+                });
+            }
+
+            const executionTime = Date.now() - startTime;
+            logger.info('SalesDataService', 'Histórico de vendas carregado (REAL)', {
+                produtoId,
+                unidadeId,
+                days,
+                totalRecords: filledSales.length,
+                vendasEncontradas: vendas.length,
+                executionTime
+            });
+
+            return filledSales;
+        } catch (error: any) {
+            logger.error('SalesDataService', 'Erro ao buscar histórico de vendas', {
+                produtoId,
+                unidadeId,
+                error: error.message
+            });
+            // Retornar array vazio em caso de erro
+            return [];
         }
-
-        logger.debug('SalesDataService', 'Histórico de vendas gerado (MOCK)', {
-            produtoId,
-            unidadeId,
-            days,
-            totalRecords: sales.length
-        });
-
-        return sales;
     }
 
     /**
@@ -116,42 +156,219 @@ export class SalesDataService {
     }
 
     /**
-     * Calcula elasticidade de preço (MOCK)
-     * TODO: Implementar cálculo real baseado em variações de preço e vendas
+     * Calcula elasticidade de preço (DADOS REAIS)
+     * Baseado em variações históricas de preço e quantidade vendida
      */
     async getPriceElasticity(produtoId: string, unidadeId: string): Promise<number> {
-        logger.warn('SalesDataService', 'getPriceElasticity retornando valor MOCK');
+        const startTime = Date.now();
 
-        // Mock: elasticidade típica entre -0.5 e -2.0
-        // Valores negativos indicam que aumento de preço reduz demanda
-        const elasticity = -(0.5 + Math.random() * 1.5);
+        try {
+            logger.info('SalesDataService', 'Calculando elasticidade de preço (REAL)', {
+                produtoId,
+                unidadeId
+            });
 
-        logger.debug('SalesDataService', 'Elasticidade de preço calculada (MOCK)', {
-            produtoId,
-            unidadeId,
-            elasticity
-        });
+            // Buscar histórico de vendas e preços dos últimos 60 dias
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - 60);
 
-        return elasticity;
+            const vendas = await prisma.vendas.findMany({
+                where: {
+                    produtoId,
+                    unidadeId,
+                    dataVenda: {
+                        gte: cutoffDate
+                    }
+                },
+                orderBy: {
+                    dataVenda: 'asc'
+                }
+            });
+
+            if (vendas.length < 10) {
+                logger.warn('SalesDataService', 'Dados insuficientes para calcular elasticidade', {
+                    produtoId,
+                    vendasEncontradas: vendas.length
+                });
+                // Retornar elasticidade padrão se não houver dados suficientes
+                return -1.2;
+            }
+
+            // Agrupar por período de preço (semana)
+            const pricePeriods: Array<{ precoMedio: number; quantidadeTotal: number; vendas: number }> = [];
+            const currentPeriod: { preco: number[]; quantidade: number; vendas: number } = {
+                preco: [],
+                quantidade: 0,
+                vendas: 0
+            };
+
+            vendas.forEach((venda, index) => {
+                currentPeriod.preco.push(Number(venda.precoUnitario));
+                currentPeriod.quantidade += venda.quantidade;
+                currentPeriod.vendas++;
+
+                // Agrupar a cada 7 vendas ou mudança significativa de preço
+                if (currentPeriod.vendas >= 7 || index === vendas.length - 1) {
+                    const precoMedio = currentPeriod.preco.reduce((a, b) => a + b, 0) / currentPeriod.preco.length;
+                    pricePeriods.push({
+                        precoMedio,
+                        quantidadeTotal: currentPeriod.quantidade,
+                        vendas: currentPeriod.vendas
+                    });
+                    currentPeriod.preco = [];
+                    currentPeriod.quantidade = 0;
+                    currentPeriod.vendas = 0;
+                }
+            });
+
+            if (pricePeriods.length < 2) {
+                return -1.2; // Elasticidade padrão
+            }
+
+            // Calcular elasticidade usando variação percentual média
+            let totalElasticity = 0;
+            let validCalculations = 0;
+
+            for (let i = 1; i < pricePeriods.length; i++) {
+                const prev = pricePeriods[i - 1];
+                const curr = pricePeriods[i];
+
+                const priceChange = (curr.precoMedio - prev.precoMedio) / prev.precoMedio;
+                const quantityChange = (curr.quantidadeTotal - prev.quantidadeTotal) / prev.quantidadeTotal;
+
+                if (Math.abs(priceChange) > 0.01) { // Ignorar mudanças muito pequenas
+                    const elasticity = quantityChange / priceChange;
+                    if (isFinite(elasticity) && elasticity < 0) { // Elasticidade deve ser negativa
+                        totalElasticity += elasticity;
+                        validCalculations++;
+                    }
+                }
+            }
+
+            const elasticity = validCalculations > 0 
+                ? totalElasticity / validCalculations 
+                : -1.2; // Padrão se não conseguir calcular
+
+            // Limitar elasticidade entre -3.0 e -0.1 (valores realistas)
+            const clampedElasticity = Math.max(-3.0, Math.min(-0.1, elasticity));
+
+            const executionTime = Date.now() - startTime;
+            logger.info('SalesDataService', 'Elasticidade de preço calculada (REAL)', {
+                produtoId,
+                unidadeId,
+                elasticity: clampedElasticity,
+                periodosAnalisados: pricePeriods.length,
+                calculosValidos: validCalculations,
+                executionTime
+            });
+
+            return clampedElasticity;
+        } catch (error: any) {
+            logger.error('SalesDataService', 'Erro ao calcular elasticidade', {
+                produtoId,
+                unidadeId,
+                error: error.message
+            });
+            // Retornar elasticidade padrão em caso de erro
+            return -1.2;
+        }
     }
 
     /**
-     * Identifica produtos correlacionados (frequentemente comprados juntos)
-     * MOCK - Será implementado com análise de cestas de compras
+     * Identifica produtos correlacionados (frequentemente comprados juntos) - DADOS REAIS
+     * Baseado em análise de cestas de compras (vendas no mesmo dia/unidade)
      */
     async getCorrelatedProducts(produtoId: string, limit: number = 5): Promise<Array<{ produtoId: string; confianca: number }>> {
-        logger.warn('SalesDataService', 'getCorrelatedProducts retornando dados MOCK');
+        const startTime = Date.now();
 
-        // Mock: retornar produtos aleatórios com confiança
-        const correlations = [];
-
-        for (let i = 0; i < limit; i++) {
-            correlations.push({
-                produtoId: `produto-${i}`,
-                confianca: 0.5 + Math.random() * 0.4 // 0.5 a 0.9
+        try {
+            logger.info('SalesDataService', 'Buscando produtos correlacionados (REAL)', {
+                produtoId,
+                limit
             });
-        }
 
-        return correlations;
+            // Buscar todas as vendas do produto nos últimos 90 dias
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - 90);
+
+            const vendasProduto = await prisma.vendas.findMany({
+                where: {
+                    produtoId,
+                    dataVenda: {
+                        gte: cutoffDate
+                    }
+                },
+                select: {
+                    unidadeId: true,
+                    dataVenda: true
+                },
+                distinct: ['unidadeId', 'dataVenda']
+            });
+
+            if (vendasProduto.length === 0) {
+                logger.warn('SalesDataService', 'Nenhuma venda encontrada para análise de correlação', {
+                    produtoId
+                });
+                return [];
+            }
+
+            // Para cada venda, buscar outros produtos vendidos no mesmo dia/unidade
+            const productCounts = new Map<string, number>();
+            const totalBaskets = vendasProduto.length;
+
+            for (const venda of vendasProduto) {
+                const startOfDay = new Date(venda.dataVenda);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(venda.dataVenda);
+                endOfDay.setHours(23, 59, 59, 999);
+
+                const vendasMesmoDia = await prisma.vendas.findMany({
+                    where: {
+                        unidadeId: venda.unidadeId,
+                        dataVenda: {
+                            gte: startOfDay,
+                            lte: endOfDay
+                        },
+                        produtoId: {
+                            not: produtoId // Excluir o próprio produto
+                        }
+                    },
+                    select: {
+                        produtoId: true
+                    },
+                    distinct: ['produtoId']
+                });
+
+                vendasMesmoDia.forEach(v => {
+                    const count = productCounts.get(v.produtoId) || 0;
+                    productCounts.set(v.produtoId, count + 1);
+                });
+            }
+
+            // Calcular confiança (suporte: quantas vezes apareceu junto / total de cestas)
+            const correlations = Array.from(productCounts.entries())
+                .map(([prodId, count]) => ({
+                    produtoId: prodId,
+                    confianca: count / totalBaskets
+                }))
+                .sort((a, b) => b.confianca - a.confianca)
+                .slice(0, limit);
+
+            const executionTime = Date.now() - startTime;
+            logger.info('SalesDataService', 'Produtos correlacionados encontrados (REAL)', {
+                produtoId,
+                totalCorrelacoes: correlations.length,
+                cestasAnalisadas: totalBaskets,
+                executionTime
+            });
+
+            return correlations;
+        } catch (error: any) {
+            logger.error('SalesDataService', 'Erro ao buscar produtos correlacionados', {
+                produtoId,
+                error: error.message
+            });
+            return [];
+        }
     }
 }

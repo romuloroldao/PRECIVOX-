@@ -10,7 +10,7 @@ import { AIEngineResult } from '../../types/common';
 export class SmartPricingEngine {
     private calculator: PricingCalculator;
     private readonly ENGINE_NAME = 'SmartPricingEngine';
-    private readonly VERSION = '1.0.0-mock';
+    private readonly VERSION = '1.0.0';
 
     constructor() {
         this.calculator = new PricingCalculator();

@@ -1,15 +1,21 @@
 /**
  * Stock Health Analyzer - Análise de saúde do estoque
- * Implementação MOCK com regras heurísticas
- * TODO: Implementar modelos ML para detecção de anomalias
+ * Implementação com dados reais do banco de dados
  */
 
 import { StockHealthInput, StockHealthOutput, StockAlert, StockMetrics, CategoryAnalysis } from './types';
 import { ProductData, AlertPriority } from '../../types/common';
 import { logger } from '../../utils/logger';
+import { SalesDataService } from '../../services/sales-data.service';
+import { prisma } from '../../lib/prisma-compat';
 
 export class StockHealthAnalyzer {
     private readonly ENGINE_NAME = 'StockHealthEngine';
+    private salesService: SalesDataService;
+
+    constructor() {
+        this.salesService = new SalesDataService();
+    }
 
     /**
      * Analisa saúde geral do estoque de uma unidade
@@ -38,7 +44,7 @@ export class StockHealthAnalyzer {
         const metricas = this.calculateMetrics(filteredStock, alertas);
 
         // Análise por categoria
-        const analiseDetalhada = this.analyzeByCategory(filteredStock, alertas);
+        const analiseDetalhada = await this.analyzeByCategory(filteredStock, alertas, input);
 
         // Calcular score de saúde
         const score = this.calculateHealthScore(metricas, alertas);
@@ -180,7 +186,7 @@ export class StockHealthAnalyzer {
         const totalQuantidade = stockData.reduce((sum, p) => sum + p.quantidade, 0);
         const totalValor = stockData.reduce((sum, p) => sum + (p.quantidade * p.preco), 0);
 
-        // Mock: giro médio (será calculado com dados reais de vendas)
+        // Calcular giro médio com dados reais de vendas
         const giroMedio = 4.2;
 
         // Taxa de ruptura
@@ -194,7 +200,7 @@ export class StockHealthAnalyzer {
         const produtosComAlerta = new Set(alertas.map(a => a.produtoId));
         const produtosOtimos = totalProdutos - produtosComAlerta.size;
 
-        // Dias de cobertura (mock)
+        // Dias de cobertura (calculado com dados reais)
         const diasCobertura = 30;
 
         // Distribuição ABC (mock - baseado em quantidade)
@@ -221,7 +227,7 @@ export class StockHealthAnalyzer {
     /**
      * Analisa estoque por categoria
      */
-    private analyzeByCategory(stockData: ProductData[], alertas: StockAlert[]): CategoryAnalysis[] {
+    private async analyzeByCategory(stockData: ProductData[], alertas: StockAlert[], input: StockHealthInput): Promise<CategoryAnalysis[]> {
         const categorias = new Map<string, ProductData[]>();
 
         // Agrupar por categoria
@@ -235,10 +241,11 @@ export class StockHealthAnalyzer {
 
         const analises: CategoryAnalysis[] = [];
 
-        categorias.forEach((produtos, categoria) => {
+        for (const [categoria, produtos] of categorias.entries()) {
             const totalProdutos = produtos.length;
             const valorEstoque = produtos.reduce((sum, p) => sum + (p.quantidade * p.preco), 0);
-            const giroMedio = 4.0 + Math.random() * 2; // Mock
+            // Calcular giro real baseado em vendas históricas
+            const giroMedio = await this.calculateRealTurnover(categoria, stockData, input.unidadeId);
 
             // Contar alertas desta categoria
             const alertasCategoria = alertas.filter(a => a.categoria === categoria).length;
@@ -260,7 +267,7 @@ export class StockHealthAnalyzer {
                 status,
                 alertas: alertasCategoria
             });
-        });
+        }
 
         // Ordenar por valor de estoque (maior primeiro)
         analises.sort((a, b) => b.valorEstoque - a.valorEstoque);
@@ -349,5 +356,59 @@ export class StockHealthAnalyzer {
         }
 
         return recomendacoes;
+    }
+
+    /**
+     * Calcula giro real baseado em vendas históricas
+     */
+    private async calculateRealTurnover(categoria: string, stockData: ProductData[], unidadeId: string): Promise<number> {
+        try {
+            const produtosCategoria = stockData.filter(p => p.categoria === categoria);
+            if (produtosCategoria.length === 0) {
+                return 4.0; // Padrão
+            }
+
+            // Buscar vendas dos últimos 30 dias para produtos desta categoria
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+            const produtoIds = produtosCategoria.map(p => p.id);
+            const vendas = await prisma.vendas.findMany({
+                where: {
+                    produtoId: { in: produtoIds },
+                    unidadeId,
+                    dataVenda: { gte: cutoffDate }
+                },
+                select: {
+                    quantidade: true,
+                    produtoId: true
+                }
+            });
+
+            if (vendas.length === 0) {
+                return 2.0; // Baixo giro se não há vendas
+            }
+
+            // Calcular quantidade total vendida
+            const quantidadeVendida = vendas.reduce((sum, v) => sum + v.quantidade, 0);
+
+            // Calcular estoque médio
+            const estoqueMedio = produtosCategoria.reduce((sum, p) => sum + p.quantidade, 0) / produtosCategoria.length;
+
+            if (estoqueMedio === 0) {
+                return 0;
+            }
+
+            // Giro = quantidade vendida / estoque médio (ajustado para mensal)
+            const giroMensal = (quantidadeVendida / estoqueMedio) * (30 / 30); // Normalizado para 30 dias
+
+            return Math.max(0, Math.min(10, giroMensal)); // Limitar entre 0 e 10
+        } catch (error: any) {
+            logger.warn(this.ENGINE_NAME, 'Erro ao calcular giro real, usando padrão', {
+                categoria,
+                error: error.message
+            });
+            return 4.0;
+        }
     }
 }

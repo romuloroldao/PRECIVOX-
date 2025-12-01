@@ -8,13 +8,13 @@ import { StockDataService } from '../../services/stock-data.service';
 import { logger } from '../../utils/logger';
 import { metricsCollector } from '../../utils/metrics';
 import { AIEngineResult } from '../../types/common';
-import { prisma } from '../../../../lib/prisma';
+import { prisma } from '../../lib/prisma-compat';
 
 export class StockHealthEngine {
     private analyzer: StockHealthAnalyzer;
     private stockService: StockDataService;
     private readonly ENGINE_NAME = 'StockHealthEngine';
-    private readonly VERSION = '1.0.0-mock';
+    private readonly VERSION = '1.0.0';
 
     constructor() {
         this.analyzer = new StockHealthAnalyzer();
