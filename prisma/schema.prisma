@@ -327,20 +327,24 @@ model unidades {
 }
 
 model User {
-  id              String         @id
-  nome            String?
-  email           String         @unique
-  emailVerified   DateTime?      @map("email_verified")
-  imagem          String?
-  senhaHash       String?        @map("senha_hash")
-  role            Role           @default(CLIENTE)
-  dataCriacao     DateTime       @default(now()) @map("data_criacao")
-  dataAtualizacao DateTime       @map("data_atualizacao")
-  ultimoLogin     DateTime?      @map("ultimo_login")
-  accounts        accounts[]
-  sessions        sessions[]
-  acoes_gestor    acoes_gestor[]
-  mercados        mercados[]
+  id                String              @id
+  nome              String?
+  email             String              @unique
+  emailVerified     DateTime?           @map("email_verified")
+  imagem            String?
+  senhaHash         String?              @map("senha_hash")
+  role              Role                 @default(CLIENTE)
+  dataCriacao       DateTime             @default(now()) @map("data_criacao")
+  dataAtualizacao  DateTime             @map("data_atualizacao")
+  ultimoLogin       DateTime?            @map("ultimo_login")
+  accounts          accounts[]
+  sessions          sessions[]
+  acoes_gestor      acoes_gestor[]
+  mercados          mercados[]
+  pushSubscriptions push_subscriptions[]
+  abTestsCreated    ab_tests[]           @relation("ab_tests_created_by")
+  abTestResults     ab_test_results[]
+  abTestAssignments ab_test_assignments[]
 
   @@map("usuarios")
 }
@@ -351,6 +355,82 @@ model verification_tokens {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model push_subscriptions {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  expiresAt DateTime? @map("expires_at")
+  active    Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+  @@index([active])
+  @@map("push_subscriptions")
+}
+
+model ab_tests {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String   // PRICING, RECOMMENDATION, LAYOUT, FEATURE
+  trafficSplit Int     @default(50) @map("traffic_split")
+  startDate   DateTime @default(now()) @map("start_date")
+  endDate     DateTime? @map("end_date")
+  status      String   @default("DRAFT") // DRAFT, RUNNING, PAUSED, COMPLETED
+  variants    Json
+  metrics     Json     @default("{\"totalUsers\": 0, \"variantMetrics\": {}, \"confidence\": 0, \"winner\": null}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdBy   String?  @map("created_by")
+  user        User?    @relation(fields: [createdBy], references: [id])
+  results     ab_test_results[]
+  assignments ab_test_assignments[]
+
+  @@index([status])
+  @@index([type])
+  @@index([startDate, endDate])
+  @@map("ab_tests")
+}
+
+model ab_test_results {
+  id        String   @id @default(uuid())
+  testId    String   @map("test_id")
+  userId    String   @map("user_id")
+  variantId String   @map("variant_id")
+  action    String?
+  value     Decimal? @db.Decimal(10, 2)
+  metadata  Json?
+  timestamp DateTime @default(now())
+  test      ab_tests @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, userId, variantId, action, timestamp])
+  @@index([testId])
+  @@index([userId])
+  @@index([variantId])
+  @@index([timestamp])
+  @@map("ab_test_results")
+}
+
+model ab_test_assignments {
+  testId     String   @map("test_id")
+  userId     String   @map("user_id")
+  variantId  String   @map("variant_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  test       ab_tests @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([testId, userId])
+  @@index([userId])
+  @@index([testId])
+  @@map("ab_test_assignments")
 }
 
 enum Role {

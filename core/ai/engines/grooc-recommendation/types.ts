@@ -12,6 +12,8 @@ export interface RecommendationInput {
     };
     preferencias?: UserPreferences;
     historicoUsuario?: UserHistory;
+    mercadoId?: string; // Filtrar por mercado específico
+    unidadeId?: string; // Filtrar por unidade específica
 }
 
 export interface ProductRequest {

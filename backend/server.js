@@ -4,6 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import net from 'net';
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import { testConnection, dbMiddleware, closePool } from './config/database.js';
 
 // Importar rotas
@@ -13,10 +15,31 @@ import productRoutes from './routes/products.js';
 import aiRoutes from './routes/ai.js';
 import aiEnginesRoutes from './routes/ai-engines.js';
 import analyticsRoutes from './routes/analytics.js';
+import reportsRoutes from './routes/reports.js';
+import pushNotificationsRoutes from './routes/push-notifications.js';
 // import loginSimplesRoutes from './routes/login-simples.js';
 
+// Importar serviços avançados
+import { RealtimeAnalyticsService } from '../core/services/realtime-analytics.service.js';
+
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// Inicializar Socket.IO
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://precivox.com.br', 'https://www.precivox.com.br']
+      : ['http://localhost:3000', 'http://localhost:5176', 'http://localhost:8080'],
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Inicializar serviço de analytics em tempo real
+const analyticsService = new RealtimeAnalyticsService();
+analyticsService.initialize(io);
 
 // ✅ FUNÇÃO PARA VERIFICAR SE PORTA ESTÁ DISPONÍVEL
 const isPortAvailable = (port) => {
@@ -247,6 +270,8 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/ai-engines', aiEnginesRoutes); // ✅ ROTAS DOS ENGINES DE IA TYPESCRIPT
 app.use('/api/analytics', analyticsRoutes);
 app.use('/analytics', analyticsRoutes); // Para compatibilidade com frontend
+app.use('/api/reports', reportsRoutes); // ✅ EXPORTAÇÃO DE RELATÓRIOS
+app.use('/api/push', pushNotificationsRoutes); // ✅ NOTIFICAÇÕES PUSH
 
 // ================================
 // BACKWARD COMPATIBILITY
@@ -501,17 +526,20 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    // Iniciar servidor na porta disponível
-    const server = app.listen(finalPort, '0.0.0.0', () => {
+    // Iniciar servidor HTTP com Socket.IO na porta disponível
+    const server = httpServer.listen(finalPort, '0.0.0.0', () => {
       console.log('🚀 ================================');
       console.log('🚀 PRECIVOX API v5.0 INICIADA');
       console.log('🚀 ================================');
       console.log(`🚀 Servidor: http://localhost:${finalPort}`);
+      console.log(`🚀 WebSocket: ws://localhost:${finalPort}`);
       if (finalPort !== PORT) {
         console.log(`🔄 Porta original ${PORT} ocupada, usando ${finalPort}`);
       }
       console.log(`🚀 Ambiente: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🚀 Banco: PostgreSQL ✅`);
+      console.log(`🚀 Socket.IO: Ativo ✅`);
+      console.log(`🚀 Analytics em Tempo Real: Ativo ✅`);
       console.log(`🚀 Timestamp: ${new Date().toISOString()}`);
       console.log('🚀 ================================');
     });

@@ -23,7 +23,7 @@ export class SalesDataService {
                 cutoffDate
             });
 
-            // Buscar vendas reais do banco de dados
+            // Buscar vendas reais do banco de dados (otimizado com select específico)
             const vendas = await prisma.vendas.findMany({
                 where: {
                     produtoId,
@@ -31,6 +31,15 @@ export class SalesDataService {
                     dataVenda: {
                         gte: cutoffDate
                     }
+                },
+                select: {
+                    id: true,
+                    produtoId: true,
+                    unidadeId: true,
+                    quantidade: true,
+                    precoUnitario: true,
+                    precoTotal: true,
+                    dataVenda: true
                 },
                 orderBy: {
                     dataVenda: 'asc'
@@ -180,6 +189,10 @@ export class SalesDataService {
                         gte: cutoffDate
                     }
                 },
+                select: {
+                    precoUnitario: true,
+                    quantidade: true
+                },
                 orderBy: {
                     dataVenda: 'asc'
                 }
@@ -275,6 +288,13 @@ export class SalesDataService {
     }
 
     /**
+     * Alias para getSalesHistory - compatibilidade com nomes em português
+     */
+    async getHistoricoVendas(produtoId: string, unidadeId: string, days: number = 30): Promise<SalesRecord[]> {
+        return this.getSalesHistory(produtoId, unidadeId, days);
+    }
+
+    /**
      * Identifica produtos correlacionados (frequentemente comprados juntos) - DADOS REAIS
      * Baseado em análise de cestas de compras (vendas no mesmo dia/unidade)
      */
@@ -291,18 +311,15 @@ export class SalesDataService {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - 90);
 
-            const vendasProduto = await prisma.vendas.findMany({
+            // Otimizado: usar groupBy em vez de distinct para melhor performance
+            const vendasProduto = await prisma.vendas.groupBy({
+                by: ['unidadeId', 'dataVenda'],
                 where: {
                     produtoId,
                     dataVenda: {
                         gte: cutoffDate
                     }
-                },
-                select: {
-                    unidadeId: true,
-                    dataVenda: true
-                },
-                distinct: ['unidadeId', 'dataVenda']
+                }
             });
 
             if (vendasProduto.length === 0) {
@@ -322,7 +339,9 @@ export class SalesDataService {
                 const endOfDay = new Date(venda.dataVenda);
                 endOfDay.setHours(23, 59, 59, 999);
 
-                const vendasMesmoDia = await prisma.vendas.findMany({
+                // Otimizado: usar groupBy em vez de distinct
+                const vendasMesmoDia = await prisma.vendas.groupBy({
+                    by: ['produtoId'],
                     where: {
                         unidadeId: venda.unidadeId,
                         dataVenda: {
@@ -332,11 +351,7 @@ export class SalesDataService {
                         produtoId: {
                             not: produtoId // Excluir o próprio produto
                         }
-                    },
-                    select: {
-                        produtoId: true
-                    },
-                    distinct: ['produtoId']
+                    }
                 });
 
                 vendasMesmoDia.forEach(v => {

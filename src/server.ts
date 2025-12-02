@@ -1,6 +1,7 @@
-// Servidor Express principal do PRECIVOX
+// Servidor Express para PRECIVOX
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import mercadosRouter from './routes/mercados';
 import unidadesRouter from './routes/unidades';
@@ -16,7 +17,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middlewares globais
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true, // Permitir cookies
+}));
+app.use(cookieParser()); // Parse de cookies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -64,4 +69,3 @@ app.listen(PORT, () => {
 });
 
 export default app;
-

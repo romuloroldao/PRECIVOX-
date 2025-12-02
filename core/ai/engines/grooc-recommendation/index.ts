@@ -35,9 +35,17 @@ export class GROOCRecommendationEngine {
             });
 
             // Buscar produtos disponíveis de todas as unidades do mercado
-            // Mock: em produção, buscar do mercado específico do usuário
-            const mercadoId = 'mercado-default';
-            const stockByUnidade = await this.stockService.getStockByMercado(mercadoId);
+            const mercadoIdToUse = input.mercadoId || 'mercado-default';
+            let stockByUnidade;
+            
+            if (input.unidadeId) {
+                // Se unidadeId específico fornecido, buscar apenas dessa unidade
+                const stock = await this.stockService.getStockByUnidade(input.unidadeId);
+                stockByUnidade = new Map([[input.unidadeId, stock]]);
+            } else {
+                // Buscar de todas as unidades do mercado
+                stockByUnidade = await this.stockService.getStockByMercado(mercadoIdToUse);
+            }
 
             // Consolidar todos os produtos disponíveis
             const allProducts = Array.from(stockByUnidade.values()).flat();

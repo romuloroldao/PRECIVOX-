@@ -4,8 +4,9 @@
 
 export interface PricingAnalysisInput {
     produtoId: string;
-    unidadeId: string;
-    precoAtual: number;
+    unidadeId?: string; // Opcional se mercadoId for fornecido
+    mercadoId?: string; // Filtrar por mercado específico
+    precoAtual?: number; // Opcional, será buscado do banco se não fornecido
     custoProduto?: number;
 }
 

@@ -16,13 +16,27 @@ export class StockDataService {
         try {
             logger.info('StockDataService', 'Buscando estoque da unidade', { unidadeId });
 
+            // Otimizado: usar select específico em vez de include completo
             const estoques = await prisma.estoques.findMany({
                 where: {
                     unidadeId,
                     disponivel: true
                 },
-                include: {
-                    produtos: true,
+                select: {
+                    id: true,
+                    quantidade: true,
+                    preco: true,
+                    precoPromocional: true,
+                    produtos: {
+                        select: {
+                            id: true,
+                            nome: true,
+                            categoria: true,
+                            marca: true,
+                            codigoBarras: true,
+                            unidadeMedida: true
+                        }
+                    },
                     unidades: {
                         select: {
                             mercadoId: true
@@ -129,6 +143,7 @@ export class StockDataService {
             });
 
             // Buscar movimentações reais do banco
+            // Otimizado: usar select específico para reduzir dados transferidos
             const movimentacoes = await prisma.movimentacoes_estoque.findMany({
                 where: {
                     produtoId,
@@ -136,6 +151,11 @@ export class StockDataService {
                     dataMovimentacao: {
                         gte: cutoffDate
                     }
+                },
+                select: {
+                    dataMovimentacao: true,
+                    quantidade: true,
+                    tipo: true
                 },
                 orderBy: {
                     dataMovimentacao: 'asc'
@@ -169,6 +189,13 @@ export class StockDataService {
     }
 
     /**
+     * Alias para getStockHistory - compatibilidade com nomes em português
+     */
+    async getMovimentacoes(produtoId: string, unidadeId: string, days: number = 30): Promise<StockRecord[]> {
+        return this.getStockHistory(produtoId, unidadeId, days);
+    }
+
+    /**
      * Busca estoque de múltiplas unidades para comparação
      */
     async getStockByMercado(mercadoId: string): Promise<Map<string, ProductData[]>> {
@@ -177,9 +204,15 @@ export class StockDataService {
         try {
             logger.info('StockDataService', 'Buscando estoque do mercado', { mercadoId });
 
+            // Otimizado: já está usando select específico, mas adicionar índice se necessário
             const unidades = await prisma.unidades.findMany({
-                where: { mercadoId, ativa: true },
-                select: { id: true }
+                where: { 
+                    mercadoId, 
+                    ativa: true 
+                },
+                select: { 
+                    id: true 
+                }
             });
 
             const stockByUnidade = new Map<string, ProductData[]>();

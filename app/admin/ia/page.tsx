@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import { useState, useEffect } from 'react';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -145,9 +146,9 @@ export default function AdminIAPage() {
                 <span className="font-semibold text-green-600">R$ 12.450,00</span>
               </div>
             </div>
-            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Link href="/gestor/ia/compras" className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               Gerenciar Análises
-            </button>
+            </Link>
           </div>
 
           {/* Conversão de Clientes */}
@@ -171,9 +172,9 @@ export default function AdminIAPage() {
                 <span className="font-semibold text-green-600">+23%</span>
               </div>
             </div>
-            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Link href="/gestor/ia/conversao" className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               Gerenciar Conversões
-            </button>
+            </Link>
           </div>
 
           {/* Promoções Inteligentes */}
@@ -197,9 +198,9 @@ export default function AdminIAPage() {
                 <span className="font-semibold text-green-600">340%</span>
               </div>
             </div>
-            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Link href="/gestor/ia/promocoes" className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               Gerenciar Promoções
-            </button>
+            </Link>
           </div>
 
           {/* Alertas Inteligentes */}
@@ -223,9 +224,9 @@ export default function AdminIAPage() {
                 <span className="font-semibold text-green-600">94%</span>
               </div>
             </div>
-            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Link href="/gestor/ia/dashboard" className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               Gerenciar Alertas
-            </button>
+            </Link>
           </div>
         </div>
 

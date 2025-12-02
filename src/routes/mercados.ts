@@ -141,13 +141,12 @@ router.get('/', async (req: any, res) => {
     const mercados = await prisma.mercados.findMany({
       where,
       include: {
-        plano: true,
+        planos_de_pagamento: true,
         gestor: {
           select: {
             id: true,
             nome: true,
             email: true,
-            telefone: true,
           },
         },
         _count: {
@@ -160,12 +159,15 @@ router.get('/', async (req: any, res) => {
     });
 
     return res.json({ success: true, data: mercados });
-  } catch (error) {
-    console.error('Erro ao listar mercados:', error);
+  } catch (error: any) {
+    console.error('❌ [MERCADOS] Erro ao listar mercados:', error);
+    console.error('❌ [MERCADOS] Stack:', error?.stack);
+    console.error('❌ [MERCADOS] Message:', error?.message);
     return res.status(500).json({
       success: false,
       error: 'Erro ao listar mercados',
       message: 'Ocorreu um erro ao buscar os mercados',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 });
@@ -189,13 +191,12 @@ router.get('/:id', authenticate, async (req: AuthRequest, res) => {
     const mercado = await prisma.mercados.findFirst({
       where,
       include: {
-        plano: true,
+        planos_de_pagamento: true,
         gestor: {
           select: {
             id: true,
             nome: true,
             email: true,
-            telefone: true,
           },
         },
         unidades: {
@@ -290,7 +291,7 @@ router.post('/', authenticate, authorizeRole('ADMIN'), async (req: AuthRequest, 
         gestorId,
       },
       include: {
-        plano: true,
+        planos_de_pagamento: true,
         gestor: {
           select: {
             id: true,
@@ -340,7 +341,7 @@ router.put('/:id', authenticate, canAccessMercado, async (req: AuthRequest, res)
         ativo,
       },
       include: {
-        plano: true,
+        planos_de_pagamento: true,
         gestor: {
           select: {
             id: true,
@@ -393,7 +394,7 @@ router.put('/:id/plano', authenticate, authorizeRole('ADMIN'), async (req: AuthR
       where: { id },
       data: { planoId },
       include: {
-        plano: true,
+        planos_de_pagamento: true,
       },
     });
 
