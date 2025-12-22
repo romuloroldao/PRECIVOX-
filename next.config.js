@@ -2,40 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-
-  // ⚠️ DESABILITADO TEMPORARIAMENTE - Bug do Next.js 14.2.33 em modo standalone
-  // gera HTML com referências incorretas aos chunks
-  // output: 'standalone',
-
-  // ✅ Configuração de imagens com domínio de produção
-  images: {
-    domains: ['precivox.com.br', 'localhost'],
-    unoptimized: false,
-  },
-
-  // ✅ Configurações experimentais otimizadas
-  experimental: {
-    workerThreads: true,
-  },
-
-  // ✅ Forçar regeneração de chunks e evitar cache de manifests
-  generateBuildId: async () => {
-    // Gerar BUILD_ID único baseado em timestamp para evitar cache
-    return `build-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-  },
-
-  // ✅ Headers de segurança e cache
+  
+  // Headers para assets estáticos e PWA
   async headers() {
     return [
-      {
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-store, max-age=0',
-          },
-        ],
-      },
+      // Assets estáticos - garantir Content-Type correto
       {
         source: '/_next/static/:path*',
         headers: [
@@ -43,49 +14,71 @@ const nextConfig = {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
           },
-        ],
-      },
-      {
-        // ✅ Forçar no-cache para HTML de rotas dinâmicas
-        source: '/admin/mercados/:path*',
-        headers: [
           {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
-          },
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-          {
-            key: 'Expires',
-            value: '0',
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
           },
         ],
       },
       {
-        // ✅ Desabilitar cache para a página inicial
-        source: '/',
+        source: '/_next/static/css/:path*.css',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'text/css; charset=utf-8',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/chunks/:path*.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8',
+          },
+        ],
+      },
+      // PWA
+      {
+        source: '/sw.js',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate, max-age=0',
+            value: 'public, max-age=0, must-revalidate',
           },
           {
-            key: 'Pragma',
-            value: 'no-cache',
+            key: 'Service-Worker-Allowed',
+            value: '/',
           },
+        ],
+      },
+      {
+        source: '/manifest.json',
+        headers: [
           {
-            key: 'Expires',
-            value: '0',
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
     ];
   },
 
-  // ✅ Remover rewrites desnecessários - Next.js gerencia automaticamente
-  // Nginx fará o proxy correto para /_next/static
-}
+  // Otimizações
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
 
-module.exports = nextConfig
+  // Imagens
+  images: {
+    domains: ['localhost'],
+    formats: ['image/avif', 'image/webp'],
+  },
+
+  // Experimental
+  experimental: {
+    optimizeCss: true,
+  },
+};
+
+module.exports = nextConfig;
