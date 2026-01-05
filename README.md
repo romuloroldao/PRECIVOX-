@@ -1,3 +1,4 @@
+
 # 🚀 PRECIVOX - Plataforma de Inteligência de Mercado
 
 **Versão:** 2.0  
