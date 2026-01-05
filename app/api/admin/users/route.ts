@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
-// Forçar renderização dinâmica
+// CRÍTICO: Prisma requer runtime nodejs, não edge
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
@@ -53,8 +54,28 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error('[API /admin/users GET] Erro:', error);
+    console.error('[API /admin/users GET] Stack trace:', error instanceof Error ? error.stack : 'No stack');
+    
+    // Erro de conexão com banco
+    if (error instanceof Error && (
+      error.message.includes('Can\'t reach database') ||
+      error.message.includes('P1001') ||
+      error.message.includes('connection')
+    )) {
+      return NextResponse.json(
+        { error: 'Erro de conexão com banco de dados', code: 'DATABASE_ERROR' },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor', 
+        code: 'INTERNAL_ERROR',
+        details: process.env.NODE_ENV === 'development' 
+          ? (error instanceof Error ? error.message : 'Unknown error')
+          : undefined
+      },
       { status: 500 }
     );
   }
