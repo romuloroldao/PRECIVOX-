@@ -26,7 +26,9 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users');
+      // Usar fetch autenticado que adiciona token automaticamente
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch('/api/admin/users');
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
@@ -47,7 +49,9 @@ export default function UsersPage() {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/role`, {
+      // Usar fetch autenticado
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch(`/api/admin/users/${userId}/role`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +71,9 @@ export default function UsersPage() {
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      // Usar fetch autenticado
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
       });
 

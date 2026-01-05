@@ -1,25 +1,25 @@
 // API Route: Listar mercados do gestor logado
-import { getServerSession } from 'next-auth';
-
-
-import { authOptions } from '@/lib/auth';
+import { TokenManager } from '@/lib/token-manager';
 
 import { prisma } from '@/lib/prisma';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await TokenManager.validateSession({
+      headers: request.headers,
+      cookies: request.cookies,
+    });
     const authHeader = request.headers.get('authorization');
 
-    const userRole = (session?.user as any)?.role;
-    const userId = (session?.user as any)?.id;
+    const userRole = user?.role;
+    const userId = user?.id;
     const baseInclude = {
       gestor: {
         select: {
@@ -54,12 +54,12 @@ export async function GET(request: Request) {
     };
 
     // ADMIN vê todos os mercados
-    if (userRole === 'ADMIN') {
+    if (user && userRole === 'ADMIN') {
       return fetchAllActiveMarkets();
     }
 
     // GESTOR vê apenas seus mercados
-    if (userRole === 'GESTOR' && userId) {
+    if (user && userRole === 'GESTOR' && userId) {
       const mercados = await prisma.mercados.findMany({
         where: {
           gestorId: userId,
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
 
     // Fallback: permitir leitura (somente mercados ativos) quando existir token legado
     // Acesso somente leitura para requisições sem sessão (ex: dashboards legados)
-    if (authHeader || !session) {
+    if (authHeader || !user) {
       return fetchAllActiveMarkets();
     }
 
@@ -96,34 +96,27 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await TokenManager.validateSession({
+      headers: req.headers,
+      cookies: req.cookies,
+    });
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = (session.user as any).role;
-
-    // Apenas ADMIN pode criar mercados
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json(
-        { success: false, error: 'Apenas administradores podem criar mercados' },
-        { status: 403 }
-      );
+    if (user.role !== 'GESTOR' && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const { nome, cnpj, descricao, telefone, emailContato, gestorId, planoId } = body;
 
-    // Validações básicas
     if (!nome || !cnpj) {
       return NextResponse.json(
-        { success: false, error: 'Nome e CNPJ são obrigatórios' },
+        { error: 'Nome e CNPJ são obrigatórios' },
         { status: 400 }
       );
     }
@@ -135,28 +128,26 @@ export async function POST(request: Request) {
 
     if (mercadoExistente) {
       return NextResponse.json(
-        { success: false, error: 'CNPJ já cadastrado' },
+        { error: 'CNPJ já cadastrado' },
         { status: 409 }
       );
     }
 
     let gestorIdValidado: string | null = null;
-    if (gestorId) {
+    
+    // Se GESTOR está criando, usar seu próprio ID
+    if (user.role === 'GESTOR') {
+      gestorIdValidado = user.id;
+    } else if (gestorId) {
+      // ADMIN pode especificar um gestor diferente
       const gestor = await prisma.user.findUnique({
         where: { id: gestorId },
         select: { id: true, role: true }
       });
 
-      if (!gestor) {
+      if (!gestor || gestor.role !== 'GESTOR') {
         return NextResponse.json(
-          { success: false, error: 'Gestor informado não existe' },
-          { status: 404 }
-        );
-      }
-
-      if (gestor.role !== 'GESTOR') {
-        return NextResponse.json(
-          { success: false, error: 'Usuário informado não possui o papel de gestor' },
+          { error: 'Gestor inválido' },
           { status: 400 }
         );
       }
@@ -165,7 +156,7 @@ export async function POST(request: Request) {
     }
 
     // Criar mercado
-    const novoMercado = await prisma.mercados.create({
+    const mercado = await prisma.mercados.create({
       data: {
         id: `mercado-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         nome,
@@ -185,23 +176,18 @@ export async function POST(request: Request) {
             nome: true,
             email: true
           }
-        },
-        _count: {
-          select: { unidades: true }
         }
       }
     });
 
     return NextResponse.json({
       success: true,
-      data: novoMercado,
-      message: 'Mercado criado com sucesso'
+      data: mercado
     }, { status: 201 });
-
   } catch (error) {
-    console.error('Erro ao criar mercado:', error);
+    console.error('[API /markets POST] Erro:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao criar mercado' },
+      { error: 'Erro interno do servidor' },
       { status: 500 }
     );
   }

@@ -12,7 +12,10 @@ import {
   ExcessStockIndicator,
   PriceElasticityCurve
 } from '@/components/ai-dashboard';
-import { TrendingUp, Package, AlertTriangle, DollarSign, RefreshCw } from 'lucide-react';
+import { ActionableInsight } from '@/components/gestor/ActionableInsight';
+import { Button, Card } from '@/components/shared';
+import { TOKENS } from '@/styles/tokens';
+import { TrendingUp, Package, AlertTriangle, DollarSign, RefreshCw, Lightbulb } from 'lucide-react';
 import { fetchDashboardData } from '@/lib/ai-api';
 
 export default function AIInsightsDashboard() {
@@ -21,6 +24,7 @@ export default function AIInsightsDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [actionableInsights, setActionableInsights] = useState<any[]>([]);
 
   // Obter mercadoId do usuário logado
   const mercadoId = (session?.user as any)?.mercadoId || 'mercado-1764614505466-1'; // Fallback para teste
@@ -60,6 +64,11 @@ export default function AIInsightsDashboard() {
       };
 
       setDashboardData(processedData);
+      
+      // Gerar insights acionáveis
+      const insights = generateActionableInsights(processedData, data);
+      setActionableInsights(insights);
+      
       setLastUpdate(new Date());
     } catch (err: any) {
       console.error('Erro ao carregar dashboard:', err);
@@ -67,6 +76,161 @@ export default function AIInsightsDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Gerar insights acionáveis a partir dos dados
+  const generateActionableInsights = (processedData: any, rawData: any) => {
+    const insights: any[] = [];
+
+    // 1. Insights de Ruptura de Estoque (URGENTE)
+    if (processedData.stockRupture && processedData.stockRupture.length > 0) {
+      const produtosRisco = processedData.stockRupture.slice(0, 12);
+      const impactoTotal = produtosRisco.reduce((sum: number, produto: any) => {
+        // Estimar impacto: R$ 50 por produto em risco (perda de venda)
+        return sum + (produto.risco * 5000); // 5000 centavos = R$ 50
+      }, 0);
+
+      insights.push({
+        type: 'URGENTE' as const,
+        title: `${produtosRisco.length} produtos vão acabar em breve`,
+        description: `Estes produtos estão com estoque baixo e podem acabar nas próximas horas. Faça o pedido agora para evitar perda de vendas.`,
+        impactValue: impactoTotal,
+        impactType: 'negative' as const,
+        priority: 10,
+        products: produtosRisco.map((p: any) => ({
+          id: p.id,
+          name: p.nome,
+          quantity: Math.ceil(p.diasEstoque),
+        })),
+        actions: [
+          {
+            label: 'Fazer Pedido Agora',
+            type: 'pedido' as const,
+            onClick: () => {
+              // TODO: Abrir modal de pedido com produtos pré-selecionados
+              console.log('Abrir modal de pedido', produtosRisco);
+              alert(`Abrir modal de pedido para ${produtosRisco.length} produtos`);
+            },
+          },
+          {
+            label: 'Ver Detalhes',
+            type: 'ver-detalhes' as const,
+            onClick: () => {
+              // TODO: Navegar para página de detalhes
+              console.log('Ver detalhes de ruptura');
+            },
+          },
+        ],
+      });
+    }
+
+    // 2. Insights de Oportunidade de Promoção (OPORTUNIDADE)
+    if (processedData.recommendations && processedData.recommendations.length > 0) {
+      const oportunidades = processedData.recommendations
+        .filter((rec: any) => rec.impactoEstimado?.receita > 0)
+        .slice(0, 5);
+
+      if (oportunidades.length > 0) {
+        const impactoTotal = oportunidades.reduce((sum: number, rec: any) => {
+          return sum + (rec.impactoEstimado?.receita || 0) * 100; // Converter para centavos
+        }, 0);
+
+        insights.push({
+          type: 'OPORTUNIDADE' as const,
+          title: `Reduza preços e venda ${oportunidades.length > 1 ? 'mais' : 'mais'}`,
+          description: `Ajustando o preço destes produtos, você pode aumentar as vendas significativamente. A IA sugere reduções estratégicas que geram mais receita.`,
+          impactValue: impactoTotal,
+          impactType: 'positive' as const,
+          priority: 8,
+          products: oportunidades.map((rec: any) => ({
+            id: rec.produtoId,
+            name: rec.produtoNome,
+          })),
+          actions: [
+            {
+              label: 'Criar Promoção',
+              type: 'promocao' as const,
+              onClick: () => {
+                // TODO: Abrir modal de promoção
+                console.log('Abrir modal de promoção', oportunidades);
+                alert(`Abrir modal de promoção para ${oportunidades.length} produtos`);
+              },
+            },
+            {
+              label: 'Ver Análise',
+              type: 'ver-detalhes' as const,
+              onClick: () => {
+                console.log('Ver análise de preços');
+              },
+            },
+          ],
+        });
+      }
+    }
+
+    // 3. Insights de Estoque Excedente (MELHORIA)
+    if (processedData.excessStock && processedData.excessStock.length > 0) {
+      const produtosExcesso = processedData.excessStock.slice(0, 8);
+      // Estimar custo de capital parado: R$ 10 por produto em excesso
+      const impactoTotal = produtosExcesso.length * 1000; // 1000 centavos = R$ 10
+
+      insights.push({
+        type: 'MELHORIA' as const,
+        title: `${produtosExcesso.length} produtos com estoque alto`,
+        description: `Estes produtos estão com muito estoque parado, ocupando espaço e capital. Considere criar promoções para acelerar a venda.`,
+        impactValue: impactoTotal,
+        impactType: 'negative' as const,
+        priority: 6,
+        products: produtosExcesso.map((p: any) => ({
+          id: p.id,
+          name: p.nome,
+        })),
+        actions: [
+          {
+            label: 'Criar Promoção',
+            type: 'promocao' as const,
+            onClick: () => {
+              console.log('Criar promoção para produtos em excesso', produtosExcesso);
+              alert(`Abrir modal de promoção para ${produtosExcesso.length} produtos`);
+            },
+          },
+          {
+            label: 'Ajustar Estoque',
+            type: 'ajuste' as const,
+            onClick: () => {
+              console.log('Ajustar estoque');
+            },
+          },
+        ],
+      });
+    }
+
+    // 4. Insight de Saúde do Estoque (MELHORIA)
+    if (processedData.metrics.stockHealth < 70) {
+      const diferenca = 70 - processedData.metrics.stockHealth;
+      const impactoEstimado = diferenca * 10000; // R$ 100 por ponto abaixo de 70
+
+      insights.push({
+        type: 'MELHORIA' as const,
+        title: `Saúde do estoque: ${Math.round(processedData.metrics.stockHealth)}%`,
+        description: `Seu estoque está ${diferenca > 10 ? 'bem' : 'um pouco'} abaixo do ideal. Faça estas ações para melhorar para ÓTIMO (80%+).`,
+        impactValue: impactoEstimado,
+        impactType: 'positive' as const,
+        priority: 7,
+        actions: [
+          {
+            label: 'Ver Ações Recomendadas',
+            type: 'ver-detalhes' as const,
+            onClick: () => {
+              console.log('Ver ações recomendadas');
+            },
+          },
+        ],
+      });
+    }
+
+    // Ordenar por prioridade (maior primeiro)
+    return insights.sort((a, b) => (b.priority || 0) - (a.priority || 0));
   };
 
   // Loading state
@@ -90,13 +254,13 @@ export default function AIInsightsDashboard() {
           <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Erro ao Carregar Dashboard</h2>
           <p className="text-gray-600 mb-6">{error}</p>
-          <button
+          <Button
+            variant="primary"
             onClick={loadDashboardData}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
           >
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw className="h-5 w-5" style={{ marginRight: TOKENS.spacing[2] }} />
             Tentar Novamente
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -128,15 +292,42 @@ export default function AIInsightsDashboard() {
               </p>
             )}
           </div>
-          <button
+          <Button
+            variant="outline"
             onClick={loadDashboardData}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
           >
-            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ marginRight: TOKENS.spacing[2] }} />
             Atualizar
-          </button>
+          </Button>
         </div>
+
+        {/* NOVA SEÇÃO: Insights Acionáveis */}
+        {actionableInsights.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="h-6 w-6" color={TOKENS.colors.accent[600]} />
+              <h2 className="text-2xl font-bold text-gray-900">Insights Acionáveis</h2>
+              <span
+                style={{
+                  padding: `${TOKENS.spacing[1]} ${TOKENS.spacing[2]}`,
+                  borderRadius: TOKENS.borderRadius.full,
+                  backgroundColor: TOKENS.colors.accent[100],
+                  color: TOKENS.colors.accent[700],
+                  fontSize: TOKENS.typography.fontSize.sm,
+                  fontWeight: TOKENS.typography.fontWeight.semibold,
+                }}
+              >
+                {actionableInsights.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {actionableInsights.map((insight, index) => (
+                <ActionableInsight key={index} {...insight} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Alerts Section */}
         {dashboardData.alerts && dashboardData.alerts.length > 0 && (
@@ -148,7 +339,6 @@ export default function AIInsightsDashboard() {
                   key={index}
                   type={alert.tipo}
                   message={alert.mensagem}
-                  severity={alert.severidade}
                 />
               ))}
             </div>

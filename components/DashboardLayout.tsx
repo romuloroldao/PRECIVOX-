@@ -28,6 +28,13 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   }, [status, router]);
 
   const handleLogout = async () => {
+    // Limpar tokens do authClient
+    try {
+      const { authClient } = await import('@/lib/auth-client');
+      authClient.clearTokens();
+    } catch (error) {
+      console.warn('[DashboardLayout] Erro ao limpar tokens:', error);
+    }
     try {
       // Limpar todos os dados locais primeiro
       localStorage.clear();

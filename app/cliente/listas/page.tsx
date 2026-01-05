@@ -1,284 +1,626 @@
+/**
+ * Página de Listas - Gerenciamento Completo
+ * 
+ * SQUAD A - Frontend/UX
+ * 
+ * Grid de listas com filtros, busca e ações
+ */
+
 'use client';
 
-import { useState } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import Link from 'next/link';
+import { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/shared';
+import { TOKENS } from '@/styles/tokens';
+import { useRouter } from 'next/navigation';
 
-interface ShoppingList {
+type FilterType = 'all' | 'active' | 'archived';
+
+interface List {
   id: string;
   name: string;
-  description?: string;
-  items: Array<{
-    id: string;
-    name: string;
-    price: number;
-    store: string;
-    quantity: number;
-  }>;
-  total: number;
-  createdAt: string;
+  itemsCount: number;
+  totalSavings: number; // centavos
   updatedAt: string;
+  archived: boolean;
 }
 
-export default function MinhasListasPage() {
-  const [lists, setLists] = useState<ShoppingList[]>([
-    {
-      id: '1',
-      name: 'Lista do Final de Semana',
-      description: 'Compras para o final de semana',
-      items: [
-        { id: '1', name: 'Cerveja Skol 350ml', price: 3.20, store: 'Supermercado Central', quantity: 6 },
-        { id: '2', name: 'Refrigerante Coca-Cola 2L', price: 7.50, store: 'Mercado do João', quantity: 2 },
-        { id: '3', name: 'Pão Francês (kg)', price: 12.00, store: 'Mercadinho da Esquina', quantity: 1 }
-      ],
-      total: 32.40,
-      createdAt: '2024-01-20',
-      updatedAt: '2024-01-20'
-    },
-    {
-      id: '2',
-      name: 'Lista de Limpeza',
-      description: 'Produtos de limpeza para casa',
-      items: [
-        { id: '4', name: 'Detergente Ypê 500ml', price: 2.99, store: 'Supermercado Central', quantity: 3 },
-        { id: '5', name: 'Sabão em Pó OMO 1kg', price: 8.55, store: 'Mercado do João', quantity: 1 }
-      ],
-      total: 17.52,
-      createdAt: '2024-01-18',
-      updatedAt: '2024-01-19'
-    }
-  ]);
+export default function ListasPage() {
+  const [lists, setLists] = useState<List[]>([]);
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingList, setEditingList] = useState<ShoppingList | null>(null);
-  const [newListName, setNewListName] = useState('');
-  const [newListDescription, setNewListDescription] = useState('');
+  // TODO: Pegar userId real do NextAuth
+  const userId = 'temp-user-id';
+
+  useEffect(() => {
+    async function fetchLists() {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/lists?userId=${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setLists(data.data.lists || []);
+        }
+      } catch (error) {
+        console.error('Error fetching lists:', error);
+        // Mock data para desenvolvimento
+        setLists([
+          {
+            id: '1',
+            name: 'Compras da Semana',
+            itemsCount: 12,
+            totalSavings: 4500,
+            updatedAt: new Date().toISOString(),
+            archived: false,
+          },
+          {
+            id: '2',
+            name: 'Churrasco',
+            itemsCount: 8,
+            totalSavings: 2300,
+            updatedAt: new Date(Date.now() - 86400000).toISOString(),
+            archived: false,
+          },
+          {
+            id: '3',
+            name: 'Festa de Aniversário',
+            itemsCount: 15,
+            totalSavings: 0,
+            updatedAt: new Date(Date.now() - 172800000).toISOString(),
+            archived: true,
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchLists();
+  }, [userId]);
+
+  // Filtrar e buscar
+  const filteredLists = useMemo(() => {
+    let result = lists;
+
+    // Filtro por status
+    if (filter === 'active') {
+      result = result.filter((list) => !list.archived);
+    } else if (filter === 'archived') {
+      result = result.filter((list) => list.archived);
+    }
+
+    // Busca
+    if (searchQuery) {
+      result = result.filter((list) =>
+        list.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return result;
+  }, [lists, filter, searchQuery]);
+
+  const counts = {
+    all: lists.length,
+    active: lists.filter((l) => !l.archived).length,
+    archived: lists.filter((l) => l.archived).length,
+  };
 
   const handleCreateList = () => {
-    if (!newListName.trim()) return;
-
-    const newList: ShoppingList = {
-      id: Date.now().toString(),
-      name: newListName,
-      description: newListDescription,
-      items: [],
-      total: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0]
-    };
-
-    setLists([...lists, newList]);
-    setNewListName('');
-    setNewListDescription('');
-    setShowCreateForm(false);
+    router.push('/cliente/listas/nova');
   };
 
-  const handleEditList = (list: ShoppingList) => {
-    setEditingList(list);
-    setNewListName(list.name);
-    setNewListDescription(list.description || '');
-    setShowCreateForm(true);
+  const handleDuplicate = (list: List) => {
+    // TODO: Implementar duplicação
+    console.log('Duplicar lista:', list.id);
   };
 
-  const handleUpdateList = () => {
-    if (!editingList || !newListName.trim()) return;
-
-    const updatedLists = lists.map(list => 
-      list.id === editingList.id 
-        ? { 
-            ...list, 
-            name: newListName, 
-            description: newListDescription,
-            updatedAt: new Date().toISOString().split('T')[0]
-          }
-        : list
+  const handleArchive = (list: List) => {
+    // TODO: Implementar arquivamento
+    setLists((prev) =>
+      prev.map((l) => (l.id === list.id ? { ...l, archived: !l.archived } : l))
     );
-
-    setLists(updatedLists);
-    setEditingList(null);
-    setNewListName('');
-    setNewListDescription('');
-    setShowCreateForm(false);
   };
 
-  const handleDeleteList = (listId: string) => {
-    if (confirm('Tem certeza que deseja excluir esta lista?')) {
-      setLists(lists.filter(list => list.id !== listId));
+  const handleDelete = (list: List) => {
+    if (confirm(`Tem certeza que deseja deletar "${list.name}"?`)) {
+      // TODO: Chamar API de delete
+      setLists((prev) => prev.filter((l) => l.id !== list.id));
     }
-  };
-
-  const handleCancelForm = () => {
-    setShowCreateForm(false);
-    setEditingList(null);
-    setNewListName('');
-    setNewListDescription('');
   };
 
   return (
-    <DashboardLayout role="CLIENTE">
-      <div className="space-y-6">
+    <main style={styles.main}>
+      <div style={styles.container}>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <header style={styles.header}>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Minhas Listas</h1>
-            <p className="text-gray-600 mt-2">Gerencie suas listas de compras</p>
+            <h1 style={styles.title}>Minhas Listas</h1>
+            <p style={styles.subtitle}>
+              Gerencie suas listas de compras
+            </p>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="px-4 py-2 bg-precivox-blue text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              + Nova Lista
-            </button>
-            <Link 
-              href="/cliente/comparar"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              ← Buscar Produtos
-            </Link>
-          </div>
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleCreateList}
+            leftIcon={<span>➕</span>}
+          >
+            Nova Lista
+          </Button>
+        </header>
+
+        {/* Filters */}
+        <div style={styles.filters}>
+          <button
+            onClick={() => setFilter('all')}
+            style={{
+              ...styles.filterButton,
+              ...(filter === 'all' ? styles.filterButtonActive : {}),
+            }}
+          >
+            Todas ({counts.all})
+          </button>
+          <button
+            onClick={() => setFilter('active')}
+            style={{
+              ...styles.filterButton,
+              ...(filter === 'active' ? styles.filterButtonActive : {}),
+            }}
+          >
+            Ativas ({counts.active})
+          </button>
+          <button
+            onClick={() => setFilter('archived')}
+            style={{
+              ...styles.filterButton,
+              ...(filter === 'archived' ? styles.filterButtonActive : {}),
+            }}
+          >
+            Arquivadas ({counts.archived})
+          </button>
         </div>
 
-        {/* Create/Edit Form */}
-        {showCreateForm && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              {editingList ? 'Editar Lista' : 'Nova Lista'}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome da Lista *
-                </label>
-                <input
-                  type="text"
-                  value={newListName}
-                  onChange={(e) => setNewListName(e.target.value)}
-                  placeholder="Ex: Lista do Final de Semana"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-precivox-blue focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descrição (opcional)
-                </label>
-                <textarea
-                  value={newListDescription}
-                  onChange={(e) => setNewListDescription(e.target.value)}
-                  placeholder="Descreva sua lista..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-precivox-blue focus:border-transparent"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={editingList ? handleUpdateList : handleCreateList}
-                  className="px-4 py-2 bg-precivox-green text-white rounded-lg hover:bg-green-600 transition-colors"
-                >
-                  {editingList ? 'Atualizar' : 'Criar Lista'}
-                </button>
-                <button
-                  onClick={handleCancelForm}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
+        {/* Search */}
+        <div style={styles.searchContainer}>
+          <span style={styles.searchIcon}>🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar lista..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={styles.searchInput}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={styles.clearButton}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Grid */}
+        {isLoading ? (
+          <div style={styles.loading}>Carregando listas...</div>
+        ) : filteredLists.length > 0 ? (
+          <div style={styles.grid}>
+            {filteredLists.map((list) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                onDuplicate={() => handleDuplicate(list)}
+                onArchive={() => handleArchive(list)}
+                onDelete={() => handleDelete(list)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={styles.empty}>
+            <span style={styles.emptyIcon}>📝</span>
+            <p style={styles.emptyText}>
+              {searchQuery
+                ? 'Nenhuma lista encontrada'
+                : filter === 'archived'
+                ? 'Nenhuma lista arquivada'
+                : 'Você ainda não tem listas'}
+            </p>
+            {!searchQuery && filter === 'all' && (
+              <Button variant="primary" onClick={handleCreateList}>
+                Criar Primeira Lista
+              </Button>
+            )}
           </div>
         )}
+      </div>
+    </main>
+  );
+}
 
-        {/* Lists Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {lists.map((list) => (
-            <div key={list.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{list.name}</h3>
-                  {list.description && (
-                    <p className="text-sm text-gray-600 mb-2">{list.description}</p>
-                  )}
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span>{list.items.length} itens</span>
-                    <span>R$ {list.total.toFixed(2).replace('.', ',')}</span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEditList(list)}
-                    className="p-2 text-gray-600 hover:text-precivox-blue transition-colors"
-                    title="Editar"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={() => handleDeleteList(list.id)}
-                    className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-                    title="Excluir"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
+// Componente ListCard
+function ListCard({
+  list,
+  onDuplicate,
+  onArchive,
+  onDelete,
+}: {
+  list: List;
+  onDuplicate: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  const router = useRouter();
 
-              {/* List Items Preview */}
-              <div className="space-y-2 mb-4">
-                {list.items.slice(0, 3).map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-700">{item.name}</span>
-                    <span className="text-precivox-blue font-medium">
-                      R$ {item.price.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                ))}
-                {list.items.length > 3 && (
-                  <p className="text-xs text-gray-500">
-                    +{list.items.length - 3} itens...
-                  </p>
-                )}
-              </div>
+  const savingsInReais = (list.totalSavings / 100).toFixed(2);
+  const date = new Date(list.updatedAt);
+  const formattedDate = date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 
-              <div className="flex gap-2">
-                <Link
-                  href={`/cliente/comparar?lista=${list.id}`}
-                  className="flex-1 px-3 py-2 bg-precivox-blue text-white rounded-lg hover:bg-blue-700 transition-colors text-center text-sm"
-                >
-                  Abrir Lista
-                </Link>
-                <button className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
-                  📋
-                </button>
-              </div>
+  const handleCardClick = () => {
+    router.push(`/cliente/listas/${list.id}`);
+  };
 
-              <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
-                Criada em {new Date(list.createdAt).toLocaleDateString('pt-BR')}
-                {list.updatedAt !== list.createdAt && (
-                  <span> • Atualizada em {new Date(list.updatedAt).toLocaleDateString('pt-BR')}</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+  return (
+    <div style={styles.card} onClick={handleCardClick}>
+      {/* Header */}
+      <div style={styles.cardHeader}>
+        <h3 style={styles.cardTitle}>{list.name}</h3>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          style={styles.menuButton}
+        >
+          ⋮
+        </button>
 
-        {/* Empty State */}
-        {lists.length === 0 && !showCreateForm && (
-          <div className="bg-white rounded-xl shadow-md p-12 text-center">
-            <div className="w-16 h-16 bg-precivox-blue bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-              📋
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhuma lista criada</h3>
-            <p className="text-gray-600 mb-4">
-              Crie sua primeira lista de compras para começar a organizar suas compras
-            </p>
+        {/* Menu Dropdown */}
+        {showMenu && (
+          <div
+            style={styles.menu}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
-              onClick={() => setShowCreateForm(true)}
-              className="px-4 py-2 bg-precivox-blue text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => {
+                router.push(`/cliente/listas/${list.id}/editar`);
+                setShowMenu(false);
+              }}
+              style={styles.menuItem}
             >
-              + Criar Primeira Lista
+              ✏️ Editar
+            </button>
+            <button
+              onClick={() => {
+                onDuplicate();
+                setShowMenu(false);
+              }}
+              style={styles.menuItem}
+            >
+              📋 Duplicar
+            </button>
+            <button
+              onClick={() => {
+                onArchive();
+                setShowMenu(false);
+              }}
+              style={styles.menuItem}
+            >
+              {list.archived ? '📂 Desarquivar' : '📁 Arquivar'}
+            </button>
+            <button
+              onClick={() => {
+                onDelete();
+                setShowMenu(false);
+              }}
+              style={{ ...styles.menuItem, color: TOKENS.colors.error }}
+            >
+              🗑️ Deletar
             </button>
           </div>
         )}
       </div>
-    </DashboardLayout>
+
+      {/* Date */}
+      <p style={styles.cardDate}>{formattedDate}</p>
+
+      {/* Stats */}
+      <div style={styles.cardStats}>
+        <div style={styles.stat}>
+          <span style={styles.statIcon}>📦</span>
+          <span style={styles.statValue}>{list.itemsCount} itens</span>
+        </div>
+
+        <div
+          style={{
+            ...styles.savingsBadge,
+            backgroundColor:
+              list.totalSavings > 0
+                ? TOKENS.colors.success + '20'
+                : TOKENS.colors.gray[100],
+            color:
+              list.totalSavings > 0
+                ? TOKENS.colors.success
+                : TOKENS.colors.text.secondary,
+          }}
+        >
+          <span style={styles.savingsIcon}>💰</span>
+          <span style={styles.savingsValue}>
+            R$ {Number(savingsInReais).toLocaleString('pt-BR')}
+          </span>
+        </div>
+      </div>
+
+      {/* Archived Badge */}
+      {list.archived && (
+        <div style={styles.archivedBadge}>Arquivada</div>
+      )}
+    </div>
   );
 }
+
+// Estilos
+const styles = {
+  main: {
+    minHeight: '100vh',
+    backgroundColor: TOKENS.colors.surface,
+  },
+
+  container: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: TOKENS.spacing[4],
+  },
+
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: TOKENS.spacing[6],
+    flexWrap: 'wrap' as const,
+    gap: TOKENS.spacing[4],
+  },
+
+  title: {
+    fontSize: TOKENS.typography.fontSize['3xl'],
+    fontWeight: TOKENS.typography.fontWeight.extrabold,
+    color: TOKENS.colors.text.primary,
+    margin: 0,
+    marginBottom: TOKENS.spacing[1],
+  },
+
+  subtitle: {
+    fontSize: TOKENS.typography.fontSize.base,
+    color: TOKENS.colors.text.secondary,
+    margin: 0,
+  },
+
+  filters: {
+    display: 'flex',
+    gap: TOKENS.spacing[2],
+    marginBottom: TOKENS.spacing[4],
+    flexWrap: 'wrap' as const,
+  },
+
+  filterButton: {
+    padding: `${TOKENS.spacing[2]} ${TOKENS.spacing[4]}`,
+    backgroundColor: TOKENS.colors.background,
+    border: `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}`,
+    borderRadius: TOKENS.borderRadius.full,
+    fontSize: TOKENS.typography.fontSize.sm,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    color: TOKENS.colors.text.secondary,
+    cursor: 'pointer',
+    transition: TOKENS.transitions.base,
+  },
+
+  filterButtonActive: {
+    backgroundColor: TOKENS.colors.primary[600],
+    borderColor: TOKENS.colors.primary[600],
+    color: TOKENS.colors.text.inverse,
+  },
+
+  searchContainer: {
+    position: 'relative' as const,
+    marginBottom: TOKENS.spacing[6],
+  },
+
+  searchIcon: {
+    position: 'absolute' as const,
+    left: TOKENS.spacing[3],
+    top: '50%',
+    transform: 'translateY(-50%)',
+    fontSize: '18px',
+    pointerEvents: 'none' as const,
+  },
+
+  searchInput: {
+    width: '100%',
+    padding: `${TOKENS.spacing[3]} ${TOKENS.spacing[3]} ${TOKENS.spacing[3]} ${TOKENS.spacing[10]}`,
+    backgroundColor: TOKENS.colors.background,
+    border: `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}`,
+    borderRadius: TOKENS.borderRadius.lg,
+    fontSize: TOKENS.typography.fontSize.base,
+    color: TOKENS.colors.text.primary,
+    outline: 'none',
+  },
+
+  clearButton: {
+    position: 'absolute' as const,
+    right: TOKENS.spacing[3],
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    fontSize: TOKENS.typography.fontSize.lg,
+    color: TOKENS.colors.text.secondary,
+    cursor: 'pointer',
+    padding: TOKENS.spacing[1],
+  },
+
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: TOKENS.spacing[4],
+  },
+
+  card: {
+    backgroundColor: TOKENS.colors.background,
+    border: `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}`,
+    borderRadius: TOKENS.borderRadius.lg,
+    padding: TOKENS.spacing[4],
+    cursor: 'pointer',
+    transition: TOKENS.transitions.base,
+    position: 'relative' as const,
+    ':hover': {
+      boxShadow: TOKENS.shadows.md,
+      transform: 'translateY(-2px)',
+    },
+  },
+
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: TOKENS.spacing[2],
+    position: 'relative' as const,
+  },
+
+  cardTitle: {
+    fontSize: TOKENS.typography.fontSize.lg,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    color: TOKENS.colors.text.primary,
+    margin: 0,
+    flex: 1,
+  },
+
+  menuButton: {
+    background: 'none',
+    border: 'none',
+    fontSize: '20px',
+    color: TOKENS.colors.text.secondary,
+    cursor: 'pointer',
+    padding: TOKENS.spacing[1],
+    lineHeight: 1,
+  },
+
+  menu: {
+    position: 'absolute' as const,
+    top: '100%',
+    right: 0,
+    backgroundColor: TOKENS.colors.background,
+    border: `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}`,
+    borderRadius: TOKENS.borderRadius.md,
+    boxShadow: TOKENS.shadows.lg,
+    zIndex: TOKENS.zIndex.dropdown,
+    minWidth: '150px',
+    marginTop: TOKENS.spacing[1],
+  },
+
+  menuItem: {
+    width: '100%',
+    padding: `${TOKENS.spacing[2]} ${TOKENS.spacing[3]}`,
+    backgroundColor: 'transparent',
+    border: 'none',
+    textAlign: 'left' as const,
+    fontSize: TOKENS.typography.fontSize.sm,
+    color: TOKENS.colors.text.primary,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: TOKENS.spacing[2],
+    transition: TOKENS.transitions.base,
+    ':hover': {
+      backgroundColor: TOKENS.colors.surface,
+    },
+  },
+
+  cardDate: {
+    fontSize: TOKENS.typography.fontSize.xs,
+    color: TOKENS.colors.text.secondary,
+    margin: `0 0 ${TOKENS.spacing[3]} 0`,
+  },
+
+  cardStats: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: TOKENS.spacing[3],
+  },
+
+  stat: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: TOKENS.spacing[1],
+  },
+
+  statIcon: {
+    fontSize: '16px',
+  },
+
+  statValue: {
+    fontSize: TOKENS.typography.fontSize.sm,
+    color: TOKENS.colors.text.secondary,
+  },
+
+  savingsBadge: {
+    padding: `${TOKENS.spacing[1]} ${TOKENS.spacing[2]}`,
+    borderRadius: TOKENS.borderRadius.full,
+    display: 'flex',
+    alignItems: 'center',
+    gap: TOKENS.spacing[1],
+  },
+
+  savingsIcon: {
+    fontSize: '14px',
+  },
+
+  savingsValue: {
+    fontSize: TOKENS.typography.fontSize.sm,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+  },
+
+  archivedBadge: {
+    position: 'absolute' as const,
+    top: TOKENS.spacing[2],
+    right: TOKENS.spacing[2],
+    padding: `${TOKENS.spacing[1]} ${TOKENS.spacing[2]}`,
+    backgroundColor: TOKENS.colors.gray[200],
+    color: TOKENS.colors.text.secondary,
+    fontSize: TOKENS.typography.fontSize.xs,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    borderRadius: TOKENS.borderRadius.full,
+  },
+
+  loading: {
+    textAlign: 'center' as const,
+    padding: TOKENS.spacing[12],
+    color: TOKENS.colors.text.secondary,
+  },
+
+  empty: {
+    textAlign: 'center' as const,
+    padding: TOKENS.spacing[12],
+  },
+
+  emptyIcon: {
+    fontSize: '64px',
+    display: 'block',
+    marginBottom: TOKENS.spacing[4],
+    opacity: 0.5,
+  },
+
+  emptyText: {
+    fontSize: TOKENS.typography.fontSize.lg,
+    color: TOKENS.colors.text.secondary,
+    marginBottom: TOKENS.spacing[6],
+  },
+};

@@ -121,8 +121,8 @@ model vendas {
   precoUnitario  Decimal  @db.Decimal(10, 2)
   precoTotal     Decimal  @db.Decimal(10, 2)
   desconto       Decimal? @default(0) @db.Decimal(10, 2)
-  formaPagamento String? // DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, PIX, etc
-  clienteId      String? // Para rastrear compras de clientes recorrentes
+  formaPagamento String?
+  clienteId      String?
   dataVenda      DateTime @default(now())
   criadoEm       DateTime @default(now())
   produtos       produtos @relation(fields: [produtoId], references: [id], onDelete: Cascade)
@@ -139,13 +139,13 @@ model movimentacoes_estoque {
   estoqueId          String
   produtoId          String
   unidadeId          String
-  tipo               String // ENTRADA, SAIDA, AJUSTE, VENDA, DEVOLUCAO
+  tipo               String
   quantidade         Int
   quantidadeAnterior Int
   quantidadeNova     Int
-  motivo             String? // COMPRA, VENDA, AJUSTE_INVENTARIO, PERDA, VENCIMENTO, etc
+  motivo             String?
   observacao         String?
-  responsavelId      String? // ID do usuário que fez a movimentação
+  responsavelId      String?
   dataMovimentacao   DateTime @default(now())
   criadoEm           DateTime @default(now())
   estoques           estoques @relation(fields: [estoqueId], references: [id], onDelete: Cascade)
@@ -271,10 +271,12 @@ model produtos {
   alertas_ia                                                                 alertas_ia[]
   analises_ia                                                                analises_ia[]
   estoques                                                                   estoques[]
-  vendas                                                                     vendas[]
   movimentacoes_estoque                                                      movimentacoes_estoque[]
   produtos_relacionados_produtos_relacionados_produtoIdToprodutos            produtos_relacionados[] @relation("produtos_relacionados_produtoIdToprodutos")
   produtos_relacionados_produtos_relacionados_produtoRelacionadoIdToprodutos produtos_relacionados[] @relation("produtos_relacionados_produtoRelacionadoIdToprodutos")
+  vendas                                                                     vendas[]
+  itens_lista                                                                itens_lista[]
+  savingsHistory                                                             SavingsHistory[]
 }
 
 model produtos_relacionados {
@@ -301,6 +303,22 @@ model sessions {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique @map("token_hash")
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  revoked   Boolean   @default(false)
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revoked])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
 model unidades {
   id                    String                  @id
   nome                  String
@@ -320,31 +338,33 @@ model unidades {
   alertas_ia            alertas_ia[]
   analises_ia           analises_ia[]
   estoques              estoques[]
-  vendas                vendas[]
-  movimentacoes_estoque movimentacoes_estoque[]
   metricas_dashboard    metricas_dashboard[]
+  movimentacoes_estoque movimentacoes_estoque[]
   mercados              mercados                @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+  vendas                vendas[]
 }
 
 model User {
-  id                String              @id
-  nome              String?
-  email             String              @unique
-  emailVerified     DateTime?           @map("email_verified")
-  imagem            String?
-  senhaHash         String?              @map("senha_hash")
-  role              Role                 @default(CLIENTE)
-  dataCriacao       DateTime             @default(now()) @map("data_criacao")
-  dataAtualizacao  DateTime             @map("data_atualizacao")
-  ultimoLogin       DateTime?            @map("ultimo_login")
-  accounts          accounts[]
-  sessions          sessions[]
-  acoes_gestor      acoes_gestor[]
-  mercados          mercados[]
-  pushSubscriptions push_subscriptions[]
-  abTestsCreated    ab_tests[]           @relation("ab_tests_created_by")
-  abTestResults     ab_test_results[]
-  abTestAssignments ab_test_assignments[]
+  id                        String                     @id
+  nome                      String?
+  email                     String                     @unique
+  emailVerified             DateTime?                  @map("email_verified")
+  imagem                    String?
+  senhaHash                 String?                    @map("senha_hash")
+  role                      Role                       @default(CLIENTE)
+  dataCriacao               DateTime                   @default(now()) @map("data_criacao")
+  dataAtualizacao           DateTime                   @map("data_atualizacao")
+  ultimoLogin               DateTime?                  @map("ultimo_login")
+  accounts                  accounts[]
+  acoes_gestor              acoes_gestor[]
+  mercados                  mercados[]
+  sessions                  sessions[]
+  refreshTokens             RefreshToken[]
+  userStreak                UserStreak?
+  savingsHistory            SavingsHistory[]
+  referralsAsReferrer       Referral[]                 @relation("referrer")
+  referralsAsReferee        Referral[]                 @relation("referee")
+  notificationSubscriptions NotificationSubscription[]
 
   @@map("usuarios")
 }
@@ -355,82 +375,6 @@ model verification_tokens {
   expires    DateTime
 
   @@unique([identifier, token])
-}
-
-model push_subscriptions {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  endpoint  String
-  p256dh    String
-  auth      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  expiresAt DateTime? @map("expires_at")
-  active    Boolean  @default(true)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, endpoint])
-  @@index([userId])
-  @@index([active])
-  @@map("push_subscriptions")
-}
-
-model ab_tests {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  type        String   // PRICING, RECOMMENDATION, LAYOUT, FEATURE
-  trafficSplit Int     @default(50) @map("traffic_split")
-  startDate   DateTime @default(now()) @map("start_date")
-  endDate     DateTime? @map("end_date")
-  status      String   @default("DRAFT") // DRAFT, RUNNING, PAUSED, COMPLETED
-  variants    Json
-  metrics     Json     @default("{\"totalUsers\": 0, \"variantMetrics\": {}, \"confidence\": 0, \"winner\": null}")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  createdBy   String?  @map("created_by")
-  user        User?    @relation(fields: [createdBy], references: [id])
-  results     ab_test_results[]
-  assignments ab_test_assignments[]
-
-  @@index([status])
-  @@index([type])
-  @@index([startDate, endDate])
-  @@map("ab_tests")
-}
-
-model ab_test_results {
-  id        String   @id @default(uuid())
-  testId    String   @map("test_id")
-  userId    String   @map("user_id")
-  variantId String   @map("variant_id")
-  action    String?
-  value     Decimal? @db.Decimal(10, 2)
-  metadata  Json?
-  timestamp DateTime @default(now())
-  test      ab_tests @relation(fields: [testId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([testId, userId, variantId, action, timestamp])
-  @@index([testId])
-  @@index([userId])
-  @@index([variantId])
-  @@index([timestamp])
-  @@map("ab_test_results")
-}
-
-model ab_test_assignments {
-  testId     String   @map("test_id")
-  userId     String   @map("user_id")
-  variantId  String   @map("variant_id")
-  assignedAt DateTime @default(now()) @map("assigned_at")
-  test       ab_tests @relation(fields: [testId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([testId, userId])
-  @@index([userId])
-  @@index([testId])
-  @@map("ab_test_assignments")
 }
 
 enum Role {
@@ -444,4 +388,150 @@ enum StatusImportacao {
   CONCLUIDO
   FALHA
   PARCIAL
+}
+
+// ============================================
+// Gamificação e Listas (adicionados pelo Squad B)
+// ============================================
+
+model badges {
+  id               String   @id
+  name             String
+  description      String
+  icon             String
+  category         String
+  points           Int
+  requirementType  String
+  requirementValue Int
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user_badges user_badges[]
+
+  @@map("badges")
+}
+
+model user_badges {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  badgeId    String   @map("badge_id")
+  progress   Int      @default(0)
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
+  badges badges @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model listas_compras {
+  id        String   @id @default(uuid())
+  nome      String
+  usuarioId String   @map("usuario_id")
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  itens_lista    itens_lista[]
+  savingsHistory SavingsHistory[]
+
+  @@index([usuarioId])
+  @@map("listas_compras")
+}
+
+model itens_lista {
+  id         String  @id @default(uuid())
+  listaId    String  @map("lista_id")
+  produtoId  String  @map("produto_id")
+  quantidade Int     @default(1)
+  comprado   Boolean @default(false)
+
+  listas_compras listas_compras @relation(fields: [listaId], references: [id], onDelete: Cascade)
+  produtos       produtos       @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@map("itens_lista")
+}
+
+// ============================================
+// Novos Models (Squad B - Dia 2)
+// ============================================
+
+model UserStreak {
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id")
+  currentStreak Int      @default(0) @map("current_streak")
+  longestStreak Int      @default(0) @map("longest_streak")
+  lastLogin     DateTime @map("last_login")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_streaks")
+}
+
+model SavingsHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  listId    String?  @map("list_id")
+  productId String?  @map("product_id")
+  pricePaid Int      @map("price_paid") // centavos
+  avgPrice  Int      @map("avg_price") // centavos
+  savings   Int // centavos
+  date      DateTime @default(now())
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list    listas_compras? @relation(fields: [listId], references: [id], onDelete: Cascade)
+  product produtos?       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("savings_history")
+}
+
+model Referral {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  referrerId  String    @map("referrer_id")
+  refereeId   String?   @map("referee_id")
+  status      String    @default("pending") // pending, completed
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  referrer User  @relation("referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User? @relation("referee", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@map("referrals")
+}
+
+model NotificationSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique // FCM token
+  platform  String // web, android, ios
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@index([userId])
+  @@map("notification_subscriptions")
+}
+
+// ============================================
+// IA - Eventos do Usuário
+// ============================================
+
+model UserEvent {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  mercadoId String   @map("mercado_id")
+  type      String // lista_criada, produto_adicionado_lista, etc
+  timestamp DateTime @default(now())
+  metadata  Json     @default("{}")
+
+  @@index([userId, mercadoId])
+  @@index([mercadoId, timestamp])
+  @@index([type, timestamp])
+  @@map("user_events")
 }

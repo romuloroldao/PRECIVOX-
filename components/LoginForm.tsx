@@ -39,6 +39,19 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
         // Aguardar um pouco para garantir que a sessão foi criada
         await new Promise(resolve => setTimeout(resolve, 500));
         
+        // IMPORTANTE: Emitir tokens após login bem-sucedido
+        try {
+          const { authClient } = await import('@/lib/auth-client');
+          const tokens = await authClient.issueTokens();
+          
+          if (!tokens) {
+            console.warn('[LoginForm] Não foi possível emitir tokens, mas login foi bem-sucedido');
+          }
+        } catch (error) {
+          console.error('[LoginForm] Erro ao emitir tokens:', error);
+          // Continuar mesmo se falhar (NextAuth session ainda funciona)
+        }
+        
         // Buscar dados do usuário para redirecionar corretamente
         const response = await fetch('/api/auth/session');
         const session = await response.json();

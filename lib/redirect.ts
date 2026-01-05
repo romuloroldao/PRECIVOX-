@@ -1,5 +1,5 @@
 // Utilitários de redirecionamento
-import { Role } from '@prisma/client';
+type Role = "ADMIN" | "GESTOR" | "CLIENTE";
 
 /**
  * Retorna a URL do dashboard apropriada baseada no role do usuário

@@ -1,119 +1,355 @@
+/**
+ * Dashboard Cliente - Tela Principal
+ * 
+ * SQUAD A - Frontend/UX
+ * 
+ * Tela principal após login do cliente
+ * Mostra economia, listas recentes, badges
+ */
+
 'use client';
 
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/shared';
+import { EconomyCard } from '@/components/cliente/EconomyCard';
+import { RecentLists } from '@/components/cliente/RecentLists';
+import { StreakCounter } from '@/components/cliente/StreakCounter';
+import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
 
-export default function ClienteHomePage() {
+interface DashboardData {
+  economy: {
+    totalSavings: number;
+    savingsThisMonth: number;
+  };
+  lists: Array<{
+    id: string;
+    name: string;
+    itemsCount: number;
+    totalSavings: number;
+    updatedAt: string;
+  }>;
+  badges: {
+    unlocked: number;
+    total: number;
+    recentlyUnlocked: any[];
+  };
+}
+
+export default function DashboardCliente() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  
+
+  // TODO: Pegar userId real do NextAuth
+  const userId = 'temp-user-id';
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        setIsLoading(true);
+
+        // Buscar dados em paralelo
+        const [statsRes, listsRes, badgesRes] = await Promise.all([
+          fetch(`/api/stats/global?userId=${userId}`),
+          fetch(`/api/lists?userId=${userId}&limit=6`),
+          fetch(`/api/gamification/badges?userId=${userId}`),
+        ]);
+
+        const [statsData, listsData, badgesData] = await Promise.all([
+          statsRes.json(),
+          listsRes.json(),
+          badgesRes.json(),
+        ]);
+
+        // Processar dados
+        setData({
+          economy: {
+            totalSavings: statsData.data?.totalSavings || 0,
+            savingsThisMonth: statsData.data?.savingsThisMonth || 0,
+          },
+          lists: listsData.data?.lists || [],
+          badges: {
+            unlocked: badgesData.data?.stats?.unlockedBadges || 0,
+            total: badgesData.data?.stats?.totalBadges || 12,
+            recentlyUnlocked: [],
+          },
+        });
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Erro ao carregar dados');
+
+        // Fallback para dados mock
+        setData({
+          economy: {
+            totalSavings: 15000, // R$ 150,00
+            savingsThisMonth: 4500, // R$ 45,00
+          },
+          lists: [],
+          badges: {
+            unlocked: 3,
+            total: 12,
+            recentlyUnlocked: [],
+          },
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, [userId]);
+
+  const handleCreateList = () => {
+    router.push('/cliente/listas/nova');
+  };
+
   return (
-    <DashboardLayout role="CLIENTE">
-      <div className="space-y-6">
-        {/* Welcome */}
-        <div className="bg-gradient-to-r from-precivox-blue to-blue-600 rounded-2xl p-8 text-white">
-          <h1 className="text-3xl font-bold mb-2">Bem-vindo ao PRECIVOX!</h1>
-          <p className="text-lg opacity-90 mb-6">
-            Sua plataforma inteligente de comparação de preços
-          </p>
-          <button 
-            onClick={() => router.push('/')}
-            className="bg-white text-precivox-blue px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors"
+    <main style={styles.main}>
+      <div style={styles.container}>
+        {/* Header */}
+        <header style={styles.header}>
+          <div>
+            <h1 style={styles.greeting}>Olá! 👋</h1>
+            <p style={styles.subtitle}>Veja sua economia e listas</p>
+          </div>
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleCreateList}
+            leftIcon={<span>➕</span>}
           >
-            🔍 Buscar Produtos Agora
-          </button>
-        </div>
+            Nova Lista
+          </Button>
+        </header>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1 */}
-          <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 bg-precivox-blue bg-opacity-10 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-precivox-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Comparar Preços
-            </h3>
-            <p className="text-gray-600 text-sm">
-              Compare preços de produtos em tempo real e economize nas suas compras
-            </p>
-            <button 
-              onClick={() => router.push('/')}
-              className="mt-4 text-precivox-blue font-medium text-sm hover:underline"
-            >
-              Começar agora →
-            </button>
-          </div>
+        {/* Economy Card */}
+        <section style={styles.economySection}>
+          <EconomyCard
+            totalSavings={data?.economy.totalSavings || 0}
+            savingsThisMonth={data?.economy.savingsThisMonth || 0}
+            isLoading={isLoading}
+          />
+        </section>
 
-          {/* Card 2 */}
-          <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 bg-precivox-green bg-opacity-10 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-precivox-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Alertas de Preço
-            </h3>
-            <p className="text-gray-600 text-sm">
-              Receba notificações quando o preço dos seus produtos favoritos baixar
-            </p>
-            <button 
-              onClick={() => router.push('/cliente/alertas')}
-              className="mt-4 text-precivox-blue font-medium text-sm hover:underline"
-            >
-              Criar alerta →
-            </button>
-          </div>
+        {/* Quick Stats */}
+        {!isLoading && data && (
+          <section style={styles.quickStats}>
+            <StatCard
+              icon="📝"
+              label="Listas"
+              value={data.lists.length.toString()}
+              color={TOKENS.colors.primary[600]}
+            />
+            <StatCard
+              icon="🏆"
+              label="Badges"
+              value={`${data.badges.unlocked}/${data.badges.total}`}
+              color={TOKENS.colors.secondary[600]}
+            />
+            <StatCard
+              icon="📊"
+              label="Este Mês"
+              value={`R$ ${(data.economy.savingsThisMonth / 100).toFixed(0)}`}
+              color={TOKENS.colors.accent[600]}
+            />
+          </section>
+        )}
 
-          {/* Card 3 */}
-          <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 bg-blue-500 bg-opacity-10 rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Relatórios
-            </h3>
-            <p className="text-gray-600 text-sm">
-              Visualize suas economias e histórico de comparações
-            </p>
-            <button 
-              onClick={() => router.push('/cliente/relatorios')}
-              className="mt-4 text-precivox-blue font-medium text-sm hover:underline"
-            >
-              Ver relatórios →
-            </button>
-          </div>
-        </div>
+        {/* Streak Counter */}
+        {!isLoading && (
+          <section style={styles.streakSection}>
+            <StreakCounter userId={userId} />
+          </section>
+        )}
 
-        {/* Stats */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Suas Estatísticas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-precivox-blue">0</p>
-              <p className="text-sm text-gray-600 mt-1">Produtos Comparados</p>
+        {/* Recent Lists */}
+        <section style={styles.listsSection}>
+          <RecentLists
+            lists={data?.lists || []}
+            isLoading={isLoading}
+          />
+        </section>
+
+        {/* CTA Section */}
+        {!isLoading && data && data.lists.length === 0 && (
+          <section style={styles.ctaSection}>
+            <div style={styles.ctaCard}>
+              <span style={styles.ctaIcon}>🎯</span>
+              <h3 style={styles.ctaTitle}>Comece a Economizar!</h3>
+              <p style={styles.ctaText}>
+                Crie sua primeira lista e descubra onde comprar mais barato
+              </p>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleCreateList}
+                fullWidth
+              >
+                Criar Primeira Lista
+              </Button>
             </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-precivox-green">R$ 0,00</p>
-              <p className="text-sm text-gray-600 mt-1">Economia Total</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-blue-500">0</p>
-              <p className="text-sm text-gray-600 mt-1">Alertas Ativos</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-purple-500">0</p>
-              <p className="text-sm text-gray-600 mt-1">Favoritos</p>
-            </div>
+          </section>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div style={styles.error}>
+            ⚠️ {error}
           </div>
-        </div>
+        )}
       </div>
-    </DashboardLayout>
+    </main>
   );
 }
 
+// Componente auxiliar: StatCard
+function StatCard({
+  icon,
+  label,
+  value,
+  color
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <div style={styles.statCard}>
+      <span style={{ ...styles.statIcon, color }}>{icon}</span>
+      <div>
+        <p style={styles.statValue}>{value}</p>
+        <p style={styles.statLabel}>{label}</p>
+      </div>
+    </div>
+  );
+}
+
+// Estilos - Mobile-First usando TOKENS
+const styles = {
+  main: {
+    minHeight: '100vh',
+    backgroundColor: TOKENS.colors.surface,
+  },
+
+  container: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: TOKENS.spacing[4],
+  },
+
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: TOKENS.spacing[6],
+    flexWrap: 'wrap' as const,
+    gap: TOKENS.spacing[4],
+  },
+
+  greeting: {
+    fontSize: TOKENS.typography.fontSize['3xl'],
+    fontWeight: TOKENS.typography.fontWeight.extrabold,
+    color: TOKENS.colors.text.primary,
+    margin: 0,
+    marginBottom: TOKENS.spacing[1],
+  },
+
+  subtitle: {
+    fontSize: TOKENS.typography.fontSize.base,
+    color: TOKENS.colors.text.secondary,
+    margin: 0,
+  },
+
+  economySection: {
+    marginBottom: TOKENS.spacing[6],
+  },
+
+  quickStats: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gap: TOKENS.spacing[4],
+    marginBottom: TOKENS.spacing[6],
+  },
+
+  streakSection: {
+    marginBottom: TOKENS.spacing[6],
+  },
+
+  statCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: TOKENS.spacing[3],
+    padding: TOKENS.spacing[4],
+    backgroundColor: TOKENS.colors.background,
+    borderRadius: TOKENS.borderRadius.lg,
+    border: `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}`,
+  },
+
+  statIcon: {
+    fontSize: '32px',
+  },
+
+  statValue: {
+    fontSize: TOKENS.typography.fontSize.xl,
+    fontWeight: TOKENS.typography.fontWeight.bold,
+    color: TOKENS.colors.text.primary,
+    margin: 0,
+    marginBottom: TOKENS.spacing[1],
+  },
+
+  statLabel: {
+    fontSize: TOKENS.typography.fontSize.sm,
+    color: TOKENS.colors.text.secondary,
+    margin: 0,
+  },
+
+  listsSection: {
+    marginBottom: TOKENS.spacing[6],
+  },
+
+  ctaSection: {
+    marginTop: TOKENS.spacing[8],
+  },
+
+  ctaCard: {
+    textAlign: 'center' as const,
+    padding: TOKENS.spacing[8],
+    backgroundColor: TOKENS.colors.background,
+    borderRadius: TOKENS.borderRadius.xl,
+    border: `${TOKENS.borderWidth[2]} dashed ${TOKENS.colors.border}`,
+  },
+
+  ctaIcon: {
+    fontSize: '64px',
+    display: 'block',
+    marginBottom: TOKENS.spacing[4],
+  },
+
+  ctaTitle: {
+    fontSize: TOKENS.typography.fontSize['2xl'],
+    fontWeight: TOKENS.typography.fontWeight.bold,
+    color: TOKENS.colors.text.primary,
+    marginBottom: TOKENS.spacing[2],
+  },
+
+  ctaText: {
+    fontSize: TOKENS.typography.fontSize.base,
+    color: TOKENS.colors.text.secondary,
+    marginBottom: TOKENS.spacing[6],
+    maxWidth: '400px',
+    margin: `0 auto ${TOKENS.spacing[6]} auto`,
+  },
+
+  error: {
+    padding: TOKENS.spacing[4],
+    backgroundColor: TOKENS.colors.error,
+    color: TOKENS.colors.text.inverse,
+    borderRadius: TOKENS.borderRadius.md,
+    textAlign: 'center' as const,
+    marginTop: TOKENS.spacing[4],
+  },
+};

@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-
+import { TokenManager } from '@/lib/token-manager';
 import { prisma } from '@/lib/prisma';
-
-import { getServerSession } from 'next-auth';
-
-import { authOptions } from '@/lib/auth';
-
 import bcrypt from 'bcryptjs';
-
 import { z } from 'zod';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
 
 const createUserSchema = z.object({
   nome: z.string().min(2),
@@ -23,55 +15,27 @@ const createUserSchema = z.object({
   role: z.enum(['CLIENTE', 'GESTOR', 'ADMIN']),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    // Verificar autenticação via NextAuth
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
+    // Passar request para validar token do header Authorization
+    const user = await TokenManager.validateSession({
+      headers: req.headers,
+      cookies: req.cookies,
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verificar se é admin
-    if (session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores' },
-        { status: 403 }
-      );
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Buscar parâmetro de filtro por role
-    const { searchParams } = new URL(request.url);
-    const roleFilter = searchParams.get('role');
-
-    // Construir where clause
-    const where: any = {};
-    if (roleFilter) {
-      where.role = roleFilter;
-    }
-
-    if (roleFilter === 'GESTOR') {
-      const gestores = await prisma.user.findMany({
-        where,
-        orderBy: { dataCriacao: 'desc' },
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          role: true,
-          dataCriacao: true,
-          ultimoLogin: true
-        }
-      });
-      return NextResponse.json(gestores);
-    }
+    const { searchParams } = new URL(req.url);
+    const role = searchParams.get('role');
 
     const users = await prisma.user.findMany({
-      where,
-      orderBy: { dataCriacao: 'desc' },
+      where: role ? { role: role as 'CLIENTE' | 'GESTOR' | 'ADMIN' } : undefined,
       select: {
         id: true,
         nome: true,
@@ -79,13 +43,16 @@ export async function GET(request: NextRequest) {
         role: true,
         dataCriacao: true,
         ultimoLogin: true
-      }
+      },
+      orderBy: { dataCriacao: 'desc' }
     });
 
-    return NextResponse.json(users);
-
+    return NextResponse.json({
+      success: true,
+      data: users
+    });
   } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
+    console.error('[API /admin/users GET] Erro:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -93,28 +60,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // Verificar autenticação via NextAuth
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
+    const user = await TokenManager.validateSession();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verificar se é admin
-    if (session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores' },
-        { status: 403 }
-      );
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Validar dados
-    const body = await request.json();
+    const body = await req.json();
     const validatedData = createUserSchema.parse(body);
 
     // Verificar se email já existe
@@ -135,7 +93,7 @@ export async function POST(request: NextRequest) {
     // Criar usuário
     const newUser = await prisma.user.create({
       data: {
-        id: `user-${Date.now()}`,
+        id: `user-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         nome: validatedData.nome,
         email: validatedData.email,
         senhaHash: hashedPassword,
@@ -155,7 +113,6 @@ export async function POST(request: NextRequest) {
       success: true,
       data: newUser
     }, { status: 201 });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -164,7 +121,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Erro ao criar usuário:', error);
+    console.error('[API /admin/users POST] Erro:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

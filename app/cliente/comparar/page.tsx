@@ -1,199 +1,501 @@
+/**
+ * Página de Comparação - Comparar Preços
+ * 
+ * SQUAD A - Frontend/UX
+ * 
+ * Tabela de comparação de preços entre mercados
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
+import { Button } from '@/components/shared';
+import { TOKENS } from '@/styles/tokens';
 
 interface Product {
   id: string;
-  nome: string;
-  preco: number;
-  mercado: string;
-  imagem?: string;
-  promoção?: boolean;
-  economia?: number;
+  name: string;
+  prices: {
+    marketId: string;
+    marketName: string;
+    price: number; // centavos
+    distance: number; // km
+    inStock: boolean;
+  }[];
+  bestDeal: {
+    marketId: string;
+    price: number;
+    savings: number;
+  };
 }
 
-export default function CompararPrecosPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
+interface ComparisonData {
+  products: Product[];
+  totalSavings: number;
+}
 
-  // Mock data para demonstração
+export default function ComparacaoPage() {
+  const [data, setData] = useState<ComparisonData | null>(null);
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
+  const [maxDistance, setMaxDistance] = useState<number>(10); // km
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Mock data para desenvolvimento
   useEffect(() => {
-    const mockProducts: Product[] = [
-      {
-        id: '1',
-        nome: 'Arroz Branco Tipo 1 - 5kg',
-        preco: 18.99,
-        mercado: 'Mercado Central',
-        promoção: true,
-        economia: 3.40,
-      },
-      {
-        id: '2',
-        nome: 'Feijão Preto - 1kg',
-        preco: 7.99,
-        mercado: 'Super Mega',
-        promoção: false,
-      },
-      {
-        id: '3',
-        nome: 'Óleo de Soja - 900ml',
-        preco: 6.99,
-        mercado: 'Atacadão',
-        promoção: true,
-        economia: 1.50,
-      },
-      {
-        id: '4',
-        nome: 'Açúcar Cristal - 1kg',
-        preco: 4.99,
-        mercado: 'Mercado Central',
-        promoção: false,
-      },
-      {
-        id: '5',
-        nome: 'Café em Pó - 500g',
-        preco: 16.99,
-        mercado: 'Super Mega',
-        promoção: true,
-        economia: 2.85,
-      },
-    ];
-    setProducts(mockProducts);
+    async function fetchComparison() {
+      try {
+        setIsLoading(true);
+        
+        // TODO: Buscar da API real
+        // const response = await fetch('/api/compare', {
+        //   method: 'POST',
+        //   body: JSON.stringify({ productIds: [...], location: {...} })
+        // });
+        
+        // Mock data
+        const mockData: ComparisonData = {
+          products: [
+            {
+              id: '1',
+              name: 'Arroz Tipo 1 5kg',
+              prices: [
+                { marketId: 'm1', marketName: 'Mercado A', price: 2200, distance: 0.8, inStock: true },
+                { marketId: 'm2', marketName: 'Mercado B', price: 2590, distance: 1.5, inStock: true },
+                { marketId: 'm3', marketName: 'Mercado C', price: 2450, distance: 3.2, inStock: false },
+              ],
+              bestDeal: { marketId: 'm1', price: 2200, savings: 390 },
+            },
+            {
+              id: '2',
+              name: 'Feijão Preto 1kg',
+              prices: [
+                { marketId: 'm1', marketName: 'Mercado A', price: 890, distance: 0.8, inStock: true },
+                { marketId: 'm2', marketName: 'Mercado B', price: 850, distance: 1.5, inStock: true },
+                { marketId: 'm3', marketName: 'Mercado C', price: 920, distance: 3.2, inStock: true },
+              ],
+              bestDeal: { marketId: 'm2', price: 850, savings: 70 },
+            },
+          ],
+          totalSavings: 460,
+        };
+        
+        setData(mockData);
+        
+        // Inicializar mercados selecionados (todos)
+        const allMarkets = Array.from(
+          new Set(mockData.products.flatMap((p) => p.prices.map((pr) => pr.marketId)))
+        );
+        setSelectedMarkets(allMarkets);
+      } catch (error) {
+        console.error('Error fetching comparison:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchComparison();
   }, []);
 
-  const filteredProducts = products.filter(p =>
-    p.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const allMarkets = data
+    ? Array.from(new Set(data.products.flatMap((p) => p.prices.map((pr) => pr.marketId))))
+    : [];
 
-  const totalEconomia = products
-    .filter(p => p.promoção)
-    .reduce((sum, p) => sum + (p.economia || 0), 0);
+  const filteredProducts = data?.products.map((product) => ({
+    ...product,
+    prices: product.prices.filter(
+      (price) =>
+        selectedMarkets.includes(price.marketId) &&
+        price.distance <= maxDistance
+    ),
+  }));
+
+  const handleToggleMarket = (marketId: string) => {
+    setSelectedMarkets((prev) =>
+      prev.includes(marketId)
+        ? prev.filter((id) => id !== marketId)
+        : [...prev, marketId]
+    );
+  };
+
+  const handleBuyHere = (product: Product) => {
+    const bestPrice = product.prices.find(
+      (p) => p.marketId === product.bestDeal.marketId
+    );
+    if (bestPrice) {
+      // Abrir Google Maps com rota
+      const url = `https://www.google.com/maps/search/${encodeURIComponent(
+        bestPrice.marketName
+      )}`;
+      window.open(url, '_blank');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <main style={styles.main}>
+        <div style={styles.container}>
+          <div style={styles.loading}>Carregando comparação...</div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!data || data.products.length === 0) {
+    return (
+      <main style={styles.main}>
+        <div style={styles.container}>
+          <div style={styles.empty}>
+            <span style={styles.emptyIcon}>🔍</span>
+            <p style={styles.emptyText}>Nenhum produto para comparar</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <DashboardLayout role="CLIENTE">
-      <div className="space-y-6">
+    <main style={styles.main}>
+      <div style={styles.container}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">🔍 Comparar Preços</h1>
-              <p className="text-lg opacity-90">
-                Encontre os melhores preços em toda a cidade
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm opacity-75">Economia Total</p>
-              <p className="text-4xl font-bold">R$ {totalEconomia.toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar produtos (ex: Arroz, Feijão, Óleo...)"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              />
-            </div>
-            <button className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-              Buscar
-            </button>
-          </div>
-        </div>
-
-        {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-gray-600">
-            {filteredProducts.length} {filteredProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
-          </p>
-          <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option>Ordenar por: Menor Preço</option>
-            <option>Ordenar por: Maior Preço</option>
-            <option>Ordenar por: Maior Economia</option>
-            <option>Ordenar por: Alfabética</option>
-          </select>
-        </div>
-
-        {/* Products Grid */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className={`bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all transform hover:scale-105 ${
-                product.promoção ? 'ring-2 ring-green-400' : ''
-              }`}
-            >
-              {/* Promoção Badge */}
-              {product.promoção && (
-                <div className="bg-green-500 text-white px-4 py-2 text-center font-semibold">
-                  🎉 Promoção!
-                </div>
-              )}
-
-              {/* Product Image */}
-              <div className="h-48 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                <div className="text-6xl">🛒</div>
-              </div>
-
-              {/* Product Info */}
-              <div className="p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  {product.nome}
-                </h3>
-                <p className="text-sm text-gray-600 mb-3">{product.mercado}</p>
-                
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-2xl font-bold text-gray-900">
-                    R$ {product.preco.toFixed(2)}
-                  </span>
-                  {product.promoção && (
-                    <span className="text-sm text-gray-500 line-through">
-                      R$ {(product.preco + (product.economia || 0)).toFixed(2)}
-                    </span>
-                  )}
-                </div>
-
-                {product.promoção && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                    <p className="text-sm font-semibold text-green-800">
-                      💰 Economize R$ {product.economia?.toFixed(2)}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                    Ver Detalhes
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                    ❤️
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredProducts.length === 0 && (
-          <div className="bg-white rounded-xl shadow-md p-12 text-center">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              Nenhum produto encontrado
-            </h3>
-            <p className="text-gray-600">
-              Tente buscar por outros termos ou explore nossas categorias
+        <header style={styles.header}>
+          <div>
+            <h1 style={styles.title}>Comparação de Preços</h1>
+            <p style={styles.subtitle}>
+              Compare preços e encontre as melhores ofertas
             </p>
           </div>
-        )}
+
+          {/* Total Savings */}
+          <div style={styles.savingsCard}>
+            <span style={styles.savingsLabel}>Economia Total</span>
+            <span style={styles.savingsValue}>
+              R$ {(data.totalSavings / 100).toFixed(2)}
+            </span>
+          </div>
+        </header>
+
+        {/* Filters */}
+        <div style={styles.filters}>
+          {/* Markets Filter */}
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Mercados:</label>
+            <div style={styles.checkboxGroup}>
+              {allMarkets.map((marketId) => {
+                const market = data.products[0].prices.find(
+                  (p) => p.marketId === marketId
+                );
+                return (
+                  <label key={marketId} style={styles.checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={selectedMarkets.includes(marketId)}
+                      onChange={() => handleToggleMarket(marketId)}
+                    />
+                    <span>{market?.marketName}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Distance Filter */}
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>
+              Distância máxima: {maxDistance}km
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              value={maxDistance}
+              onChange={(e) => setMaxDistance(Number(e.target.value))}
+              style={styles.slider}
+            />
+          </div>
+        </div>
+
+        {/* Comparison Table */}
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Produto</th>
+                {selectedMarkets.map((marketId) => {
+                  const market = data.products[0].prices.find(
+                    (p) => p.marketId === marketId
+                  );
+                  return (
+                    <th key={marketId} style={styles.th}>
+                      {market?.marketName}
+                      <br />
+                      <span style={styles.distance}>
+                        {market?.distance.toFixed(1)}km
+                      </span>
+                    </th>
+                  );
+                })}
+                <th style={styles.th}>Melhor Oferta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts?.map((product) => (
+                <tr key={product.id}>
+                  <td style={styles.td}>
+                    <strong>{product.name}</strong>
+                  </td>
+                  {selectedMarkets.map((marketId) => {
+                    const price = product.prices.find(
+                      (p) => p.marketId === marketId
+                    );
+                    const isBest = price?.marketId === product.bestDeal.marketId;
+
+                    return (
+                      <td
+                        key={marketId}
+                        style={{
+                          ...styles.td,
+                          ...(isBest ? styles.bestPrice : {}),
+                        }}
+                      >
+                        {price ? (
+                          <>
+                            <span style={styles.price}>
+                              R$ {(price.price / 100).toFixed(2)}
+                            </span>
+                            {!price.inStock && (
+                              <span style={styles.outOfStock}>
+                                Sem estoque
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span style={styles.noData}>-</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td style={styles.td}>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleBuyHere(product)}
+                    >
+                      🛒 Comprar Aqui
+                    </Button>
+                    <div style={styles.savings}>
+                      Economize R${' '}
+                      {(product.bestDeal.savings / 100).toFixed(2)}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Actions */}
+        <div style={styles.actions}>
+          <Button variant="secondary" size="md">
+            📤 Compartilhar
+          </Button>
+          <Button variant="outline" size="md">
+            📄 Exportar PDF
+          </Button>
+        </div>
       </div>
-    </DashboardLayout>
+    </main>
   );
 }
+
+const styles = {
+  main: {
+    minHeight: '100vh',
+    backgroundColor: TOKENS.colors.surface,
+  },
+
+  container: {
+    maxWidth: '1400px',
+    margin: '0 auto',
+    padding: TOKENS.spacing[4],
+  },
+
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: TOKENS.spacing[6],
+    flexWrap: 'wrap' as const,
+    gap: TOKENS.spacing[4],
+  },
+
+  title: {
+    fontSize: TOKENS.typography.fontSize['3xl'],
+    fontWeight: TOKENS.typography.fontWeight.extrabold,
+    color: TOKENS.colors.text.primary,
+    margin: 0,
+    marginBottom: TOKENS.spacing[1],
+  },
+
+  subtitle: {
+    fontSize: TOKENS.typography.fontSize.base,
+    color: TOKENS.colors.text.secondary,
+    margin: 0,
+  },
+
+  savingsCard: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-end',
+    padding: TOKENS.spacing[4],
+    backgroundColor: TOKENS.colors.success + '20',
+    borderRadius: TOKENS.borderRadius.lg,
+    border: `${TOKENS.borderWidth[2]} solid ${TOKENS.colors.success}`,
+  },
+
+  savingsLabel: {
+    fontSize: TOKENS.typography.fontSize.sm,
+    color: TOKENS.colors.success,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    marginBottom: TOKENS.spacing[1],
+  },
+
+  savingsValue: {
+    fontSize: TOKENS.typography.fontSize['2xl'],
+    fontWeight: TOKENS.typography.fontWeight.extrabold,
+    color: TOKENS.colors.success,
+  },
+
+  filters: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: TOKENS.spacing[4],
+    padding: TOKENS.spacing[4],
+    backgroundColor: TOKENS.colors.background,
+    borderRadius: TOKENS.borderRadius.lg,
+    marginBottom: TOKENS.spacing[6],
+  },
+
+  filterGroup: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: TOKENS.spacing[2],
+  },
+
+  filterLabel: {
+    fontSize: TOKENS.typography.fontSize.sm,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    color: TOKENS.colors.text.primary,
+  },
+
+  checkboxGroup: {
+    display: 'flex',
+    gap: TOKENS.spacing[4],
+    flexWrap: 'wrap' as const,
+  },
+
+  checkbox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: TOKENS.spacing[2],
+    fontSize: TOKENS.typography.fontSize.sm,
+    color: TOKENS.colors.text.primary,
+    cursor: 'pointer',
+  },
+
+  slider: {
+    width: '100%',
+    maxWidth: '400px',
+  },
+
+  tableContainer: {
+    overflowX: 'auto' as const,
+    marginBottom: TOKENS.spacing[6],
+  },
+
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+    backgroundColor: TOKENS.colors.background,
+    borderRadius: TOKENS.borderRadius.lg,
+    overflow: 'hidden' as const,
+  },
+
+  th: {
+    padding: TOKENS.spacing[3],
+    backgroundColor: TOKENS.colors.surface,
+    borderBottom: `${TOKENS.borderWidth[2]} solid ${TOKENS.colors.border}`,
+    fontSize: TOKENS.typography.fontSize.sm,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    color: TOKENS.colors.text.primary,
+    textAlign: 'left' as const,
+  },
+
+  td: {
+    padding: TOKENS.spacing[3],
+    borderBottom: `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}`,
+    fontSize: TOKENS.typography.fontSize.sm,
+    color: TOKENS.colors.text.primary,
+  },
+
+  bestPrice: {
+    backgroundColor: TOKENS.colors.success + '10',
+    fontWeight: TOKENS.typography.fontWeight.bold,
+  },
+
+  price: {
+    display: 'block',
+    marginBottom: TOKENS.spacing[1],
+  },
+
+  outOfStock: {
+    display: 'block',
+    fontSize: TOKENS.typography.fontSize.xs,
+    color: TOKENS.colors.error,
+  },
+
+  noData: {
+    color: TOKENS.colors.text.secondary,
+  },
+
+  distance: {
+    fontSize: TOKENS.typography.fontSize.xs,
+    color: TOKENS.colors.text.secondary,
+    fontWeight: TOKENS.typography.fontWeight.normal,
+  },
+
+  savings: {
+    marginTop: TOKENS.spacing[2],
+    fontSize: TOKENS.typography.fontSize.xs,
+    color: TOKENS.colors.success,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+  },
+
+  actions: {
+    display: 'flex',
+    gap: TOKENS.spacing[3],
+    justifyContent: 'center',
+  },
+
+  loading: {
+    textAlign: 'center' as const,
+    padding: TOKENS.spacing[12],
+    color: TOKENS.colors.text.secondary,
+  },
+
+  empty: {
+    textAlign: 'center' as const,
+    padding: TOKENS.spacing[12],
+  },
+
+  emptyIcon: {
+    fontSize: '64px',
+    display: 'block',
+    marginBottom: TOKENS.spacing[4],
+    opacity: 0.5,
+  },
+
+  emptyText: {
+    fontSize: TOKENS.typography.fontSize.lg,
+    color: TOKENS.colors.text.secondary,
+  },
+};

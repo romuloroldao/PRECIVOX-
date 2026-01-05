@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Otimização para deploy (Docker/Self-hosted)
+  output: 'standalone',
+
   reactStrictMode: true,
   swcMinify: true,
-  
+
   // Headers para assets estáticos e PWA
   async headers() {
     return [
@@ -78,6 +81,18 @@ const nextConfig = {
   // Experimental
   experimental: {
     optimizeCss: true,
+  },
+
+  // Webpack Safe-Guards
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Bloquear Prisma no client-side
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        '@prisma/client': false,
+      };
+    }
+    return config;
   },
 };
 

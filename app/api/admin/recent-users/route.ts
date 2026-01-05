@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // Forçar renderização dinâmica
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
+import { prisma } from '@/lib/prisma';
+import { TokenManager } from '@/lib/token-manager';
 
 // Rate limiting simples em memória
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -32,26 +31,41 @@ function checkRateLimit(identifier: string): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verificar autenticação via NextAuth
-    const session = await getServerSession(authOptions);
+    // Verificar autenticação usando TokenManager
+    // Passar request para validar token do header Authorization
+    const user = await TokenManager.validateRole('ADMIN', {
+      headers: request.headers,
+      cookies: request.cookies,
+    });
     
-    if (!session || !session.user) {
+    // Debug: Log para verificar sessão
+    console.log('[API /admin/recent-users] Session check:', {
+      hasUser: !!user,
+      userRole: user?.role,
+      hasAuthHeader: !!request.headers.get('authorization'),
+      cookies: request.cookies.getAll().map(c => c.name),
+    });
+    
+    if (!user) {
+      // Verificar se é problema de autenticação ou permissão
+      const sessionUser = await TokenManager.validateSession({
+        headers: request.headers,
+        cookies: request.cookies,
+      });
+      if (!sessionUser) {
+        return NextResponse.json(
+          { error: 'Não autenticado', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    // Verificar se é admin
-    if (session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores' },
+        { error: 'Acesso negado - Apenas administradores', code: 'FORBIDDEN' },
         { status: 403 }
       );
     }
 
     // Rate limiting por usuário
-    const userId = (session.user as any).id || session.user.email;
+    const userId = user.id || user.email;
     if (!checkRateLimit(userId || 'anonymous')) {
       console.warn(`Rate limit excedido para usuário: ${userId}`);
       return NextResponse.json(
@@ -78,10 +92,13 @@ export async function GET(request: NextRequest) {
       )
     ]);
 
-    return NextResponse.json(recentUsers);
+    return NextResponse.json({
+      success: true,
+      data: recentUsers
+    });
 
   } catch (error) {
-    console.error('Erro ao buscar usuários recentes:', error);
+    console.error('[API /admin/recent-users] Erro ao buscar usuários recentes:', error);
     
     // Erro mais específico para timeout
     if (error instanceof Error && error.message === 'Timeout na consulta') {
@@ -92,7 +109,7 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // Forçar renderização dinâmica
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
+import { prisma } from '@/lib/prisma';
+import { TokenManager } from '@/lib/token-manager';
 
 // Rate limiting simples em memória
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -32,26 +31,42 @@ function checkRateLimit(identifier: string): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verificar autenticação via NextAuth
-    const session = await getServerSession(authOptions);
+    // Verificar autenticação usando TokenManager
+    // Passar request para validar token do header Authorization
+    const user = await TokenManager.validateRole('ADMIN', {
+      headers: request.headers,
+      cookies: request.cookies,
+    });
     
-    if (!session || !session.user) {
+    // Debug: Log para verificar sessão
+    console.log('[API /admin/stats] Session check:', {
+      hasUser: !!user,
+      userRole: user?.role,
+      userId: user?.id,
+      hasAuthHeader: !!request.headers.get('authorization'),
+      cookies: request.cookies.getAll().map(c => c.name),
+    });
+    
+    if (!user) {
+      // Verificar se é problema de autenticação ou permissão
+      const sessionUser = await TokenManager.validateSession({
+        headers: request.headers,
+        cookies: request.cookies,
+      });
+      if (!sessionUser) {
+        return NextResponse.json(
+          { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    // Verificar se é admin
-    if (session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores' },
+        { error: 'Forbidden', code: 'FORBIDDEN' },
         { status: 403 }
       );
     }
 
     // Rate limiting por usuário
-    const userId = (session.user as any).id || session.user.email;
+    const userId = user.id || user.email;
     if (!checkRateLimit(userId || 'anonymous')) {
       console.warn(`Rate limit excedido para usuário: ${userId}`);
       return NextResponse.json(
@@ -65,25 +80,32 @@ export async function GET(request: NextRequest) {
       prisma.user.count(),
       prisma.user.count({ where: { role: 'CLIENTE' } }),
       prisma.user.count({ where: { role: 'GESTOR' } }),
-      prisma.user.count({ where: { role: 'ADMIN' } })
+      prisma.user.count({ where: { role: 'ADMIN' } }),
+      prisma.mercados.count(),
+      prisma.produtos.count()
     ]);
 
-    const [total, clientes, gestores, admins] = await Promise.race([
+    const [total, clientes, gestores, admins, markets, products] = await Promise.race([
       statsPromise,
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout na consulta')), 5000)
       )
-    ]) as [number, number, number, number];
+    ]) as [number, number, number, number, number, number];
 
     return NextResponse.json({
-      total,
-      clientes,
-      gestores,
-      admins
+      success: true,
+      data: {
+        total,
+        clientes,
+        gestores,
+        admins,
+        markets,
+        products
+      }
     });
 
   } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error);
+    console.error('[API /admin/stats] Erro ao buscar estatísticas:', error);
     
     // Erro mais específico para timeout
     if (error instanceof Error && error.message === 'Timeout na consulta') {
@@ -94,7 +116,7 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

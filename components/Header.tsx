@@ -1,8 +1,10 @@
-// Componente de Header com funcionalidade de logout
+// Componente de Header com funcionalidade de logout usando NextAuth
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
+import Link from 'next/link';
 
 interface HeaderProps {
   title?: string;
@@ -11,47 +13,34 @@ interface HeaderProps {
 
 export default function Header({ title = 'PRECIVOX', showUserInfo = true }: HeaderProps) {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Buscar informações do usuário do localStorage
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decoded = JSON.parse(atob(token.split('.')[1]));
-        setUser({
-          id: decoded.id,
-          nome: decoded.nome,
-          email: decoded.email,
-          role: decoded.role
-        });
-      } catch (error) {
-        console.error('Erro ao decodificar token:', error);
-      }
+    // Aguardar carregamento da sessão
+    if (status !== 'loading') {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, []);
+  }, [status]);
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        // Chamar API de logout (opcional)
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }).catch(() => {
-          // Ignorar erros de API
-        });
+      // Limpar tokens do authClient
+      try {
+        const { authClient } = await import('@/lib/auth-client');
+        authClient.clearTokens();
+      } catch (error) {
+        console.warn('[Header] Erro ao limpar tokens:', error);
       }
+      
+      // Usar signOut do NextAuth que limpa cookies automaticamente
+      await signOut({ 
+        callbackUrl: '/',
+        redirect: true 
+      });
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-    } finally {
-      // Limpar localStorage e redirecionar
-      localStorage.removeItem('token');
+      // Fallback: redirecionar mesmo se houver erro
       window.location.href = '/';
     }
   };
@@ -74,13 +63,18 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true }: Head
     return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
-  if (isLoading) {
+  const user = session?.user;
+  const userRole = (user as any)?.role;
+
+  if (isLoading || status === 'loading') {
     return (
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                {title}
+              </Link>
             </div>
             <div className="animate-pulse">
               <div className="h-8 w-32 bg-gray-200 rounded"></div>
@@ -96,31 +90,50 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true }: Head
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-            {user && (
-              <span className={`ml-3 px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                {getRoleLabel(user.role)}
+            <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+              {title}
+            </Link>
+            {user && userRole && (
+              <span className={`ml-3 px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(userRole)}`}>
+                {getRoleLabel(userRole)}
               </span>
             )}
           </div>
           
-          {showUserInfo && user && (
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user.nome}</p>
-                <p className="text-xs text-gray-500">{user.email}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+          <div className="flex items-center space-x-4">
+            {showUserInfo && user ? (
+              // Usuário autenticado: mostrar nome e botão de logout
+              <>
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-gray-900">{user.name || user.email}</p>
+                  {user.email && user.name && (
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  )}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                  aria-label="Sair"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span className="hidden sm:inline">Sair</span>
+                </button>
+              </>
+            ) : (
+              // Usuário não autenticado: mostrar botão de entrar
+              <Link
+                href="/login"
+                className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                 </svg>
-                Sair
-              </button>
-            </div>
-          )}
+                Entrar
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </header>

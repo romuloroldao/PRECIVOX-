@@ -18,6 +18,23 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     },
     {
+      name: 'precivox-frontend',
+      script: 'npm',
+      args: 'start',
+      cwd: '/root',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000,
+      },
+      error_file: '/var/log/precivox-frontend-error.log',
+      out_file: '/var/log/precivox-frontend-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+    {
       name: 'precivox-ai-scheduler',
       script: 'npx',
       args: 'tsx core/ai/run-scheduler.ts',

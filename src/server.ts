@@ -8,6 +8,8 @@ import unidadesRouter from './routes/unidades';
 import planosRouter from './routes/planos';
 import produtosRouter from './routes/produtos';
 import authRouter from './routes/auth';
+import publicRouter from './routes/public';
+import aiEnginesRouter from '../backend/routes/ai-engines.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -36,6 +38,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Rotas públicas (sem autenticação)
+app.use('/api/public', publicRouter);
+
 // Rotas da API
 app.use('/api/mercados', mercadosRouter);
 app.use('/api/markets', mercadosRouter); // ✅ Alias em inglês para compatibilidade com frontend
@@ -44,6 +49,7 @@ app.use('/api/planos', planosRouter);
 app.use('/api/produtos', produtosRouter);
 app.use('/api/products', produtosRouter); // ✅ Alias em inglês para compatibilidade
 app.use('/api/auth', authRouter);
+app.use('/api/ai-engines', aiEnginesRouter); // ✅ Rotas de IA
 
 // Tratamento de erros 404
 app.use((req, res) => {
@@ -66,6 +72,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 app.listen(PORT, () => {
   console.log(`🚀 Servidor PRECIVOX rodando na porta ${PORT}`);
   console.log(`📁 Diretório de uploads: ${uploadsDir}`);
+  console.log(`🤖 Rotas de IA disponíveis em /api/ai-engines`);
 });
 
 export default app;

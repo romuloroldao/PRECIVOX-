@@ -28,36 +28,34 @@ export async function GET(request: NextRequest) {
   try {
     console.log(`[${requestId}] GET /api/produtos/recomendacoes - Iniciando`);
 
-    // Verificar autenticação
+    // Verificar autenticação - permitir acesso público com dados limitados
     const session = await getServerSession(authOptions);
     
-    if (!session || !session.user) {
-      console.warn(`[${requestId}] Não autenticado`);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Não autenticado',
-          code: 'UNAUTHORIZED'
-        },
-        { status: 401 }
-      );
-    }
+    let userRole: string | null = null;
+    let userId: string | null = null;
+    let isAuthenticated = false;
 
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
+    if (session && session.user) {
+      isAuthenticated = true;
+      userRole = (session.user as any).role;
+      userId = (session.user as any).id;
 
-    // Permite acesso para ADMIN, GESTOR e CLIENTE
-    const allowedRoles = ['ADMIN', 'GESTOR', 'CLIENTE'];
-    if (!allowedRoles.includes(userRole)) {
-      console.warn(`[${requestId}] Acesso negado para role: ${userRole}`);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Acesso negado',
-          code: 'FORBIDDEN'
-        },
-        { status: 403 }
-      );
+      // Permite acesso para ADMIN, GESTOR e CLIENTE
+      const allowedRoles = ['ADMIN', 'GESTOR', 'CLIENTE'];
+      if (!allowedRoles.includes(userRole)) {
+        console.warn(`[${requestId}] Acesso negado para role: ${userRole}`);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Acesso negado',
+            code: 'FORBIDDEN'
+          },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Usuário não autenticado - retornar dados públicos limitados
+      console.log(`[${requestId}] Acesso não autenticado - retornando recomendações públicas`);
     }
 
     // Buscar produtos em promoção como recomendações
@@ -102,8 +100,8 @@ export async function GET(request: NextRequest) {
       take: 10,
     });
 
-    // Se GESTOR, filtrar apenas produtos dos seus mercados
-    if (userRole === 'GESTOR') {
+    // Se GESTOR autenticado, filtrar apenas produtos dos seus mercados
+    if (isAuthenticated && userRole === 'GESTOR') {
       const mercadosDoGestor = await prisma.mercados.findMany({
         where: { gestorId: userId },
         select: { id: true },
@@ -160,7 +158,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Para outros roles (ADMIN, CLIENTE), retornar todas as promoções
+    // Para outros roles (ADMIN, CLIENTE) ou usuários não autenticados, retornar todas as promoções
     const recomendacoes: Recomendacao[] = estoquesPromocao.map((estoque, index) => {
       const economia = estoque.preco && estoque.precoPromocional
         ? Number(estoque.preco) - Number(estoque.precoPromocional)

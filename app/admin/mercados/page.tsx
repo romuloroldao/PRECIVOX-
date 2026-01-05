@@ -71,10 +71,13 @@ export default function MercadosPage() {
     try {
       setLoading(true);
 
+      // Usar fetch autenticado que adiciona token automaticamente
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      
       const [mercadosRes, planosRes, gestoresRes] = await Promise.all([
-        fetch('/api/markets'),
-        fetch('/api/planos'),
-        fetch('/api/admin/users?role=GESTOR'),
+        authenticatedFetch('/api/markets'),
+        authenticatedFetch('/api/planos'),
+        authenticatedFetch('/api/admin/users?role=GESTOR'),
       ]);
 
       if (mercadosRes.ok) {
@@ -99,7 +102,10 @@ export default function MercadosPage() {
 
   const handleCreateMercado = async (data: any) => {
     try {
-      const response = await fetch('/api/markets', {
+      // Usar fetch autenticado que adiciona token automaticamente
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      
+      const response = await authenticatedFetch('/api/markets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +130,9 @@ export default function MercadosPage() {
 
   const handleUpdateMercado = async (data: any) => {
     try {
-      const response = await fetch(`/api/markets/${editingMercado.id}`, {
+      // Usar fetch autenticado
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch(`/api/markets/${editingMercado.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +160,9 @@ export default function MercadosPage() {
     if (!confirm('Tem certeza que deseja excluir este mercado?')) return;
 
     try {
-      const response = await fetch(`/api/markets/${mercadoId}`, {
+      // Usar fetch autenticado
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch(`/api/markets/${mercadoId}`, {
         method: 'DELETE',
       });
 

@@ -8,6 +8,8 @@ import LinkedInProvider from 'next-auth/providers/linkedin';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 import { getDashboardUrl } from './redirect';
+import { autoUnlockBadgesServer } from './gamification-server';
+import { checkAndUpdateStreak } from './streak-server';
 
 export const authOptions: NextAuthOptions = {
   adapter: CustomPrismaAdapter(prisma),
@@ -219,6 +221,12 @@ export const authOptions: NextAuthOptions = {
       // Fallback: retornar para página de login
       return `${baseUrl}/login`;
     },
+    
+    /**
+     * IMPORTANTE: NextAuth é usado APENAS para login social/onboarding
+     * Após login bem-sucedido, a aplicação deve emitir tokens próprios via /api/auth/token
+     * APIs não devem depender de getServerSession - usar TokenManager.validateSession
+     */
   },
 
   events: {
@@ -226,10 +234,25 @@ export const authOptions: NextAuthOptions = {
       // Atualizar último login na nossa tabela usuarios
       if (user.email) {
         try {
-          await prisma.user.update({
+          const updatedUser = await prisma.user.update({
             where: { email: user.email },
             data: { ultimoLogin: new Date() },
           });
+
+          // Verificar e atualizar streak (não bloquear se falhar)
+          if (updatedUser.id) {
+            try {
+              const streakResult = await checkAndUpdateStreak(updatedUser.id);
+              
+              // Se deve desbloquear badge (7 ou 30 dias consecutivos)
+              if (streakResult.shouldUnlockBadge) {
+                await autoUnlockBadgesServer(updatedUser.id, 'daily_login');
+              }
+            } catch (error) {
+              console.error('Error checking streak on login:', error);
+              // Continuar mesmo se streak falhar
+            }
+          }
         } catch (error) {
           console.log('Usuário não encontrado na tabela usuarios:', user.email);
         }

@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { autoUnlockBadgesServer } from '@/lib/gamification-server';
+import { invalidate } from '@/lib/redis';
 
 const registerSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  referralCode: z.string().optional(), // Código de referral opcional
 });
 
 export async function POST(request: NextRequest) {
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Criar usuário
     const newUser = await prisma.user.create({
       data: {
-        id: `user-${Date.now()}`,
+        id: `user-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         nome: validatedData.nome,
         email: validatedData.email,
         senhaHash: hashedPassword,
@@ -48,11 +51,52 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Processar referral se código fornecido
+    let referralReward = null;
+    if (validatedData.referralCode) {
+      try {
+        // Verificar se código é válido
+        const referral = await prisma.referral.findUnique({
+          where: { code: validatedData.referralCode },
+        });
+
+        if (referral && referral.status === 'pending' && referral.referrerId !== newUser.id) {
+          // Atualizar referral como completado
+          await prisma.referral.update({
+            where: { id: referral.id },
+            data: {
+              refereeId: newUser.id,
+              status: 'completed',
+              completedAt: new Date(),
+            },
+          });
+
+          // Recompensar referrer
+          await autoUnlockBadgesServer(referral.referrerId, 'referral_made');
+          await invalidate(`badges:${referral.referrerId}`);
+
+          // Recompensar referee (novo usuário)
+          // Badge será desbloqueado automaticamente quando sistema de pontos for implementado
+          await invalidate(`badges:${newUser.id}`);
+
+          referralReward = {
+            referrerRewarded: true,
+            refereeRewarded: true,
+            message: 'Você ganhou 50 pontos por usar um código de referral!',
+          };
+        }
+      } catch (error) {
+        console.error('Error processing referral:', error);
+        // Não bloquear registro se referral falhar
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         usuario: newUser,
         redirectUrl: '/cliente/home',
+        referralReward,
       },
     }, { status: 201 });
 

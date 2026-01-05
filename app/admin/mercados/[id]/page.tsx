@@ -38,7 +38,7 @@ export default function MercadoDetailsPage() {
 
   const loadGestores = async () => {
     try {
-      const response = await fetch('/api/admin/users?role=GESTOR');
+      const response = await fetch('/api/admin/users?role=GESTOR', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setGestores(data);
@@ -53,7 +53,7 @@ export default function MercadoDetailsPage() {
       const result = await apiFetch(`/api/markets/${mercadoId}`);
       
       if (result.error) {
-        toast.error(result.error);
+        toast.error(result.error.message || 'Erro ao carregar mercado');
       } else if (result.data) {
         setMercado(result.data.data || result.data);
       }
@@ -97,7 +97,7 @@ export default function MercadoDetailsPage() {
       });
 
       if (result.error) {
-        toast.error(result.error);
+        toast.error(result.error.message || 'Erro ao criar unidade');
       } else {
         await loadUnidades();
         setShowUnidadeForm(false);
@@ -117,7 +117,7 @@ export default function MercadoDetailsPage() {
       });
 
       if (result.error) {
-        toast.error(result.error);
+        toast.error(result.error.message || 'Erro ao criar unidade');
       } else {
         await loadUnidades();
         setEditingUnidade(null);
@@ -139,7 +139,7 @@ export default function MercadoDetailsPage() {
       });
 
       if (result.error) {
-        toast.error(result.error);
+        toast.error(result.error.message || 'Erro ao criar unidade');
       } else {
         await loadUnidades();
         toast.success('Unidade excluída com sucesso!');
@@ -168,7 +168,7 @@ export default function MercadoDetailsPage() {
       });
 
       if (result.error) {
-        toast.error(result.error);
+        toast.error(result.error.message || 'Erro ao associar gestor');
       } else if (result.data?.success) {
         toast.success('Gestor associado com sucesso!');
         setIsEditingGestor(false);
@@ -197,7 +197,7 @@ export default function MercadoDetailsPage() {
       });
 
       if (result.error) {
-        toast.error(result.error);
+        toast.error(result.error.message || 'Erro ao remover gestor');
       } else if (result.data?.success) {
         toast.success('Gestor removido com sucesso!');
         await loadMercado();

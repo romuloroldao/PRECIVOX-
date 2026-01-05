@@ -13,9 +13,23 @@ interface ListaLateralProps {
 }
 
 export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
-  const { itens, removerItem, atualizarQuantidade, limparLista, total, totalItens } = useLista();
+  const { 
+    itens, 
+    removerItem, 
+    atualizarQuantidade, 
+    limparLista, 
+    total, 
+    totalItens,
+    listaAtivaId,
+    listasSalvas,
+    criarNovaLista,
+    selecionarLista,
+    salvarListaAtual,
+    deletarLista
+  } = useLista();
   const { success, error } = useToast();
   const [nomeLista, setNomeLista] = useState('');
+  const [mostrarSeletorListas, setMostrarSeletorListas] = useState(false);
 
   useEffect(() => {
     if (!expandida) {
@@ -34,29 +48,8 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
       return;
     }
 
-    if (typeof window === 'undefined') {
-      error('Salvamento disponível apenas no navegador.');
-      return;
-    }
-
     try {
-      const listasSalvas = JSON.parse(
-        window.localStorage.getItem('precivox_listas_salvas') || '[]'
-      );
-
-      const novaLista = {
-        id: Date.now().toString(),
-        nome: nomeLista.trim(),
-        criadaEm: new Date().toISOString(),
-        total,
-        itens,
-      };
-
-      window.localStorage.setItem(
-        'precivox_listas_salvas',
-        JSON.stringify([novaLista, ...listasSalvas])
-      );
-
+      salvarListaAtual(nomeLista.trim());
       success('Lista salva com sucesso!');
       setNomeLista('');
     } catch (storageError) {
@@ -64,6 +57,19 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
       error('Não foi possível salvar a lista. Tente novamente.');
     }
   };
+
+  const handleCriarNovaLista = () => {
+    if (itens.length > 0) {
+      if (!confirm('Você tem itens na lista atual. Deseja criar uma nova lista vazia?')) {
+        return;
+      }
+    }
+    criarNovaLista('Nova Lista');
+    setNomeLista('');
+    success('Nova lista criada!');
+  };
+
+  const listaAtiva = listasSalvas.find(l => l.id === listaAtivaId);
 
   // Versão retraída (apenas ícone)
   if (!expandida) {
@@ -91,13 +97,26 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
         isOpen={expandida}
         onClose={onToggle}
         title={
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-text-primary" />
-            <span className="font-semibold text-text-primary">Minha Lista</span>
-            {totalItens > 0 && (
-              <span className="bg-success-100 text-success-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                {totalItens}
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-text-primary" />
+              <span className="font-semibold text-text-primary">
+                {listaAtiva?.nome || 'Minha Lista'}
               </span>
+              {totalItens > 0 && (
+                <span className="bg-success-100 text-success-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                  {totalItens}
+                </span>
+              )}
+            </div>
+            {listasSalvas.length > 1 && (
+              <button
+                onClick={() => setMostrarSeletorListas(!mostrarSeletorListas)}
+                className="text-xs text-text-secondary hover:text-text-primary"
+                title="Alternar entre listas"
+              >
+                {mostrarSeletorListas ? '▼' : '▶'} Listas
+              </button>
             )}
           </div>
         }
@@ -105,7 +124,70 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
         size="lg"
       >
         <div className="flex h-full flex-col">
-        {/* Lista de itens */}
+          {/* Seletor de Listas */}
+          {mostrarSeletorListas && listasSalvas.length > 0 && (
+            <div className="border-b border-gray-200 p-3 bg-gray-50">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {listasSalvas.map((lista) => (
+                  <div
+                    key={lista.id}
+                    className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
+                      lista.id === listaAtivaId
+                        ? 'bg-precivox-blue text-white'
+                        : 'bg-white hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      selecionarLista(lista.id);
+                      setMostrarSeletorListas(false);
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${
+                        lista.id === listaAtivaId ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {lista.nome}
+                      </p>
+                      <p className={`text-xs ${
+                        lista.id === listaAtivaId ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                        {lista.itens.length} itens • R$ {lista.total.toFixed(2).replace('.', ',')}
+                      </p>
+                    </div>
+                    {lista.id === listaAtivaId && (
+                      <span className="text-xs text-blue-100">✓</span>
+                    )}
+                    {listasSalvas.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Tem certeza que deseja excluir esta lista?')) {
+                            deletarLista(lista.id);
+                          }
+                        }}
+                        className={`ml-2 p-1 rounded ${
+                          lista.id === listaAtivaId
+                            ? 'hover:bg-blue-700 text-white'
+                            : 'hover:bg-red-100 text-red-600'
+                        }`}
+                        title="Excluir lista"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleCriarNovaLista}
+                className="mt-2 w-full px-3 py-2 text-sm bg-precivox-blue text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nova Lista
+              </button>
+            </div>
+          )}
+          
+          {/* Lista de itens */}
           <div className="flex-1 overflow-y-auto pr-1">
           {itens.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center text-text-secondary py-12 px-4">
@@ -241,34 +323,34 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
                   <>
                     <div className="space-y-2">
                       <label htmlFor="nome-lista" className="text-xs font-medium text-text-secondary">
-                        Nome da lista
+                        {listaAtiva ? 'Renomear lista' : 'Nome da lista'}
                       </label>
                       <input
                         id="nome-lista"
                         type="text"
-                        value={nomeLista}
+                        value={nomeLista || listaAtiva?.nome || ''}
                         onChange={(event) => setNomeLista(event.target.value)}
-                        placeholder="Ex: Compras do mês"
+                        placeholder={listaAtiva?.nome || "Ex: Compras do mês"}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-2 focus:ring-success-200"
                       />
-            </div>
+                    </div>
             
                     <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
+                      <Button
                         type="button"
                         variant="ghost"
                         className="w-full border border-transparent text-error-600 hover:bg-error-50 hover:text-error-700"
-              onClick={limparLista}
-            >
-              Limpar Lista
-            </Button>
+                        onClick={limparLista}
+                      >
+                        Limpar Lista
+                      </Button>
                       <Button
                         type="button"
                         variant="success"
                         className="w-full"
                         onClick={handleSalvarLista}
                       >
-                        Salvar Lista
+                        {listaAtiva ? 'Atualizar Lista' : 'Salvar Lista'}
                       </Button>
                     </div>
                   </>

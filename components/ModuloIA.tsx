@@ -92,10 +92,10 @@ export default function ModuloIA({ onRecomendacaoClick, onAceitarRecomendacao }:
       const recomendacoesRes = await apiFetch<{ recomendacoes?: Recomendacao[] }>('/api/produtos/recomendacoes');
 
       if (recomendacoesRes.error) {
-        if (recomendacoesRes.status === 401) {
+        if (recomendacoesRes.error.status === 401) {
           console.warn('Não autenticado para recomendações. Verifique a sessão.');
           // Não definir erro fatal, apenas logar
-        } else if (recomendacoesRes.status === 404) {
+        } else if (recomendacoesRes.error.status === 404) {
           console.warn('Endpoint de recomendações não encontrado');
           // Não definir erro fatal, apenas logar
         } else {
@@ -115,10 +115,10 @@ export default function ModuloIA({ onRecomendacaoClick, onAceitarRecomendacao }:
       const analisesRes = await apiFetch<{ items?: AnalisePreco[]; count?: number }>(urlAnalises);
 
       if (analisesRes.error) {
-        if (analisesRes.status === 401) {
+        if (analisesRes.error.status === 401) {
           setError('Sessão expirada. Por favor, faça login novamente.');
           console.warn('Não autenticado para análises de preços');
-        } else if (analisesRes.status === 404) {
+        } else if (analisesRes.error.status === 404) {
           setError('Nenhum dado encontrado para análises de preços.');
           console.warn('Análises de preços não encontradas:', analisesRes.error);
         } else {

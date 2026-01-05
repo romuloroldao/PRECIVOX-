@@ -1,4 +1,5 @@
 // Cliente Prisma Singleton
+import 'server-only';
 import { PrismaClient } from '@prisma/client';
 
 declare global {
@@ -21,7 +22,7 @@ if (process.env.NODE_ENV !== 'production') {
 // Middleware para timeout nas queries
 prisma.$use(async (params, next) => {
   const timeout = 8000; // 8 segundos de timeout
-  
+
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error('Query timeout')), timeout);
   });

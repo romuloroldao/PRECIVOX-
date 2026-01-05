@@ -36,8 +36,11 @@ export default function NewUserPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch('/api/admin/users', {
+      // Usar fetch autenticado que adiciona token automaticamente
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch('/api/admin/users', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

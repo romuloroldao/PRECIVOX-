@@ -1,9 +1,9 @@
 // Utilitários JWT - Compatível com Edge Runtime
 import { SignJWT, jwtVerify } from 'jose';
-import { Role } from '@prisma/client';
 
-const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '7d';
+type Role = "ADMIN" | "GESTOR" | "CLIENTE";
+const JWT_SECRET: string = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret-change-in-production';
+const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '15m'; // Access token: 15 minutos
 
 // Converter string para Uint8Array para jose
 const secret = new TextEncoder().encode(JWT_SECRET);
@@ -18,12 +18,16 @@ export interface JWTPayload {
 
 /**
  * Gera um token JWT com os dados do usuário
+ * @param payload - Dados do usuário
+ * @param expiresIn - Tempo de expiração (ex: '15m', '1h', '7d'). Se não fornecido, usa JWT_EXPIRES_IN
  */
-export async function generateToken(payload: JWTPayload): Promise<string> {
+export async function generateToken(payload: JWTPayload, expiresIn?: string): Promise<string> {
+  const expiration = expiresIn || (JWT_EXPIRES_IN as string);
+  
   const token = await new SignJWT(payload as any)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRES_IN as string)
+    .setExpirationTime(expiration)
     .sign(secret);
   
   return token;

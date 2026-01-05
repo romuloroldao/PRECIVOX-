@@ -56,7 +56,9 @@ export default function UserDetailsPage() {
     
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/users/${userId}`);
+      // Usar fetch autenticado que adiciona token automaticamente
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch(`/api/admin/users/${userId}`);
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -124,7 +126,9 @@ export default function UserDetailsPage() {
   const onSubmit = async (data: UpdateUserInput) => {
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      // Usar fetch autenticado
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

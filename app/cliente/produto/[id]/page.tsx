@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, MapPin, Clock, ShoppingCart, Plus, Minus, Share2, Eye, TrendingDown, Package, Heart } from 'lucide-react';
+import { recordProductViewed } from '@/lib/events/frontend-events';
 
 interface Product {
   id: string;
@@ -529,9 +530,6 @@ const ProductDetails: React.FC<ProductDetailsProps> = async ({ params }) => {
                       {product.available ? 'Disponível' : 'Indisponível'}
                     </span>
                   </div>
-                  {product.stock && (
-                    <p className="text-xs text-gray-500 mt-1">{product.stock} em estoque</p>
-                  )}
                 </div>
               </div>
             </div>
