@@ -311,12 +311,29 @@ model RefreshToken {
   revoked   Boolean   @default(false)
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revoked])
   @@index([tokenHash])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+model AuthAuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  event     String   // login_success, login_failure, logout, refresh, token_revoked
+  ip        String?
+  userAgent String?  @map("user_agent")
+  metadata  Json?   @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
+  @@index([createdAt])
+  @@map("auth_audit_logs")
 }
 
 model unidades {
@@ -352,6 +369,7 @@ model User {
   imagem                    String?
   senhaHash                 String?                    @map("senha_hash")
   role                      Role                       @default(CLIENTE)
+  tokenVersion              Int                        @default(0) @map("token_version")
   dataCriacao               DateTime                   @default(now()) @map("data_criacao")
   dataAtualizacao           DateTime                   @map("data_atualizacao")
   ultimoLogin               DateTime?                  @map("ultimo_login")

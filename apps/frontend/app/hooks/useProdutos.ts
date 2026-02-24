@@ -1,0 +1,200 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+
+export interface Produto {
+  id: string;
+  estoqueId: string;
+  nome: string;
+  preco: number;
+  precoPromocional?: number;
+  emPromocao: boolean;
+  disponivel: boolean;
+  quantidade: number;
+  categoria?: string;
+  marca?: string;
+  imagem?: string;
+  unidade: {
+    id: string;
+    nome: string;
+    endereco: string;
+    cidade: string;
+    estado: string;
+    mercado: {
+      id: string;
+      nome: string;
+    };
+  };
+  produto?: any;
+}
+
+interface UseProdutosParams {
+  busca?: string;
+  categoria?: string;
+  marca?: string;
+  precoMin?: number;
+  precoMax?: number;
+  disponivel?: boolean;
+  emPromocao?: boolean;
+  mercado?: string;
+  cidade?: string;
+  debounceDelay?: number;
+}
+
+// Hook para debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    if (delay <= 0) {
+      setDebouncedValue(value);
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+export function useProdutos(params: UseProdutosParams = {}) {
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const {
+    busca,
+    categoria,
+    marca,
+    precoMin,
+    precoMax,
+    disponivel,
+    emPromocao,
+    mercado,
+    cidade,
+    debounceDelay = 400,
+  } = params;
+
+  // Debounce na busca
+  const buscaDebounced = useDebounce(busca, debounceDelay);
+
+  const buscarProdutos = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams();
+      if (buscaDebounced) queryParams.append('busca', buscaDebounced);
+      if (categoria) queryParams.append('categoria', categoria);
+      if (marca) queryParams.append('marca', marca);
+      if (precoMin) queryParams.append('precoMin', precoMin.toString());
+      if (precoMax) queryParams.append('precoMax', precoMax.toString());
+      if (disponivel !== undefined) queryParams.append('disponivel', disponivel.toString());
+      if (emPromocao !== undefined) queryParams.append('emPromocao', emPromocao.toString());
+      if (mercado) queryParams.append('mercado', mercado);
+      if (cidade) queryParams.append('cidade', cidade);
+
+      // Adicionar timestamp para evitar cache
+      queryParams.append('_t', Date.now().toString());
+
+      const response = await fetch(`/api/produtos/buscar?${queryParams.toString()}`, {
+        cache: 'no-store',
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Erro ${response.status}: ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch {
+          // Se não conseguir parsear, usa o texto original
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      const data = Array.isArray(result) ? result : result?.data;
+      if (!Array.isArray(data)) {
+        throw new Error('Resposta da API em formato inválido');
+      }
+      
+      // Transformar dados para incluir estoqueId no id
+      // Os dados vêm do backend com estrutura: { id, produtos, unidades: { mercados } }
+      const produtosFormatados = data.map((estoque: any) => ({
+        id: `${estoque.id}-${estoque.unidades?.id || estoque.unidade?.id || ''}`,
+        estoqueId: estoque.id,
+        nome: estoque.produtos?.nome || estoque.produto?.nome || '',
+        preco: Number(estoque.preco) || 0,
+        precoPromocional: estoque.precoPromocional ? Number(estoque.precoPromocional) : undefined,
+        emPromocao: estoque.emPromocao || false,
+        disponivel: estoque.disponivel !== false,
+        quantidade: estoque.quantidade || 0,
+        categoria: estoque.produtos?.categoria || estoque.produto?.categoria || '',
+        marca: estoque.produtos?.marca || estoque.produto?.marca || '',
+        imagem: estoque.produtos?.imagem || estoque.produto?.imagem || '',
+        unidade: {
+          id: estoque.unidades?.id || estoque.unidade?.id || '',
+          nome: estoque.unidades?.nome || estoque.unidade?.nome || '',
+          endereco: estoque.unidades?.endereco || estoque.unidade?.endereco || '',
+          cidade: estoque.unidades?.cidade || estoque.unidade?.cidade || '',
+          estado: estoque.unidades?.estado || estoque.unidade?.estado || '',
+          mercado: {
+            id: estoque.unidades?.mercados?.id || estoque.unidade?.mercado?.id || '',
+            nome: estoque.unidades?.mercados?.nome || estoque.unidade?.mercado?.nome || '',
+          },
+        },
+        produto: estoque.produtos || estoque.produto,
+      }));
+
+      setProdutos(produtosFormatados);
+      setError(null); // Limpa erro em caso de sucesso
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao buscar produtos';
+      setError(errorMessage);
+      setProdutos([]); // Define array vazio em caso de erro
+      console.error('Erro ao buscar produtos:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    buscaDebounced,
+    categoria,
+    marca,
+    precoMin,
+    precoMax,
+    disponivel,
+    emPromocao,
+    mercado,
+    cidade,
+  ]);
+
+  useEffect(() => {
+    buscarProdutos();
+  }, [buscarProdutos]);
+
+  // Revalidação automática a cada 30 segundos quando não há busca ativa
+  useEffect(() => {
+    if (!buscaDebounced && !loading) {
+      const interval = setInterval(() => {
+        buscarProdutos();
+      }, 30000); // 30 segundos
+
+      return () => clearInterval(interval);
+    }
+  }, [buscaDebounced, loading, buscarProdutos]);
+
+  return {
+    produtos,
+    loading,
+    error,
+    buscarProdutos,
+  };
+}
+
