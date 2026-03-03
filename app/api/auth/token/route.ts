@@ -25,10 +25,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Buscar usuário no banco para obter tokenVersion (revogação)
+    // Buscar usuário no banco para emissão de token
     const dbUser = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, email: true, role: true, nome: true, tokenVersion: true },
+      select: { id: true, email: true, role: true, nome: true },
     });
 
     if (!dbUser) {
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       email: dbUser.email,
       role: dbUser.role,
       nome: dbUser.nome,
-      tokenVersion: dbUser.tokenVersion ?? 0,
+      tokenVersion: 0,
     };
 
     const tokens = await TokenManager.issueTokenPair(user);

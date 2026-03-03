@@ -83,6 +83,12 @@ const nextConfig = {
     optimizeCss: true,
   },
 
+  eslint: {
+    // Desabilita falha de build por erros de lint em produção.
+    // Lint continua disponível via `next lint` em pipelines dedicados.
+    ignoreDuringBuilds: true,
+  },
+
   // Webpack Safe-Guards
   webpack: (config, { isServer }) => {
     if (!isServer) {

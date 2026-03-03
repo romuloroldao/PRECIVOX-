@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { TokenManager } from '@/lib/token-manager';
-import { prisma } from '@/lib/prisma';
+import { internalFetch } from '@/lib/internal-backend';
 
 export async function POST(request: NextRequest) {
   try {
-    // 1) Invalidar tokens Auth v2 (tokenVersion + revogar refresh) para que Express e Next rejeitem o token
-    const user = await TokenManager.validateSession({
-      headers: request.headers,
-      cookies: request.cookies,
-    });
+    const cookiePrefix = process.env.NODE_ENV === 'production' ? '__Secure-' : '';
+    const refreshCookieName = `${cookiePrefix}precivox-refresh-token`;
 
-    if (user) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { tokenVersion: { increment: 1 } },
-      });
-      await TokenManager.revokeUserTokens(user.id);
+    const refreshToken = request.cookies.get(refreshCookieName)?.value;
+
+    if (refreshToken) {
+      await internalFetch('/api/v1/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => undefined);
     }
 
     const response = NextResponse.json({
@@ -25,7 +21,6 @@ export async function POST(request: NextRequest) {
       message: 'Logout realizado com sucesso',
     });
 
-    const cookiePrefix = process.env.NODE_ENV === 'production' ? '__Secure-' : '';
     const sessionCookieName = `${cookiePrefix}next-auth.session-token`;
 
     response.cookies.delete(sessionCookieName);
@@ -37,6 +32,7 @@ export async function POST(request: NextRequest) {
     response.cookies.delete(`${cookiePrefix}precivox-access-token`);
     response.cookies.delete('precivox-access-token');
     response.cookies.delete('__Secure-precivox-access-token');
+    response.cookies.delete(refreshCookieName);
 
     return response;
   } catch (error) {
