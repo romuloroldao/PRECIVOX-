@@ -7,6 +7,8 @@ export const fetchCache = "force-no-store";
 
 import { prisma } from '@/lib/prisma';
 import { TokenManager } from '@/lib/token-manager';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Rate limiting simples em memória
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -32,12 +34,31 @@ function checkRateLimit(identifier: string): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verificar autenticação usando TokenManager
-    // Passar request para validar token do header Authorization
-    const user = await TokenManager.validateRole('ADMIN', {
+    // 1) TokenManager (Authorization Bearer + cookie access token + sessão DB)
+    let user = await TokenManager.validateRole('ADMIN', {
       headers: request.headers,
       cookies: request.cookies,
     });
+
+    // 2) Fallback: sessão NextAuth JWT (cookie __Secure-next-auth.session-token)
+    if (!user) {
+      const session = await getServerSession(authOptions);
+      console.log('[ADMIN DEBUG] recent-users getServerSession:', session ? { email: session.user?.email, role: (session.user as { role?: string })?.role } : null);
+      if (session?.user?.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: { id: true, email: true, role: true, nome: true },
+        });
+        if (dbUser?.role === 'ADMIN') {
+          user = {
+            id: dbUser.id,
+            email: dbUser.email,
+            role: dbUser.role as 'ADMIN' | 'GESTOR' | 'CLIENTE',
+            nome: dbUser.nome,
+          };
+        }
+      }
+    }
     
     // Debug: Log para verificar sessão
     console.log('[API /admin/recent-users] Session check:', {
@@ -48,20 +69,16 @@ export async function GET(request: NextRequest) {
     });
     
     if (!user) {
-      // Verificar se é problema de autenticação ou permissão
-      const sessionUser = await TokenManager.validateSession({
-        headers: request.headers,
-        cookies: request.cookies,
-      });
-      if (!sessionUser) {
+      const session = await getServerSession(authOptions);
+      if (session?.user?.email) {
         return NextResponse.json(
-          { error: 'Não autenticado', code: 'UNAUTHORIZED' },
-          { status: 401 }
+          { error: 'Acesso negado - Apenas administradores', code: 'FORBIDDEN' },
+          { status: 403 }
         );
       }
       return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores', code: 'FORBIDDEN' },
-        { status: 403 }
+        { error: 'Não autenticado', code: 'UNAUTHORIZED' },
+        { status: 401 }
       );
     }
 

@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiFetch, ApiResult } from '@/lib/api-client';
+import { apiFetch } from '@/lib/api-client';
 
 export interface UseApiQueryOptions<T> {
   enabled?: boolean;
@@ -16,11 +16,14 @@ export interface UseApiQueryOptions<T> {
   onSuccess?: (data: T) => void;
   onError?: (error: Error) => void;
   refetchInterval?: number;
+   skipInterceptors?: boolean;
 }
 
 export interface UseApiQueryResult<T> {
   data: T | null;
   error: string | null;
+  errorStatus: number | null;
+  errorCode: string | null;
   isLoading: boolean;
   isError: boolean;
   isSuccess: boolean;
@@ -42,6 +45,7 @@ export function useApiQuery<T = any>(
     retries = 2,
     retryDelay = 1000,
     timeout = 30000,
+    skipInterceptors = false,
     onSuccess,
     onError,
     refetchInterval,
@@ -49,6 +53,8 @@ export function useApiQuery<T = any>(
 
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -69,16 +75,21 @@ export function useApiQuery<T = any>(
     setIsError(false);
     setIsSuccess(false);
     setError(null);
+    setErrorStatus(null);
+    setErrorCode(null);
 
     try {
       const result = await apiFetch<T>(url, {
         retries,
         retryDelay,
         timeout,
+        skipInterceptors,
         signal: abortControllerRef.current.signal,
         onError: (apiError) => {
           const errorMessage = apiError.message || 'Erro desconhecido';
           setError(errorMessage);
+          setErrorStatus(apiError.status);
+          setErrorCode(apiError.code || null);
           setIsError(true);
           setIsLoading(false);
           
@@ -93,6 +104,8 @@ export function useApiQuery<T = any>(
         setIsSuccess(true);
         setIsError(false);
         setError(null);
+        setErrorStatus(null);
+        setErrorCode(null);
         
         if (onSuccess) {
           onSuccess(result.data);
@@ -100,6 +113,8 @@ export function useApiQuery<T = any>(
       } else if (result.error) {
         const errorMessage = result.error.message || 'Erro ao carregar dados';
         setError(errorMessage);
+        setErrorStatus(result.error.status);
+        setErrorCode(result.error.code || null);
         setIsError(true);
         
         if (onError) {
@@ -109,6 +124,8 @@ export function useApiQuery<T = any>(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(errorMessage);
+      setErrorStatus(null);
+      setErrorCode(null);
       setIsError(true);
       
       if (onError) {
@@ -159,6 +176,8 @@ export function useApiQuery<T = any>(
   return {
     data,
     error,
+    errorStatus,
+    errorCode,
     isLoading,
     isError,
     isSuccess,

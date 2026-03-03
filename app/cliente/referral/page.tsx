@@ -35,13 +35,17 @@ export default function ReferralPage() {
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
 
-    const userId = (session?.user as any)?.id || 'temp-user-id';
+    const userId = (session?.user as any)?.id ?? null;
 
     useEffect(() => {
-        fetchReferralStats();
+        if (!userId) {
+            setLoading(false);
+            return;
+        }
+        fetchReferralStats(userId);
     }, [userId]);
 
-    async function fetchReferralStats() {
+    async function fetchReferralStats(userId: string) {
         try {
             setLoading(true);
 

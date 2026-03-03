@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PlanoPagamento, User } from '@prisma/client';
+import type { PlanoPagamento, User } from '@prisma/client';
 
 interface MercadoFormProps {
   mercado?: any;

@@ -3,51 +3,31 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { User } from '../models/User.js';
 import { query } from '../config/database.js';
-// import { 
-//   authenticate, 
-//   authorize, 
-//   requireAdmin,
-//   createUserSession,
-//   logout,
-//   refreshToken 
-// } from '../middleware/auth.js';
+import { authenticate } from '../middleware/authMiddleware.js';
+import { requireRole, requireAnyRole } from '../middleware/requireRole.js';
 
-// Funções temporárias para substituir auth.js
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-  // Validação simples do token
-  req.user = { id: 'temp-user', role: 'admin' };
-  next();
+const requireAdmin = requireRole('ADMIN');
+const authorize = (roles) => requireAnyRole(Array.isArray(roles) ? roles : [roles]);
+
+// Compatibilidade: login legado espera createUserSession que retorna { sessionId, token, refreshToken, expiresAt }
+const createUserSession = async (user, req) => ({
+  sessionId: user.id,
+  token: '(use token do Next)',
+  refreshToken: '(use refresh do Next)',
+  expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+});
+
+const logout = (req, res) => {
+  res.json({ success: true, message: 'Logout realizado com sucesso' });
 };
 
-const authorize = (roles) => (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Usuário não autenticado' });
-  }
-  next();
+const refreshToken = (req, res) => {
+  res.status(501).json({
+    error: 'Use o endpoint do Next: POST /api/auth/refresh',
+    message: 'Renovação de token deve ser feita pelo frontend Next.',
+  });
 };
 
-const requireAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
-  next();
-};
-
-const createUserSession = (req, res, next) => {
-  next();
-};
-
-const logout = (req, res, next) => {
-  next();
-};
-
-const refreshToken = (req, res, next) => {
-  next();
-};
 import {
   validateUserRegister,
   validateUserLogin,
@@ -217,14 +197,12 @@ router.post('/logout', authenticate, logout);
 // GET /api/users/me - Obter dados do usuário logado
 router.get('/me', authenticate, async (req, res) => {
   try {
-    const userWithMarkets = await req.user.getMarkets();
-    
+    // req.user vem do authMiddleware (id, role, email, nome) - tabela usuarios
     res.json({
       success: true,
       data: {
-        user: req.user.toJSON(),
-        markets: userWithMarkets
-      }
+        user: req.user,
+      },
     });
   } catch (error) {
     console.error('❌ Erro ao buscar dados do usuário:', error);
@@ -238,20 +216,33 @@ router.get('/me', authenticate, async (req, res) => {
 // PUT /api/users/me - Atualizar dados do usuário logado
 router.put('/me', authenticate, validateUserUpdate, async (req, res) => {
   try {
-    const updatedUser = await req.user.update(req.body, req.user.id);
+    // req.user vem do authMiddleware (objeto plano). Atualizar na tabela usuarios.
+    if (!req.db || typeof req.db.query !== 'function') {
+      return res.status(501).json({
+        success: false,
+        error: 'Atualização de perfil: use o app Next ou configure escrita em usuarios.',
+      });
+    }
+    const { name, phone, address_city, address_state } = req.body;
+    await req.db.query(
+      `UPDATE usuarios SET nome = COALESCE($1, nome), data_atualizacao = NOW() WHERE id = $2`,
+      [name || null, req.user.id]
+    );
+    const result = await req.db.query(
+      'SELECT id, email, nome, role FROM usuarios WHERE id = $1',
+      [req.user.id]
+    );
+    const user = result.rows[0] || req.user;
 
-    // Log de auditoria
     await query(
       'INSERT INTO audit_logs (user_id, action, resource_type, resource_id, description) VALUES ($1, $2, $3, $4, $5)',
       [req.user.id, 'update', 'user', req.user.id, 'Dados do usuário atualizados']
-    );
+    ).catch(() => {});
 
     res.json({
       success: true,
       message: 'Dados atualizados com sucesso',
-      data: {
-        user: updatedUser.toJSON()
-      }
+      data: { user },
     });
   } catch (error) {
     console.error('❌ Erro ao atualizar usuário:', error);
@@ -266,30 +257,41 @@ router.put('/me', authenticate, validateUserUpdate, async (req, res) => {
 router.put('/me/password', authenticate, validatePasswordChange, async (req, res) => {
   try {
     const { current_password, new_password } = req.body;
-
-    // Verificar senha atual
-    const isValidPassword = await req.user.verifyPassword(current_password);
+    if (!req.db || typeof req.db.query !== 'function') {
+      return res.status(501).json({
+        success: false,
+        error: 'Alteração de senha: use o app Next.',
+      });
+    }
+    const r = await req.db.query(
+      'SELECT senha_hash FROM usuarios WHERE id = $1',
+      [req.user.id]
+    );
+    const row = r.rows[0];
+    if (!row || !row.senha_hash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Senha atual incorreta',
+      });
+    }
+    const isValidPassword = await bcrypt.compare(current_password, row.senha_hash);
     if (!isValidPassword) {
       return res.status(400).json({
         success: false,
-        error: 'Senha atual incorreta'
+        error: 'Senha atual incorreta',
       });
     }
-
-    // Atualizar senha
-    await req.user.updatePassword(new_password, req.user.id);
-
-    // Invalidar todas as sessões do usuário (exceto a atual)
-    await query(
-      'UPDATE user_sessions SET is_active = false WHERE user_id = $1 AND id != $2',
-      [req.user.id, req.sessionId]
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(new_password, saltRounds);
+    await req.db.query(
+      'UPDATE usuarios SET senha_hash = $1, data_atualizacao = NOW() WHERE id = $2',
+      [password_hash, req.user.id]
     );
 
-    // Log de auditoria
     await query(
       'INSERT INTO audit_logs (user_id, action, resource_type, resource_id, description) VALUES ($1, $2, $3, $4, $5)',
       [req.user.id, 'update', 'user', req.user.id, 'Senha alterada pelo usuário']
-    );
+    ).catch(() => {});
 
     res.json({
       success: true,

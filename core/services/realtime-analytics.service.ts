@@ -3,8 +3,8 @@
  */
 
 import { Server as SocketIOServer } from 'socket.io';
-import { logger } from '../ai/utils/logger';
-import { prisma } from '../ai/lib/prisma-compat';
+import { logger } from '../ai/utils/logger.js';
+import { prisma } from '../ai/lib/prisma-compat.js';
 
 export interface AnalyticsEvent {
     type: 'venda' | 'estoque' | 'preco' | 'alerta' | 'analise';

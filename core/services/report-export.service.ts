@@ -2,7 +2,7 @@
  * Report Export Service - Exportação de relatórios em PDF e Excel
  */
 
-import { logger } from '../ai/utils/logger';
+import { logger } from '../ai/utils/logger.js';
 import * as XLSX from 'xlsx';
 import PDFDocument from 'pdfkit';
 import * as fs from 'fs';

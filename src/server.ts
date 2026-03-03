@@ -69,7 +69,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '127.0.0.1', () => {
   console.log(`🚀 Servidor PRECIVOX rodando na porta ${PORT}`);
   console.log(`📁 Diretório de uploads: ${uploadsDir}`);
   console.log(`🤖 Rotas de IA disponíveis em /api/ai-engines`);

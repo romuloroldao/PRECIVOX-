@@ -3,33 +3,14 @@ import express from 'express';
 import { Market } from '../models/Market.js';
 import { User } from '../models/User.js';
 import { query, transaction } from '../config/database.js';
-// import { 
-//   authenticate, 
-//   requireAdmin,
-//   requireMarketAccess,
-//   optionalAuth
-// } from '../middleware/auth.js';
+import { authenticate } from '../middleware/authMiddleware.js';
+import { requireRole, requireAnyRole } from '../middleware/requireRole.js';
 
-// Funções temporárias para substituir auth.js
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-  req.user = { id: 'temp-user', role: 'admin' };
-  next();
-};
-
-const requireAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
-  next();
-};
+const requireAdmin = requireRole('ADMIN');
 
 const requireMarketAccess = (permission) => (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Usuário não autenticado' });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
   next();
 };

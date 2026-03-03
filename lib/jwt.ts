@@ -13,6 +13,7 @@ export interface JWTPayload {
   email: string;
   role: Role;
   nome: string;
+  tokenVersion?: number;
   [key: string]: any; // Para compatibilidade com jose
 }
 

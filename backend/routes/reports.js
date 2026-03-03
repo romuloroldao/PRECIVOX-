@@ -4,7 +4,7 @@
 
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { ReportExportService } from '../../core/services/report-export.service.js';
+import { ReportExportService } from '../../core/dist/services/report-export.service.js';
 import * as path from 'path';
 import * as fs from 'fs';
 

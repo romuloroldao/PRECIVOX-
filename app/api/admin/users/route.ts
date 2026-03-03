@@ -3,6 +3,8 @@ import { TokenManager } from '@/lib/token-manager';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // CRÍTICO: Prisma requer runtime nodejs, não edge
 export const runtime = 'nodejs';
@@ -18,11 +20,22 @@ const createUserSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    // Passar request para validar token do header Authorization
-    const user = await TokenManager.validateSession({
+    let user = await TokenManager.validateSession({
       headers: req.headers,
       cookies: req.cookies,
     });
+
+    // Fallback: sessão NextAuth JWT
+    if (!user) {
+      const session = await getServerSession(authOptions);
+      if (session?.user?.email && (session.user as { role?: string }).role === 'ADMIN') {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: { id: true, email: true, role: true, nome: true },
+        });
+        if (dbUser) user = { id: dbUser.id, email: dbUser.email, role: dbUser.role as 'ADMIN' | 'GESTOR' | 'CLIENTE', nome: dbUser.nome };
+      }
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -83,7 +96,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await TokenManager.validateSession();
+    let user = await TokenManager.validateSession({
+      headers: req.headers,
+      cookies: req.cookies,
+    });
+
+    // Fallback: sessão NextAuth JWT
+    if (!user) {
+      const session = await getServerSession(authOptions);
+      if (session?.user?.email && (session.user as { role?: string }).role === 'ADMIN') {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: { id: true, email: true, role: true, nome: true },
+        });
+        if (dbUser) user = { id: dbUser.id, email: dbUser.email, role: dbUser.role as 'ADMIN' | 'GESTOR' | 'CLIENTE', nome: dbUser.nome };
+      }
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

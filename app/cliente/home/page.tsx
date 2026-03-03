@@ -16,6 +16,7 @@ import { RecentLists } from '@/components/cliente/RecentLists';
 import { StreakCounter } from '@/components/cliente/StreakCounter';
 import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 interface DashboardData {
   economy: {
@@ -41,16 +42,25 @@ export default function DashboardCliente() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-
-  // TODO: Pegar userId real do NextAuth
-  const userId = 'temp-user-id';
+  const { data: session, status } = useSession();
+  const userId = (session?.user as any)?.id ?? null;
 
   useEffect(() => {
+    if (status === 'loading') return;
+    if (!userId) {
+      setData({
+        economy: { totalSavings: 0, savingsThisMonth: 0 },
+        lists: [],
+        badges: { unlocked: 0, total: 12, recentlyUnlocked: [] },
+      });
+      setIsLoading(false);
+      return;
+    }
+
     async function fetchDashboardData() {
       try {
         setIsLoading(true);
 
-        // Buscar dados em paralelo
         const [statsRes, listsRes, badgesRes] = await Promise.all([
           fetch(`/api/stats/global?userId=${userId}`),
           fetch(`/api/lists?userId=${userId}&limit=6`),
@@ -63,7 +73,6 @@ export default function DashboardCliente() {
           badgesRes.json(),
         ]);
 
-        // Processar dados
         setData({
           economy: {
             totalSavings: statsData.data?.totalSavings || 0,
@@ -71,27 +80,18 @@ export default function DashboardCliente() {
           },
           lists: listsData.data?.lists || [],
           badges: {
-            unlocked: badgesData.data?.stats?.unlockedBadges || 0,
-            total: badgesData.data?.stats?.totalBadges || 12,
+            unlocked: badgesData.data?.stats?.unlockedBadges ?? badgesData.data?.unlockedBadges ?? 0,
+            total: badgesData.data?.stats?.totalBadges ?? badgesData.data?.totalBadges ?? 12,
             recentlyUnlocked: [],
           },
         });
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Erro ao carregar dados');
-
-        // Fallback para dados mock
         setData({
-          economy: {
-            totalSavings: 15000, // R$ 150,00
-            savingsThisMonth: 4500, // R$ 45,00
-          },
+          economy: { totalSavings: 0, savingsThisMonth: 0 },
           lists: [],
-          badges: {
-            unlocked: 3,
-            total: 12,
-            recentlyUnlocked: [],
-          },
+          badges: { unlocked: 0, total: 12, recentlyUnlocked: [] },
         });
       } finally {
         setIsLoading(false);
@@ -99,7 +99,7 @@ export default function DashboardCliente() {
     }
 
     fetchDashboardData();
-  }, [userId]);
+  }, [userId, status]);
 
   const handleCreateList = () => {
     router.push('/cliente/listas/nova');

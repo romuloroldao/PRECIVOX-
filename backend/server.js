@@ -7,6 +7,9 @@ import net from 'net';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { testConnection, dbMiddleware, closePool } from './config/database.js';
+import internalOnly from './middleware/internalOnly.js';
+import { validateJWT } from './middleware/validateJWT.js';
+import { checkTokenVersion } from './middleware/checkTokenVersion.js';
 
 // Importar rotas
 import userRoutes from './routes/users.js';
@@ -20,7 +23,7 @@ import pushNotificationsRoutes from './routes/push-notifications.js';
 // import loginSimplesRoutes from './routes/login-simples.js';
 
 // Importar serviços avançados
-import { RealtimeAnalyticsService } from '../core/services/realtime-analytics.service.js';
+import { RealtimeAnalyticsService } from '../core/dist/services/realtime-analytics.service.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -86,25 +89,13 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 100 requests em produção, 1000 em dev
+// Rate limiting apenas em /api/v1 (contrato da camada API)
+const v1Limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
   message: {
     success: false,
     error: 'Muitas tentativas. Tente novamente em alguns minutos.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Rate limit mais restritivo para autenticação
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // 5 tentativas de login por IP
-  message: {
-    success: false,
-    error: 'Muitas tentativas de login. Tente novamente em 15 minutos.'
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -121,7 +112,7 @@ app.use(cors({
     : ['http://localhost:3000', 'http://localhost:5176', 'http://localhost:8080', 'http://127.0.0.1:8080'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-api-version', 'Accept', 'x-client']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-api-version', 'Accept', 'x-client', 'x-internal-secret']
 }));
 
 // Body parsing
@@ -137,12 +128,8 @@ app.set('trust proxy', 1);
 // Middleware de database
 app.use(dbMiddleware);
 
-// Rate limiting geral
-app.use('/api/', limiter);
-
-// Rate limiting específico para auth
-app.use('/api/users/login', authLimiter);
-app.use('/api/users/register', authLimiter);
+// Rate limiting apenas em /api/v1 (não global)
+// app.use('/api/', limiter) removido - só /api/v1 tem rate limit
 
 // ================================
 // LOGGING E MONITORAMENTO
@@ -171,6 +158,26 @@ app.use((req, res, next) => {
 // ================================
 // ROTAS DA API
 // ================================
+// ORDEM OBRIGATÓRIA: /api/v1, /api/health e /api/admin/* devem vir ANTES do middleware
+// que retorna 410 para o resto de /api. Novas rotas em /api devem ser registradas
+// antes do bloco "app.use('/api', ...)" abaixo, senão receberão 410 Gone.
+
+// ----- /api/v1: contrato fixo (internalOnly + JWT + tokenVersion + rate limit)
+app.use('/api/v1', internalOnly);
+app.use('/api/v1', validateJWT);
+app.use('/api/v1', checkTokenVersion);
+app.use('/api/v1', v1Limiter);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/auth', userRoutes);
+app.use('/api/v1/markets', marketRoutes);
+app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/ai-engines', aiEnginesRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/reports', reportsRoutes);
+app.use('/api/v1/push', pushNotificationsRoutes);
+
+// ----- Rotas legadas /api (compatibilidade; login/register sem JWT aqui)
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -260,170 +267,17 @@ app.get('/api/admin/recent-users', async (req, res) => {
   }
 });
 
-// Rotas principais
-// app.use('/api', loginSimplesRoutes); // ✅ LOGIN SIMPLIFICADO (compatível com schema português)
-app.use('/api/users', userRoutes);
-app.use('/api/auth', userRoutes); // ✅ ALIAS PARA COMPATIBILIDADE COM FRONTEND
-app.use('/api/markets', marketRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/ai-engines', aiEnginesRoutes); // ✅ ROTAS DOS ENGINES DE IA TYPESCRIPT
-app.use('/api/analytics', analyticsRoutes);
-app.use('/analytics', analyticsRoutes); // Para compatibilidade com frontend
-app.use('/api/reports', reportsRoutes); // ✅ EXPORTAÇÃO DE RELATÓRIOS
-app.use('/api/push', pushNotificationsRoutes); // ✅ NOTIFICAÇÕES PUSH
-
-// ================================
-// BACKWARD COMPATIBILITY
-// ================================
-
-// Manter compatibilidade com frontend antigo
-app.get('/api/produtos', async (req, res) => {
-  try {
-    const { search, categoria, mercado, page = 1, limit = 50 } = req.query;
-
-    // Usar a nova rota de busca de produtos - apenas produtos uploadados
-    let sql = `
-      SELECT 
-        p.id,
-        p.nome,
-        p.categoria,
-        p.preco,
-        p.preco_original as promotional_price,
-        p.promocao,
-        p.desconto,
-        p.imagem_url,
-        p.marca,
-        p.codigo_barras,
-        p.estoque,
-        p.disponivel,
-        p.loja,
-        m.name as mercado,
-        m.slug as mercado_slug,
-        m.address_city as cidade,
-        m.address_state as estado
-      FROM products p
-      JOIN markets m ON p.market_id = m.id
-      WHERE p.status = 'active' 
-      AND m.status = 'active'
-      AND m.verified = true
-      AND p.data_source = 'json_upload'
-    `;
-
-    const values = [];
-    let paramCount = 0;
-
-    // Filtro por busca (simplificado para não usar full-text search por enquanto)
-    if (search) {
-      paramCount++;
-      sql += ` AND (LOWER(p.nome) LIKE LOWER($${paramCount}) OR LOWER(p.marca) LIKE LOWER($${paramCount}))`;
-      values.push(`%${search}%`);
-    }
-
-    // Filtro por categoria
-    if (categoria && categoria !== 'todas') {
-      paramCount++;
-      sql += ` AND p.categoria = $${paramCount}`;
-      values.push(categoria);
-    }
-
-    // Filtro por mercado
-    if (mercado && mercado !== 'todos') {
-      paramCount++;
-      sql += ` AND (m.name = $${paramCount} OR m.slug = $${paramCount})`;
-      values.push(mercado);
-    }
-
-    sql += ` ORDER BY p.promocao DESC, p.preco ASC`;
-
-    // Paginação
-    const offset = (page - 1) * limit;
-    paramCount++;
-    sql += ` LIMIT $${paramCount}`;
-    values.push(parseInt(limit));
-
-    paramCount++;
-    sql += ` OFFSET $${paramCount}`;
-    values.push(offset);
-
-    const result = await req.db.query(sql, values);
-
-    const produtos = result.rows.map(p => ({
-      id: p.id,
-      nome: p.nome,
-      categoria: p.categoria,
-      preco: parseFloat(p.promotional_price || p.preco),
-      preco_original: p.promotional_price ? parseFloat(p.preco) : null,
-      promocao: p.promocao,
-      desconto: p.desconto,
-      marca: p.marca,
-      codigo_barras: p.codigo_barras,
-      estoque: p.estoque || 0,
-      disponivel: p.disponivel !== false && (p.estoque > 0), // Disponível se estoque > 0
-      loja: p.loja || p.mercado, // Usar loja específica ou nome do mercado
-      mercado: p.mercado,
-      mercado_slug: p.mercado_slug,
-      cidade: p.cidade,
-      estado: p.estado,
-      imagem: p.imagem_url || `https://via.placeholder.com/150x150/004A7C/white?text=${encodeURIComponent(p.nome ? p.nome.substring(0, 10) : 'Produto')}`
-    }));
-
-    res.json({
-      success: true,
-      produtos,
-      total: produtos.length
-    });
-  } catch (error) {
-    console.error('❌ Erro na API de produtos:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro interno do servidor'
-    });
-  }
+// ----- Rotas legadas /api removidas: uso exclusivo de /api/v1
+// Qualquer /api/* não tratado acima (incl. rotas criadas por descuido depois deste bloco) → 410.
+// Este use('/api') deve ser o ÚLTIMO registro sob /api.
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health' || req.path.startsWith('/admin/')) return next();
+  res.status(410).json({
+    error: 'Gone',
+    message: 'Legacy /api removed. Use /api/v1 with BFF.',
+    migration: 'https://docs.precivox.com.br/api-v1'
+  });
 });
-
-// Mercados públicos (compatibility) - apenas mercados cadastrados manualmente a partir de hoje
-app.get('/api/mercados', async (req, res) => {
-  try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const markets = await req.db.query(`
-      SELECT 
-        id, name, slug, address_city, address_state, 
-        address_neighborhood, verified, status,
-        total_products, average_rating
-      FROM markets 
-      WHERE status = 'active' AND verified = true
-      AND created_at >= $1
-      ORDER BY name
-    `, [today]);
-
-    res.json({
-      success: true,
-      mercados: markets.rows.map(m => ({
-        id: m.id,
-        nome: m.name,
-        slug: m.slug,
-        cidade: m.address_city,
-        estado: m.address_state,
-        bairro: m.address_neighborhood,
-        verificado: m.verified,
-        status: m.status,
-        totalProdutos: m.total_products,
-        avaliacao: m.average_rating
-      }))
-    });
-  } catch (error) {
-    console.error('❌ Erro na API de mercados:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro interno do servidor'
-    });
-  }
-});
-
-// ================================
-// TRATAMENTO DE ERROS
-// ================================
 
 // 404 Handler
 app.use('*', (req, res) => {
@@ -526,12 +380,12 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    // Iniciar servidor HTTP com Socket.IO na porta disponível
-    const server = httpServer.listen(finalPort, '0.0.0.0', () => {
+    // Iniciar servidor HTTP com Socket.IO - bind seguro 127.0.0.1 (contrato camada API)
+    const server = httpServer.listen(finalPort, '127.0.0.1', () => {
       console.log('🚀 ================================');
       console.log('🚀 PRECIVOX API v5.0 INICIADA');
       console.log('🚀 ================================');
-      console.log(`🚀 Servidor: http://localhost:${finalPort}`);
+      console.log(`🚀 Servidor: http://127.0.0.1:${finalPort}`);
       console.log(`🚀 WebSocket: ws://localhost:${finalPort}`);
       if (finalPort !== PORT) {
         console.log(`🔄 Porta original ${PORT} ocupada, usando ${finalPort}`);

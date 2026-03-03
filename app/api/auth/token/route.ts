@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TokenManager } from '@/lib/token-manager';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,19 +18,32 @@ export async function POST(req: NextRequest) {
     // Verificar se usuário está autenticado via NextAuth
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    if (!session || !session.user?.email) {
       return NextResponse.json(
         { error: 'Não autenticado' },
         { status: 401 }
       );
     }
 
-    // Criar par de tokens
+    // Buscar usuário no banco para obter tokenVersion (revogação)
+    const dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, email: true, role: true, nome: true, tokenVersion: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 401 }
+      );
+    }
+
     const user: import('@/lib/token-manager').SessionUser = {
-      id: (session.user as any).id,
-      email: session.user.email!,
-      role: (session.user as any).role || 'CLIENTE',
-      nome: session.user.name || null,
+      id: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      nome: dbUser.nome,
+      tokenVersion: dbUser.tokenVersion ?? 0,
     };
 
     const tokens = await TokenManager.issueTokenPair(user);
@@ -43,9 +57,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Definir cookie do access token (opcional, para conveniência)
-    const cookieName = process.env.NODE_ENV === 'production'
-      ? '__Secure-precivox-access-token'
-      : 'precivox-access-token';
+    const cookieName =
+      process.env.NODE_ENV === 'production'
+        ? '__Secure-precivox-access-token'
+        : 'precivox-access-token';
 
     response.cookies.set(cookieName, tokens.accessToken, {
       httpOnly: true,

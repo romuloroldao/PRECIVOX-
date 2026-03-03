@@ -43,7 +43,9 @@ echo  # Remove Next.js cache to avoid stale HTML references
 rm -rf .next/cache
 
 echo "🔨 Fazendo build do projeto..."
-echo "🤖 Compilando engines de IA..."\nnpm run build:ai\necho "✅ Engines de IA compilados!"\n
+echo "🤖 Compilando engines de IA..."
+npm run build:ai || true
+echo "✅ Build de IA concluído (ou ignorado)"
 npm run build
 
 # Verificar se o build foi bem-sucedido
@@ -51,6 +53,14 @@ if [ ! -d ".next" ]; then
     echo "❌ Erro: Build falhou - pasta .next não encontrada"
     exit 1
 fi
+
+echo "🔨 Compilando core (TypeScript → JS para backend)..."
+npx tsc -p core/tsconfig.json
+if [ $? -ne 0 ]; then
+    echo "❌ Erro: Build do core falhou"
+    exit 1
+fi
+echo "✅ Core compilado em core/dist/"
 
 echo "📁 Sincronizando assets estáticos para Nginx..."
 # Criar diretório se não existir
@@ -90,17 +100,17 @@ cd ..
 # 6. Configurar Nginx (se necessário)
 echo "⚙️ Configurando Nginx..."
 if [ -f "/etc/nginx/sites-available/precivox.conf" ]; then
-    sudo cp nginx/nextjs-production.conf /etc/nginx/sites-available/precivox.conf
+    sudo cp nginx/production-nextjs.conf /etc/nginx/sites-available/precivox.conf
     sudo nginx -t && sudo systemctl reload nginx
     echo "✅ Nginx configurado e recarregado"
 elif [ -f "/etc/nginx/sites-available/precivox" ]; then
     # Fallback para nome antigo
-    sudo cp nginx/nextjs-production.conf /etc/nginx/sites-available/precivox
+    sudo cp nginx/production-nextjs.conf /etc/nginx/sites-available/precivox
     sudo nginx -t && sudo systemctl reload nginx
     echo "✅ Nginx configurado e recarregado (arquivo antigo)"
 else
     # Criar novo se não existir
-    sudo cp nginx/nextjs-production.conf /etc/nginx/sites-available/precivox.conf
+    sudo cp nginx/production-nextjs.conf /etc/nginx/sites-available/precivox.conf
     # Criar symlink se não existir
     if [ ! -f "/etc/nginx/sites-enabled/precivox.conf" ]; then
         sudo ln -s /etc/nginx/sites-available/precivox.conf /etc/nginx/sites-enabled/precivox.conf

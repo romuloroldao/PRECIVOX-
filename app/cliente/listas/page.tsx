@@ -12,6 +12,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/shared';
 import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 type FilterType = 'all' | 'active' | 'archived';
 
@@ -30,56 +31,36 @@ export default function ListasPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
-  // TODO: Pegar userId real do NextAuth
-  const userId = 'temp-user-id';
+  const { data: session, status } = useSession();
+  const userId = (session?.user as any)?.id ?? null;
 
   useEffect(() => {
+    if (status === 'loading') return;
+    if (!userId) {
+      setLists([]);
+      setIsLoading(false);
+      return;
+    }
+
     async function fetchLists() {
       try {
         setIsLoading(true);
         const response = await fetch(`/api/lists?userId=${userId}`);
         const data = await response.json();
-        
+
         if (data.success) {
           setLists(data.data.lists || []);
         }
       } catch (error) {
         console.error('Error fetching lists:', error);
-        // Mock data para desenvolvimento
-        setLists([
-          {
-            id: '1',
-            name: 'Compras da Semana',
-            itemsCount: 12,
-            totalSavings: 4500,
-            updatedAt: new Date().toISOString(),
-            archived: false,
-          },
-          {
-            id: '2',
-            name: 'Churrasco',
-            itemsCount: 8,
-            totalSavings: 2300,
-            updatedAt: new Date(Date.now() - 86400000).toISOString(),
-            archived: false,
-          },
-          {
-            id: '3',
-            name: 'Festa de Aniversário',
-            itemsCount: 15,
-            totalSavings: 0,
-            updatedAt: new Date(Date.now() - 172800000).toISOString(),
-            archived: true,
-          },
-        ]);
+        setLists([]);
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchLists();
-  }, [userId]);
+  }, [userId, status]);
 
   // Filtrar e buscar
   const filteredLists = useMemo(() => {

@@ -396,17 +396,20 @@ const styles = {
     color: TOKENS.colors.text.inverse,
     padding: `${TOKENS.spacing[12]} 0`,
     textAlign: 'center' as const,
+    minHeight: 'auto',
   },
-  
+
   logoContainer: {
-    marginBottom: TOKENS.spacing[8],
+    marginBottom: TOKENS.spacing[6],
+    maxWidth: '100%',
   },
-  
+
   logo: {
-    fontSize: TOKENS.typography.fontSize['3xl'],
+    fontSize: 'clamp(1.25rem, 4vw, 2rem)',
     fontWeight: TOKENS.typography.fontWeight.extrabold,
     margin: 0,
     letterSpacing: '2px',
+    maxWidth: '100%',
   },
   
   tagline: {
@@ -416,7 +419,7 @@ const styles = {
   },
   
   headline: {
-    fontSize: TOKENS.typography.fontSize['4xl'],
+    fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
     fontWeight: TOKENS.typography.fontWeight.extrabold,
     lineHeight: TOKENS.typography.lineHeight.tight,
     margin: `0 0 ${TOKENS.spacing[4]} 0`,
@@ -425,7 +428,7 @@ const styles = {
   highlightAmount: {
     color: TOKENS.colors.secondary[300],
     display: 'block',
-    fontSize: TOKENS.typography.fontSize['5xl'],
+    fontSize: 'clamp(1.75rem, 5vw, 2.5rem)',
   },
   
   subheadline: {

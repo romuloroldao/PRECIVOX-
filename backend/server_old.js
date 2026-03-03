@@ -2042,7 +2042,7 @@ app.use('*', (req, res) => {
 // Carregar dados na inicialização
 carregarDados();
 
-app.listen(PORT, () => {
+app.listen(PORT, '127.0.0.1', () => {
   console.log('\n🚀 =====================================');
   console.log('   PRECIVOX API v4.1 - CAMINHO CORRIGIDO');
   console.log('      🧠 Groq AI + 📍 Geolocalização');

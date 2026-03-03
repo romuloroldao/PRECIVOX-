@@ -4,7 +4,7 @@
 
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { PushNotificationService } from '../../core/services/push-notification.service.js';
+import { PushNotificationService } from '../../core/dist/services/push-notification.service.js';
 
 const router = express.Router();
 const pushService = new PushNotificationService();

@@ -5,38 +5,18 @@ import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
 import { query, transaction } from '../config/database.js';
-// import { 
-//   authenticate, 
-//   requireMarketAccess,
-//   optionalAuth
-// } from '../middleware/auth.js';
-
-// Funções temporárias para substituir auth.js
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-  req.user = { id: 'temp-user', role: 'admin' };
-  next();
-};
+import { authenticate, optionalAuthenticate } from '../middleware/authMiddleware.js';
+import { requireAnyRole } from '../middleware/requireRole.js';
 
 const requireMarketAccess = (permission) => (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Usuário não autenticado' });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
-  // Por enquanto, permitir acesso para todos os usuários autenticados
-  // TODO: Implementar verificação real de permissão de mercado
   next();
 };
 
-const optionalAuth = (req, res, next) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (token) {
-    req.user = { id: 'temp-user', role: 'admin' };
-  }
-  next();
-};
+const optionalAuth = optionalAuthenticate;
+
 import {
   validateUuidParam,
   validateMarketIdParam,

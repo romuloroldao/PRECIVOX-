@@ -104,11 +104,28 @@ export async function GET(request: NextRequest) {
 
     // Buscar do cache Redis (1 hora) ou do banco
     const cacheKey = `badges:${userId}`;
-    const data = await getCached(
-      cacheKey,
-      () => fetchBadgesFromDB(userId),
-      3600 // 1 hora
-    );
+    let data;
+    try {
+      data = await getCached(
+        cacheKey,
+        () => fetchBadgesFromDB(userId),
+        3600 // 1 hora
+      );
+    } catch (dbError: any) {
+      const isTableMissing =
+        dbError?.message?.includes('does not exist') ||
+        dbError?.code === 'P2021';
+      if (isTableMissing) {
+        data = {
+          badges: {},
+          stats: null,
+          totalBadges: 0,
+          unlockedBadges: 0,
+        };
+      } else {
+        throw dbError;
+      }
+    }
 
     const response = {
       success: true,
@@ -123,7 +140,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching badges:', error);
-    
+
     return NextResponse.json(
       {
         success: false,

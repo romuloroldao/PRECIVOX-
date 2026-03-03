@@ -122,10 +122,11 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true }: Head
                 </button>
               </>
             ) : (
-              // Usuário não autenticado: mostrar botão de entrar
+              // Usuário não autenticado: mostrar botão de entrar (tamanho mínimo garantido)
               <Link
                 href="/login"
                 className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                style={{ minHeight: '40px', fontSize: '1rem' }}
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />

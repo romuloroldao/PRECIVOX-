@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/shared';
 import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 
 type OnboardingStep = 1 | 2 | 3;
 
@@ -22,6 +22,8 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState('');
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id ?? null;
 
   // Auto-avançar após login (simulado)
   useEffect(() => {
@@ -62,34 +64,42 @@ export default function OnboardingPage() {
 
   const handleCreateFirstList = async () => {
     setIsLoading(true);
-    
+
+    const effectiveUserId = userId;
+    if (!effectiveUserId) {
+      console.warn('Onboarding: usuário não logado, redirecionando para listas');
+      router.push('/cliente/listas');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Buscar produtos populares
       const productsResponse = await fetch('/api/products/popular?limit=10');
       const productsData = await productsResponse.json();
-      
+
       if (productsData.success) {
-        // Criar lista automática
         const createResponse = await fetch('/api/lists/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: 'temp-user-id', // TODO: usar userId real do NextAuth
+            userId: effectiveUserId,
             name: 'Minha Primeira Lista',
             products: productsData.data.products.slice(0, 5).map((p: any) => p.id),
           }),
         });
-        
+
         const listData = await createResponse.json();
-        
+
         if (listData.success) {
-          // Redirecionar para dashboard com a lista criada
           router.push(`/cliente/listas?new=${listData.data.listId}`);
+        } else {
+          router.push('/cliente/listas');
         }
+      } else {
+        router.push('/cliente/listas');
       }
     } catch (error) {
       console.error('Error creating list:', error);
-      // Fallback: redirecionar mesmo com erro
       router.push('/cliente/listas');
     } finally {
       setIsLoading(false);

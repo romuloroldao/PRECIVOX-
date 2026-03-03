@@ -51,6 +51,8 @@ PRECIVOX é uma plataforma de inteligência de mercado que fornece a pequenos e 
 - Nginx (reverse proxy)
 - Systemd (auto-start)
 
+**Contrato de arquitetura (regras obrigatórias):** [ARCHITECTURE.md](./ARCHITECTURE.md) — RULE 1–4 (apenas BFF chama Express, apenas /api/v1, 3001 nunca público, internalFetch único gateway).
+
 ---
 
 ## 📁 Estrutura do Projeto
@@ -95,7 +97,7 @@ precivox/
 
 ### Pré-requisitos
 
-- Node.js 22+
+- Node.js 22+ (em produção recomenda-se **Node 18.20.8** via `.nvmrc`: execute `nvm use` antes do build/deploy para evitar drift e bugs de runtime como crypto).
 - PostgreSQL 14+
 - npm ou yarn
 - PM2 (opcional, para produção)
@@ -298,13 +300,38 @@ npm run test:coverage
 
 - **[API Documentation](./docs/API_DOCUMENTATION.md)** - Referência completa de APIs
 - **[Dashboard Guide](./docs/DASHBOARD_GUIDE.md)** - Guia do usuário do dashboard
-- **[Architecture](./docs/ARCHITECTURE.md)** - Arquitetura detalhada do sistema
+- **[Architecture](./ARCHITECTURE.md)** - Arquitetura detalhada do sistema
+- **[Deploy](./docs/DEPLOY.md)** - Procedimento oficial de deploy em produção
+- **[Estabilização Login](./docs/ESTABILIZACAO_LOGIN.md)** - Checklist de layout e estabilização do /login
 
 ---
 
 ## 🚀 Deploy
 
-### Produção
+### Versão do Node em produção
+
+O projeto define a versão em `.nvmrc` (ex.: 18.20.8). Antes do build ou do script de deploy:
+
+```bash
+nvm use
+```
+
+Isso evita uso de Node incorreto e problemas como falhas de crypto em produção.
+
+### Produção (script oficial)
+
+Na raiz do repositório, use o script idempotente (ver [docs/DEPLOY.md](docs/DEPLOY.md)):
+
+```bash
+nvm use
+./deploy-prod.sh
+```
+
+Ou: `npm run deploy:prod`
+
+O script executa na ordem: `git pull` → `npm ci` → `build:ai` → `prisma migrate deploy` → build frontend (limpa `.next`) → restart PM2 → `pm2 save`.
+
+### Produção (manual)
 
 1. **Build do projeto**
 ```bash
@@ -321,16 +348,21 @@ pm2 startup
 
 3. **Configurar Nginx**
 ```nginx
+upstream nextjs_upstream {
+    server 127.0.0.1:3000;
+    keepalive 64;
+}
+
 server {
     listen 80;
     server_name precivox.com.br;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://nextjs_upstream;
     }
 
-    location /api/ {
-        proxy_pass http://localhost:3001;
+    location /api {
+        proxy_pass http://nextjs_upstream;
     }
 }
 ```

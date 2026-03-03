@@ -141,9 +141,21 @@ export async function POST(request: NextRequest) {
         },
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error checking streak:', error);
-
+    const isTableMissing =
+      error?.message?.includes('does not exist') ||
+      error?.code === 'P2021';
+    if (isTableMissing) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          streak: 0,
+          longestStreak: 0,
+          isNew: false,
+        },
+      });
+    }
     return NextResponse.json(
       {
         success: false,

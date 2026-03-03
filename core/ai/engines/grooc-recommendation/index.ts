@@ -7,7 +7,7 @@ import { RecommendationInput, RecommendationOutput } from './types';
 import { StockDataService } from '../../services/stock-data.service';
 import { logger } from '../../utils/logger';
 import { metricsCollector } from '../../utils/metrics';
-import { AIEngineResult } from '../../types/common';
+import { AIEngineResult, ProductData } from '../../types/common';
 
 export class GROOCRecommendationEngine {
     private recommender: GROOCRecommender;
@@ -36,7 +36,7 @@ export class GROOCRecommendationEngine {
 
             // Buscar produtos disponíveis de todas as unidades do mercado
             const mercadoIdToUse = input.mercadoId || 'mercado-default';
-            let stockByUnidade;
+            let stockByUnidade: Map<string, ProductData[]>;
             
             if (input.unidadeId) {
                 // Se unidadeId específico fornecido, buscar apenas dessa unidade
@@ -48,7 +48,8 @@ export class GROOCRecommendationEngine {
             }
 
             // Consolidar todos os produtos disponíveis
-            const allProducts = Array.from(stockByUnidade.values()).flat();
+            const allProducts: ProductData[] =
+                Array.from(stockByUnidade.values()).flat();
 
             if (allProducts.length === 0) {
                 logger.warn(this.ENGINE_NAME, 'Nenhum produto disponível no mercado');

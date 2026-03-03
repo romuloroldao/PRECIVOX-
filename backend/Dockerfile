@@ -16,8 +16,9 @@ COPY . .
 # Criar diretório para logs e dados
 RUN mkdir -p logs data
 
-# Expor porta
-EXPOSE 3001
+# NÃO expor 3001 para o host. Backend só deve ser acessível na rede interna (BFF).
+# Em produção: não use "ports: - 3001:3001" no compose. Só Next.js (BFF) fala com o backend.
+# EXPOSE omitido de propósito — ver ARCHITECTURE.md RULE 3.
 
 # Definir variáveis de ambiente padrão
 ENV NODE_ENV=staging

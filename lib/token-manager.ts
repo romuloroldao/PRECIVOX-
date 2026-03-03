@@ -20,6 +20,7 @@ export type SessionUser = {
   email: string;
   role: 'ADMIN' | 'GESTOR' | 'CLIENTE';
   nome?: string | null;
+  tokenVersion?: number;
 };
 
 export interface TokenPair {
@@ -51,13 +52,15 @@ export class TokenManager {
    * Emite par de tokens (Access + Refresh)
    */
   static async issueTokenPair(user: SessionUser): Promise<TokenPair> {
-    // 1. Gerar Access Token (JWT curto - 15 minutos)
+    const normalizedTokenVersion = user.tokenVersion ?? 0;
+    // 1. Gerar Access Token (JWT curto - 15 minutos) com tokenVersion para revogação
     const accessToken = await generateToken(
       {
         id: user.id,
         email: user.email,
         role: user.role,
         nome: user.nome || null,
+        tokenVersion: normalizedTokenVersion,
       },
       this.ACCESS_TOKEN_EXPIRES_IN
     );
@@ -140,12 +143,13 @@ export class TokenManager {
         data: { revoked: true, revokedAt: new Date() },
       });
 
-      // Gerar novo par de tokens
+      // Gerar novo par de tokens (com tokenVersion atual do usuário)
       const user: SessionUser = {
         id: storedToken.user.id,
         email: storedToken.user.email,
         role: storedToken.user.role as 'ADMIN' | 'GESTOR' | 'CLIENTE',
         nome: storedToken.user.nome,
+        tokenVersion: (storedToken.user as any).tokenVersion ?? 0,
       };
 
       return await this.issueTokenPair(user);
@@ -215,7 +219,12 @@ export class TokenManager {
 
       // 2. Tentar ler Access Token do cookie
       const cookieStore = cookies();
-      const accessTokenCookie = cookieStore.get('precivox-access-token')?.value;
+      const accessTokenCookie =
+        cookieStore.get(
+          process.env.NODE_ENV === 'production'
+            ? '__Secure-precivox-access-token'
+            : 'precivox-access-token',
+        )?.value;
       if (accessTokenCookie) {
         const user = await this.validateAccessToken(accessTokenCookie);
         if (user) {

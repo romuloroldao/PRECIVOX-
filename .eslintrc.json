@@ -1,0 +1,31 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals"],
+  "overrides": [
+    {
+      "files": ["lib/internal-backend.ts", "apps/frontend/lib/internal-backend.ts"],
+      "rules": {}
+    },
+    {
+      "files": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+      "excludedFiles": ["lib/internal-backend.ts", "apps/frontend/lib/internal-backend.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "MemberExpression[object.object.name='process'][object.property.name='env'][property.name='BACKEND_INTERNAL_URL']",
+            "message": "Uso direto de process.env.BACKEND_INTERNAL_URL é proibido. Use internalFetch de @/lib/internal-backend."
+          },
+          {
+            "selector": "MemberExpression[object.object.name='process'][object.property.name='env'][property.name='BACKEND_URL']",
+            "message": "Uso direto de process.env.BACKEND_URL é proibido. Use internalFetch de @/lib/internal-backend."
+          },
+          {
+            "selector": "CallExpression[callee.name='fetch'] > Literal[value=/3001/]",
+            "message": "Fetch com URL contendo porta 3001 é proibido. Use internalFetch(path, options) de @/lib/internal-backend."
+          }
+        ]
+      }
+    }
+  ]
+}

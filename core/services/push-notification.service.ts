@@ -3,7 +3,7 @@
  */
 
 import * as webpush from 'web-push';
-import { logger } from '../ai/utils/logger';
+import { logger } from '../ai/utils/logger.js';
 
 export interface PushSubscription {
     endpoint: string;
@@ -56,7 +56,7 @@ export class PushNotificationService {
      */
     async registerSubscription(userId: string, subscription: PushSubscription): Promise<void> {
         try {
-            const { prisma } = await import('../ai/lib/prisma-compat');
+            const { prisma } = await import('../ai/lib/prisma-compat.js');
             
             // Verificar se já existe subscription para este endpoint
             const existing = await prisma.push_subscriptions.findFirst({
@@ -106,7 +106,7 @@ export class PushNotificationService {
      */
     async sendNotification(userId: string, payload: NotificationPayload): Promise<void> {
         try {
-            const { prisma } = await import('../ai/lib/prisma-compat');
+            const { prisma } = await import('../ai/lib/prisma-compat.js');
             
             // Buscar subscriptions ativas do usuário
             const subscriptions = await prisma.push_subscriptions.findMany({

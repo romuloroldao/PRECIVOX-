@@ -80,7 +80,7 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
   return (
     <div className="min-h-screen flex">
       {/* Painel Esquerdo - Formulário */}
-      <div className="w-full lg:w-3/5 flex items-center justify-center px-8 bg-white">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-8 bg-white">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
@@ -201,30 +201,28 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
         </div>
       </div>
 
-      {/* Painel Direito - Branding */}
-      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-teal-500 to-blue-600 relative">
-        {/* Background Waves Pattern */}
-        <div className="absolute inset-0 opacity-20">
-          <svg
-            className="w-full h-full"
-            fill="none"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M0,0 C30,40 70,0 100,40 L100,0 L0,0 Z"
-              fill="rgba(255,255,255,0.1)"
-            />
-            <path
-              d="M0,20 C30,60 70,20 100,60 L100,20 L0,20 Z"
-              fill="rgba(255,255,255,0.05)"
-            />
-            <path
-              d="M0,40 C30,80 70,40 100,80 L100,40 L0,40 Z"
-              fill="rgba(255,255,255,0.02)"
-            />
-          </svg>
-        </div>
+      {/* Painel Direito - Branding: sem h-full/min-h-screen; gradiente inline */}
+      <div
+        className="relative hidden lg:flex lg:w-1/2 flex-1 overflow-hidden"
+        style={{ background: 'linear-gradient(to bottom right, #0d9488, #2563eb)' }}
+      >
+        {/* SVG de onda: altura fixa 200px, não depende do pai */}
+        <svg
+          className="absolute bottom-0 left-0 w-full"
+          style={{ height: '200px' }}
+          viewBox="0 0 1440 320"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M0,96 C360,256 1080,0 1440,96 L1440,320 L0,320 Z"
+            fill="rgba(255,255,255,0.15)"
+          />
+          <path
+            d="M0,160 C360,32 1080,288 1440,160 L1440,320 L0,320 Z"
+            fill="rgba(255,255,255,0.1)"
+          />
+        </svg>
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center items-center text-white p-8 w-full">

@@ -48,11 +48,13 @@ export default function AdminDashboardPage() {
     isLoading: statsLoading,
     isError: statsError,
     error: statsErrorMsg,
+    errorStatus: statsStatus,
     refetch: refetchStats,
   } = useApiQuery<UserStats>('/api/admin/stats', {
     enabled: status === 'authenticated' && user?.role === 'ADMIN',
     retries: 2,
     timeout: 10000,
+    skipInterceptors: true,
   });
 
   // ✅ Query para usuários recentes - Hook gerencia loading, error, data
@@ -61,11 +63,13 @@ export default function AdminDashboardPage() {
     isLoading: usersLoading,
     isError: usersError,
     error: usersErrorMsg,
+    errorStatus: usersStatus,
     refetch: refetchUsers,
   } = useApiQuery<RecentUser[]>('/api/admin/recent-users', {
     enabled: status === 'authenticated' && user?.role === 'ADMIN',
     retries: 2,
     timeout: 10000,
+    skipInterceptors: true,
   });
 
   // Verificar se está carregando ou não autenticado
@@ -112,11 +116,23 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* System Stats - Com fallback completo */}
+        {/* System Stats - Com fallback completo e tratamento explícito para 401/403 */}
         {statsError ? (
           <ErrorDisplay
-            title="Erro ao carregar estatísticas"
-            message={statsErrorMsg || 'Não foi possível carregar as estatísticas do sistema'}
+            title={
+              statsStatus === 401
+                ? 'Sessão expirada'
+                : statsStatus === 403
+                  ? 'Sem permissão de administrador'
+                  : 'Erro ao carregar estatísticas'
+            }
+            message={
+              statsStatus === 401
+                ? 'Sua sessão expirou ou o token é inválido. Faça login novamente para continuar.'
+                : statsStatus === 403
+                  ? 'Apenas usuários com perfil ADMIN podem ver as estatísticas.'
+                  : statsErrorMsg || 'Não foi possível carregar as estatísticas do sistema.'
+            }
             onRetry={refetchStats}
           />
         ) : (
@@ -292,8 +308,20 @@ export default function AdminDashboardPage() {
           
           {usersError ? (
             <ErrorDisplay
-              title="Erro ao carregar usuários recentes"
-              message={usersErrorMsg || 'Não foi possível carregar os usuários recentes'}
+              title={
+                usersStatus === 401
+                  ? 'Sessão expirada'
+                  : usersStatus === 403
+                    ? 'Sem permissão de administrador'
+                    : 'Erro ao carregar usuários recentes'
+              }
+              message={
+                usersStatus === 401
+                  ? 'Sua sessão expirou ou o token é inválido. Faça login novamente para continuar.'
+                  : usersStatus === 403
+                    ? 'Apenas usuários com perfil ADMIN podem ver os registros recentes.'
+                    : usersErrorMsg || 'Não foi possível carregar os usuários recentes.'
+              }
               onRetry={refetchUsers}
             />
           ) : usersLoading ? (
