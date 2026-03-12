@@ -95,7 +95,7 @@ export const authOptions: NextAuthOptions = {
     updateAge: 24 * 60 * 60, // Atualizar sessão a cada 24 horas
   },
 
-  // Configurações para evitar loops
+  // Configurações de cookies / sessão
   useSecureCookies: process.env.NODE_ENV === 'production',
   cookies: {
     sessionToken: {
@@ -103,8 +103,11 @@ export const authOptions: NextAuthOptions = {
       options: {
         httpOnly: true,
         sameSite: 'lax',
-        path: '/',
         secure: process.env.NODE_ENV === 'production',
+        // Permite compartilhar sessão entre precivox.com.br, www.precivox.com.br, etc.
+        // IMPORTANTE: mantenha alinhado com NEXTAUTH_URL em produção.
+        domain: process.env.NODE_ENV === 'production' ? '.precivox.com.br' : undefined,
+        path: '/',
       },
     },
   },
@@ -223,9 +226,9 @@ export const authOptions: NextAuthOptions = {
     },
     
     /**
-     * IMPORTANTE: NextAuth é usado APENAS para login social/onboarding
-     * Após login bem-sucedido, a aplicação deve emitir tokens próprios via /api/auth/token
-     * APIs não devem depender de getServerSession - usar TokenManager.validateSession
+     * IMPORTANTE: NextAuth é usado para login (identidade).
+     * Autorização (role) vem do banco — ver docs/AUTH_AUTHORITY_MODEL.md.
+     * APIs não usam session.user.role do JWT como fonte de verdade; usam TokenManager ou prisma.user.
      */
   },
 

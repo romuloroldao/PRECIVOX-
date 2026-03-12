@@ -6,9 +6,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { prisma } from '@/lib/prisma';
-import { TokenManager } from '@/lib/token-manager';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { withAdmin } from '@/lib/api/auth/withAdmin';
 
 // Rate limiting simples em memória
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -32,56 +30,8 @@ function checkRateLimit(identifier: string): boolean {
   return true;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAdmin(async (request, user) => {
   try {
-    // 1) TokenManager (Authorization Bearer + cookie access token + sessão DB)
-    let user = await TokenManager.validateRole('ADMIN', {
-      headers: request.headers,
-      cookies: request.cookies,
-    });
-
-    // 2) Fallback: sessão NextAuth JWT (cookie __Secure-next-auth.session-token)
-    if (!user) {
-      const session = await getServerSession(authOptions);
-      console.log('[ADMIN DEBUG] recent-users getServerSession:', session ? { email: session.user?.email, role: (session.user as { role?: string })?.role } : null);
-      if (session?.user?.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: session.user.email },
-          select: { id: true, email: true, role: true, nome: true },
-        });
-        if (dbUser?.role === 'ADMIN') {
-          user = {
-            id: dbUser.id,
-            email: dbUser.email,
-            role: dbUser.role as 'ADMIN' | 'GESTOR' | 'CLIENTE',
-            nome: dbUser.nome,
-          };
-        }
-      }
-    }
-    
-    // Debug: Log para verificar sessão
-    console.log('[API /admin/recent-users] Session check:', {
-      hasUser: !!user,
-      userRole: user?.role,
-      hasAuthHeader: !!request.headers.get('authorization'),
-      cookies: request.cookies.getAll().map(c => c.name),
-    });
-    
-    if (!user) {
-      const session = await getServerSession(authOptions);
-      if (session?.user?.email) {
-        return NextResponse.json(
-          { error: 'Acesso negado - Apenas administradores', code: 'FORBIDDEN' },
-          { status: 403 }
-        );
-      }
-      return NextResponse.json(
-        { error: 'Não autenticado', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
-
     // Rate limiting por usuário
     const userId = user.id || user.email;
     if (!checkRateLimit(userId || 'anonymous')) {
@@ -150,4 +100,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
+

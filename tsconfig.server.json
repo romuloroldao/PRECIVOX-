@@ -5,6 +5,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "noEmit": false,
+    "allowJs": false,
     "jsx": "preserve"
   },
   "include": ["src/**/*.ts"],

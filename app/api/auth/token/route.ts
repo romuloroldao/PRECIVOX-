@@ -25,9 +25,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Buscar usuário no banco para emissão de token
-    const dbUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    // Buscar usuário no banco para emissão de token (email case-insensitive)
+    const dbUser = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: session.user.email,
+          mode: 'insensitive',
+        },
+      },
       select: { id: true, email: true, role: true, nome: true },
     });
 

@@ -8,6 +8,7 @@
     "dev:server": "tsx watch src/server.ts",
     "legacy:server": "echo 'WARNING: LEGACY SERVER' && node legacy-backend/server.js",
     "build": "next build",
+    "build:server": "tsc -p tsconfig.server.json",
     "build:ai": "tsc --project tsconfig.build.json",
     "build:frontend": "rm -rf .next && npm run build",
     "build:backend": "cd apps/backend && npm run build",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import LoginForm from '@/components/LoginForm';
@@ -9,65 +9,62 @@ import RegisterModal from '@/components/RegisterModal';
 export default function LoginPage() {
   const router = useRouter();
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const { data: session, status } = useSession();
 
-  useEffect(() => {
-    // Evitar múltiplos redirecionamentos
-    if (isRedirecting) {
-      return;
-    }
+  // Se já está autenticado, mostrar mensagem estável com opção de ir para o dashboard
+  if (status === 'authenticated' && session?.user) {
+    const user = session.user as any;
+    const role = user.role as string | undefined;
 
-    // Só redirecionar se estiver completamente autenticado
-    if (status === 'authenticated' && session?.user) {
-      const user = session.user as any;
-      
-      // Verificar se o usuário tem um role válido
-      if (user.role && ['ADMIN', 'GESTOR', 'CLIENTE'].includes(user.role)) {
-        setIsRedirecting(true);
-        
-        const dashboardUrls: Record<string, string> = {
-          ADMIN: '/admin/dashboard',
-          GESTOR: '/gestor/home',
-          CLIENTE: '/', // Redirecionar clientes diretamente para a página de busca
-        };
-        
-        const targetUrl = dashboardUrls[user.role];
-        
-        // Usar replace em vez de push para evitar loop
-        router.replace(targetUrl);
-      }
-    }
-  }, [session, status, router, isRedirecting]);
+    const dashboardUrls: Record<string, string> = {
+      ADMIN: '/admin/dashboard',
+      GESTOR: '/gestor/home',
+      CLIENTE: '/',
+    };
 
-  // Mostrar loading se estiver redirecionando
-  if (isRedirecting || (status === 'authenticated' && session?.user)) {
+    const targetUrl = role && dashboardUrls[role] ? dashboardUrls[role] : '/';
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Redirecionando...</p>
+        <div className="bg-white shadow-md rounded-xl p-8 max-w-md text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Você já está autenticado
+          </h2>
+          <p className="text-gray-600 mb-4">
+            Clique abaixo para ir para o seu painel.
+          </p>
+          <button
+            onClick={() => router.replace(targetUrl)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Ir para o painel
+          </button>
         </div>
       </div>
     );
   }
 
-  // Só mostrar o formulário se não estiver autenticado
-  if (status === 'unauthenticated' || status === 'loading') {
+  // Enquanto carrega a sessão, mostrar um loading simples
+  if (status === 'loading') {
     return (
-      <>
-        {/* Formulário de Login com novo layout */}
-        <LoginForm onShowRegister={() => setShowRegisterModal(true)} />
-
-        {/* Modal de Cadastro */}
-        <RegisterModal
-          isOpen={showRegisterModal}
-          onClose={() => setShowRegisterModal(false)}
-        />
-      </>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
     );
   }
 
-  return null;
+  // Não autenticado: mostrar formulário de login normalmente
+  return (
+    <>
+      <LoginForm onShowRegister={() => setShowRegisterModal(true)} />
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+      />
+    </>
+  );
 }
 

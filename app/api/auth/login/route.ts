@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { internalFetch } from '@/lib/internal-backend';
+import { TokenManager } from '@/lib/token-manager';
 
 export const dynamic = 'force-dynamic';
+
+const PLACEHOLDER_TOKEN = '(use token do Next)';
+const PLACEHOLDER_REFRESH = '(use refresh do Next)';
+
+function isValidToken(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 10 && value !== PLACEHOLDER_TOKEN && value !== PLACEHOLDER_REFRESH;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,30 +41,58 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!data.success || !data.data?.user || !data.data.accessToken || !data.data.refreshToken) {
+    if (!data.success || !data.data?.user) {
       return NextResponse.json(
         { success: false, error: 'Resposta inválida do backend' },
         { status: 502 }
       );
     }
 
-    const backendUser = data.data.user as { id?: string; email?: string; nome?: string; role?: string };
+    const backendUser = data.data.user as { id?: string; email?: string; nome?: string; name?: string; role?: string };
+    const accessTokenFromBackend = data.data.accessToken ?? data.data.token;
+    const refreshTokenFromBackend = data.data.refreshToken;
+
+    let accessToken: string;
+    let refreshToken: string;
+
+    if (isValidToken(accessTokenFromBackend) && isValidToken(refreshTokenFromBackend)) {
+      accessToken = accessTokenFromBackend;
+      refreshToken = refreshTokenFromBackend;
+    } else {
+      // Backend não envia tokens reais (ex: placeholders) — BFF emite os tokens
+      const role = (backendUser.role ?? 'CLIENTE').toUpperCase() as 'ADMIN' | 'GESTOR' | 'CLIENTE';
+      if (!['ADMIN', 'GESTOR', 'CLIENTE'].includes(role)) {
+        return NextResponse.json(
+          { success: false, error: 'Resposta inválida do backend (role inválido)' },
+          { status: 502 }
+        );
+      }
+      const sessionUser = {
+        id: backendUser.id!,
+        email: backendUser.email!,
+        role,
+        nome: backendUser.nome ?? backendUser.name ?? null,
+      };
+      const pair = await TokenManager.issueTokenPair(sessionUser);
+      accessToken = pair.accessToken;
+      refreshToken = pair.refreshToken;
+    }
 
     const response = NextResponse.json({
       success: true,
       user: {
         id: backendUser.id,
         email: backendUser.email,
-        nome: backendUser.nome ?? '',
+        nome: backendUser.nome ?? backendUser.name ?? '',
         role: backendUser.role,
       },
-      accessToken: data.data.accessToken,
-      refreshToken: data.data.refreshToken,
+      accessToken,
+      refreshToken,
     });
 
     const cookiePrefix = process.env.NODE_ENV === 'production' ? '__Secure-' : '';
 
-    response.cookies.set(`${cookiePrefix}precivox-access-token`, data.data.accessToken, {
+    response.cookies.set(`${cookiePrefix}precivox-access-token`, accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -64,7 +100,7 @@ export async function POST(req: NextRequest) {
       maxAge: 15 * 60,
     });
 
-    response.cookies.set(`${cookiePrefix}precivox-refresh-token`, data.data.refreshToken, {
+    response.cookies.set(`${cookiePrefix}precivox-refresh-token`, refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

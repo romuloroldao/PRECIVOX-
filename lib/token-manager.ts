@@ -32,7 +32,8 @@ export interface TokenPair {
 export class TokenManager {
   // Duração dos tokens
   private static readonly ACCESS_TOKEN_EXPIRES_IN = '15m'; // 15 minutos
-  private static readonly REFRESH_TOKEN_EXPIRES_IN_DAYS = 30; // 30 dias
+  // Mantém alinhado com a arquitetura Auth v2 (docs: 7 dias)
+  private static readonly REFRESH_TOKEN_EXPIRES_IN_DAYS = 7;
 
   /**
    * Gera hash seguro para refresh token
@@ -101,11 +102,47 @@ export class TokenManager {
         return null;
       }
 
+      const userId = payload.id;
+      if (!userId) {
+        return null;
+      }
+
+      // Validar contra o banco para respeitar tokenVersion (kill switch)
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        // tokenVersion existe no modelo Prisma (User.tokenVersion)
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          nome: true,
+          tokenVersion: true,
+        },
+      });
+
+      if (!dbUser) {
+        return null;
+      }
+
+      const tokenVersionFromToken =
+        typeof (payload as any).tokenVersion === 'number'
+          ? (payload as any).tokenVersion
+          : 0;
+      const tokenVersionFromDb =
+        typeof (dbUser as any).tokenVersion === 'number'
+          ? (dbUser as any).tokenVersion
+          : 0;
+
+      if (tokenVersionFromToken !== tokenVersionFromDb) {
+        return null;
+      }
+
       return {
-        id: payload.id,
-        email: payload.email,
-        role: payload.role,
-        nome: payload.nome || null,
+        id: dbUser.id,
+        email: dbUser.email,
+        role: dbUser.role as SessionUser['role'],
+        nome: dbUser.nome || null,
+        tokenVersion: tokenVersionFromDb,
       };
     } catch (error) {
       return null;
@@ -217,14 +254,19 @@ export class TokenManager {
         }
       }
 
-      // 2. Tentar ler Access Token do cookie
-      const cookieStore = cookies();
-      const accessTokenCookie =
-        cookieStore.get(
-          process.env.NODE_ENV === 'production'
-            ? '__Secure-precivox-access-token'
-            : 'precivox-access-token',
-        )?.value;
+      // 2. Tentar ler Access Token do cookie (usar request.cookies se passado, senão next/headers)
+      const accessTokenCookieName =
+        process.env.NODE_ENV === 'production'
+          ? '__Secure-precivox-access-token'
+          : 'precivox-access-token';
+      let accessTokenCookie: string | undefined;
+      if (request?.cookies && typeof request.cookies.get === 'function') {
+        accessTokenCookie = request.cookies.get(accessTokenCookieName)?.value;
+      }
+      if (!accessTokenCookie) {
+        const cookieStore = cookies();
+        accessTokenCookie = cookieStore.get(accessTokenCookieName)?.value;
+      }
       if (accessTokenCookie) {
         const user = await this.validateAccessToken(accessTokenCookie);
         if (user) {
@@ -232,12 +274,20 @@ export class TokenManager {
         }
       }
 
-      // 3. Fallback: Tentar ler session token do NextAuth (compatibilidade)
-      const nextAuthToken = cookieStore.get(
+      // 3. Fallback: NextAuth session token (com strategy JWT não está em prisma.sessions;
+      //    a rota que chama deve usar getServerSession como fallback)
+      const nextAuthTokenName =
         process.env.NODE_ENV === 'production'
           ? '__Secure-next-auth.session-token'
-          : 'next-auth.session-token'
-      )?.value;
+          : 'next-auth.session-token';
+      let nextAuthToken: string | undefined;
+      if (request?.cookies && typeof request.cookies.get === 'function') {
+        nextAuthToken = request.cookies.get(nextAuthTokenName)?.value;
+      }
+      if (!nextAuthToken) {
+        const cookieStore = cookies();
+        nextAuthToken = cookieStore.get(nextAuthTokenName)?.value;
+      }
 
       if (nextAuthToken) {
         const session = await prisma.sessions.findUnique({

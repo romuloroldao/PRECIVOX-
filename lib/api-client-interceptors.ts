@@ -13,25 +13,27 @@ export interface ApiInterceptor {
 
 /**
  * Interceptor para erros 401 (Unauthorized)
- * Redireciona para login e limpa tokens
+ * Limpa tokens próprios; UI decide se deve redirecionar.
  */
 export const unauthorizedInterceptor: ApiInterceptor = {
   onError: async (error: ApiError) => {
-    if (error.status === 401) {
-      // Limpar tokens
-      if (typeof window !== 'undefined') {
-        try {
-          const { authClient } = await import('@/lib/auth-client');
-          authClient.clearTokens();
-        } catch (e) {
-          console.error('Erro ao limpar tokens:', e);
-        }
+    if (error.status === 401 && typeof window !== 'undefined') {
+      const path = window.location.pathname;
 
-        // Redirecionar para login após um pequeno delay
-        setTimeout(() => {
-          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-        }, 100);
+      // Nunca redirecionar se já estamos na tela de login
+      if (path.startsWith('/login')) {
+        return;
       }
+
+      // Limpar tokens de sessão do AuthClient (tokens próprios da Auth V2)
+      try {
+        const { authClient } = await import('@/lib/auth-client');
+        authClient.clearTokens();
+      } catch (e) {
+        console.error('Erro ao limpar tokens:', e);
+      }
+      // Não fazer redirect automático aqui para evitar loops.
+      // As páginas (ex.: dashboard admin) já tratam 401/403 e podem exibir CTA de login.
     }
   },
 };

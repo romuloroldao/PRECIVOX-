@@ -26,49 +26,18 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
     setErrorMessage('');
 
     try {
+      // Deixar o NextAuth cuidar do redirect em uma única etapa.
+      // Para admin, usamos /admin/dashboard como callback padrão.
       const result = await signIn('credentials', {
         email: data.email,
         senha: data.senha,
-        redirect: false,
+        callbackUrl: '/admin/dashboard',
       });
 
+      // Quando redirect=true (padrão), se chegar aqui é porque houve erro.
       if (result?.error) {
         setErrorMessage('Email ou senha inválidos');
         setIsLoading(false);
-      } else if (result?.ok) {
-        // Aguardar um pouco para garantir que a sessão foi criada
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // IMPORTANTE: Emitir tokens após login bem-sucedido
-        try {
-          const { authClient } = await import('@/lib/auth-client');
-          const tokens = await authClient.issueTokens();
-          
-          if (!tokens) {
-            console.warn('[LoginForm] Não foi possível emitir tokens, mas login foi bem-sucedido');
-          }
-        } catch (error) {
-          console.error('[LoginForm] Erro ao emitir tokens:', error);
-          // Continuar mesmo se falhar (NextAuth session ainda funciona)
-        }
-        
-        // Buscar dados do usuário para redirecionar corretamente
-        const response = await fetch('/api/auth/session');
-        const session = await response.json();
-        
-        if (session?.user?.role) {
-          const dashboardUrls: Record<string, string> = {
-            ADMIN: '/admin/dashboard',
-            GESTOR: '/gestor/home',
-            CLIENTE: '/cliente/home',
-          };
-          
-          // Usar window.location.href para garantir redirecionamento completo
-          // Isso evita problemas com o estado do React
-          window.location.href = dashboardUrls[session.user.role] || '/cliente/home';
-        } else {
-          window.location.href = '/cliente/home';
-        }
       }
     } catch (error) {
       console.error('Erro no onSubmit:', error);

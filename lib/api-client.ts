@@ -66,6 +66,11 @@ export interface ApiError {
   code?: string;
   status: number;
   retryable: boolean;
+  /**
+   * URL final chamada pelo cliente (já resolvida por getApiEndpoint).
+   * Útil para interceptors diferenciarem contextos (ex: /api/admin/*).
+   */
+  url?: string;
 }
 
 /**
@@ -169,6 +174,7 @@ export async function apiFetch<T = any>(
       code,
       status,
       retryable,
+      url,
     };
   };
 

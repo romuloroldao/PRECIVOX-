@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
+import { withAdmin } from '@/lib/api/auth/withAdmin';
 
-// Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
@@ -15,32 +13,21 @@ const updateUserSchema = z.object({
 });
 
 // GET - Buscar usuário por ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const GET = withAdmin(async (request, adminUser) => {
   try {
-    // Verificar autenticação via NextAuth
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop();
 
-    // Verificar se é admin
-    if (session.user.role !== 'ADMIN') {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores' },
-        { status: 403 }
+        { error: 'ID do usuário não informado' },
+        { status: 400 },
       );
     }
 
     // Buscar usuário
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         nome: true,
@@ -70,35 +57,24 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Atualizar usuário
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const PUT = withAdmin(async (request, adminUser) => {
   try {
-    // Verificar autenticação via NextAuth
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop();
 
-    // Verificar se é admin
-    if (session.user.role !== 'ADMIN') {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores' },
-        { status: 403 }
+        { error: 'ID do usuário não informado' },
+        { status: 400 },
       );
     }
 
     // Verificar se usuário existe
     const existingUser = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingUser) {
@@ -128,7 +104,7 @@ export async function PUT(
 
     // Atualizar usuário
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(validatedData.nome && { nome: validatedData.nome }),
         ...(validatedData.email && { email: validatedData.email }),
@@ -168,35 +144,24 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Excluir usuário
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const DELETE = withAdmin(async (request, adminUser) => {
   try {
-    // Verificar autenticação via NextAuth
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop();
 
-    // Verificar se é admin
-    if (session.user.role !== 'ADMIN') {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Acesso negado - Apenas administradores' },
-        { status: 403 }
+        { error: 'ID do usuário não informado' },
+        { status: 400 },
       );
     }
 
     // Verificar se usuário existe
     const user = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!user) {
@@ -207,7 +172,7 @@ export async function DELETE(
     }
 
     // Não permitir excluir o próprio usuário
-    if (user.id === (session.user as any).id) {
+    if (user.id === adminUser.id) {
       return NextResponse.json(
         { error: 'Não é possível excluir seu próprio usuário' },
         { status: 400 }
@@ -216,7 +181,7 @@ export async function DELETE(
 
     // Excluir usuário (isso também excluirá as sessões relacionadas devido ao cascade)
     await prisma.user.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({
@@ -231,4 +196,5 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});
+
