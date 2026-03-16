@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // CRÍTICO: Prisma requer runtime nodejs, não edge
 export const runtime = 'nodejs';
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 import { prisma } from '@/lib/prisma';
-import { withAdmin } from '@/lib/api/auth/withAdmin';
+import { requireAdmin } from '@/lib/api/admin-auth';
+import { TokenManager } from '@/lib/token-manager';
 
 // Rate limiting simples em memória
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -30,8 +31,33 @@ function checkRateLimit(identifier: string): boolean {
   return true;
 }
 
-export const GET = withAdmin(async (request, user) => {
+export async function GET(request: NextRequest) {
   try {
+    const accessCookie = request.cookies.get('__Secure-precivox-access-token') ? 'present' : 'missing';
+    const sessionCookie = request.cookies.get('__Secure-next-auth.session-token') ? 'present' : 'missing';
+    console.log('[admin/stats] cookies', { accessCookie, sessionCookie });
+
+    // Auth: 1) TokenManager (cookie/header), 2) fallback NextAuth (getToken + Prisma)
+    let user = await TokenManager.validateRole('ADMIN', {
+      headers: request.headers,
+      cookies: request.cookies,
+    });
+    if (!user) {
+      const adminResult = await requireAdmin(request);
+      console.log('[admin/stats] requireAdmin result', { hasSession: adminResult.hasSession, userEmail: adminResult.user?.email });
+      const adminUser = adminResult.user;
+      user = adminUser
+        ? { id: adminUser.id, email: adminUser.email, role: adminUser.role, nome: adminUser.nome ?? undefined }
+        : null;
+    }
+
+    if (!user) {
+      console.warn('[admin/stats] unauthorized after TokenManager + requireAdmin');
+      return NextResponse.json(
+        { error: 'Não autenticado', code: 'UNAUTHORIZED' },
+        { status: 401 },
+      );
+    }
     // Rate limiting por usuário
     const userId = user.id || user.email;
     if (!checkRateLimit(userId || 'anonymous')) {
@@ -67,10 +93,9 @@ export const GET = withAdmin(async (request, user) => {
         gestores,
         admins,
         markets,
-        products
-      }
+        products,
+      },
     });
-
   } catch (error) {
     console.error('[API /admin/stats] Erro ao buscar estatísticas:', error);
     console.error('[API /admin/stats] Stack trace:', error instanceof Error ? error.stack : 'No stack');
@@ -84,11 +109,12 @@ export const GET = withAdmin(async (request, user) => {
     }
     
     // Erro de conexão com banco
-    if (error instanceof Error && (
-      error.message.includes('Can\'t reach database') ||
-      error.message.includes('P1001') ||
-      error.message.includes('connection')
-    )) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("Can't reach database") ||
+        error.message.includes('P1001') ||
+        error.message.includes('connection'))
+    ) {
       return NextResponse.json(
         { error: 'Erro de conexão com banco de dados', code: 'DATABASE_ERROR' },
         { status: 503 }
@@ -96,15 +122,18 @@ export const GET = withAdmin(async (request, user) => {
     }
     
     return NextResponse.json(
-      { 
-        error: 'Erro interno do servidor', 
+      {
+        error: 'Erro interno do servidor',
         code: 'INTERNAL_ERROR',
-        details: process.env.NODE_ENV === 'development' 
-          ? (error instanceof Error ? error.message : 'Unknown error')
-          : undefined
+        details:
+          process.env.NODE_ENV === 'development'
+            ? error instanceof Error
+              ? error.message
+              : 'Unknown error'
+            : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
-});
+}
 

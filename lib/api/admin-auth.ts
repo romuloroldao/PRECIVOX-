@@ -1,8 +1,11 @@
 import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getToken, decode } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
-import { TokenManager } from '@/lib/token-manager';
+
+const SESSION_COOKIE =
+  process.env.NODE_ENV === 'production'
+    ? '__Secure-next-auth.session-token'
+    : 'next-auth.session-token';
 
 export type AdminUser = {
   id: string;
@@ -35,36 +38,31 @@ export type AdminAuthResult = {
  */
 export async function requireAdmin(request: NextRequest): Promise<AdminAuthResult> {
   try {
-    // 1) TokenManager: tokens próprios (Auth V2)
-    const tokenUser = await TokenManager.validateRole('ADMIN', {
-      headers: request.headers,
-      cookies: request.cookies,
+    const secret = process.env.NEXTAUTH_SECRET;
+    // getToken() falha em Route Handlers porque next-auth espera req.cookies como Map/getAll;
+    // NextRequest.cookies é ReadonlyRequestCookies com apenas .get(name).
+    let token = await getToken({
+      req: request as any,
+      secret,
     });
-
-    if (tokenUser) {
-      return {
-        user: {
-          id: tokenUser.id,
-          email: tokenUser.email,
-          role: tokenUser.role,
-          nome: tokenUser.nome ?? null,
-        },
-        hasSession: true,
-      };
+    if (!token) {
+      const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
+      if (sessionToken && secret) {
+        token = await decode({ token: sessionToken, secret });
+      }
     }
 
-    // 2) Fallback: sessão NextAuth (identidade via email)
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
+    if (!token?.email) {
       return { user: null, hasSession: false };
     }
 
-    // 3) Banco é autoridade para role (case-insensitive por segurança)
+    const email = token.email as string;
+
+    // Banco é autoridade para role (case-insensitive por segurança)
     const dbUser = await prisma.user.findFirst({
       where: {
         email: {
-          equals: session.user.email,
+          equals: email,
           mode: 'insensitive',
         },
       },

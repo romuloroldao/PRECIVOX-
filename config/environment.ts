@@ -39,7 +39,8 @@ export const config: EnvironmentConfig = {
   },
   
   database: {
-    url: process.env.DATABASE_URL || 'postgresql://localhost:5432/produto_images',
+    // Usar o mesmo DATABASE_URL do app (precivox). Não criar banco separado produto_images.
+    url: process.env.DATABASE_URL || '',
     maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '10')
   },
   
@@ -78,8 +79,8 @@ GOOGLE_CUSTOM_SEARCH_API_KEY=sua_chave_aqui
 GOOGLE_SEARCH_ENGINE_ID=seu_id_aqui
 BING_SEARCH_API_KEY=sua_chave_bing_aqui
 
-# Banco de dados
-DATABASE_URL=postgresql://usuario:senha@localhost:5432/produto_images
+# Banco de dados (mesmo do app Precivox)
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/precivox
 DB_MAX_CONNECTIONS=10
 
 # Cache

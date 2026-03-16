@@ -5,14 +5,37 @@
  * - Sem npx: entrypoints estáveis (node + caminho direto).
  * - Sem tsx em produção: backend é backend/server.js (Node ESM).
  * - Frontend: Next.js via bin do next (node_modules/next/dist/bin/next).
- * - Variáveis de ambiente: exporte no shell antes de pm2 start
- *   ou use --env no deploy (ex: NEXTAUTH_SECRET, DATABASE_URL, INTERNAL_API_SECRET).
+ * - Variáveis de ambiente: carregadas de .env.production (na pasta do ecosystem)
+ *   para o frontend (NEXTAUTH_SECRET, JWT_SECRET, DATABASE_URL). Backend usa seu próprio .env.
  *
  * cwd produção: /home/deploy/apps/precivox
  * Em local: altere cwd para o path absoluto do projeto.
  */
 
+const path = require('path');
+const fs = require('fs');
+
 const CWD = process.env.PM2_CWD || '/home/deploy/apps/precivox';
+
+// Carregar .env.production da pasta onde está este arquivo (projeto root)
+function loadEnvProduction() {
+  const envPath = path.join(__dirname, '.env.production');
+  try {
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      content.split('\n').forEach((line) => {
+        const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+        if (m && !m[1].startsWith('#')) {
+          const value = m[2].replace(/^["']|["']$/g, '').trim();
+          if (!process.env[m[1]]) process.env[m[1]] = value;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[ecosystem] .env.production não encontrado ou erro ao ler:', e.message);
+  }
+}
+loadEnvProduction();
 
 module.exports = {
   apps: [
@@ -48,8 +71,11 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        NEXTAUTH_URL: 'https://www.precivox.com.br',
-        NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'REPLACE_WITH_STRONG_SECRET_IN_PROD',
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'https://www.precivox.com.br',
+        NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+        JWT_SECRET: process.env.JWT_SECRET,
+        DATABASE_URL: process.env.DATABASE_URL,
+        NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL,
       },
       error_file: '/var/log/precivox-frontend-error.log',
       out_file: '/var/log/precivox-frontend-out.log',
