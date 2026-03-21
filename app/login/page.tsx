@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import LoginForm from '@/components/LoginForm';
 import RegisterModal from '@/components/RegisterModal';
+import { safeCallbackUrl } from '@/lib/safe-callback-url';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'));
   const refCode = searchParams.get('ref');
   const confirmed = searchParams.get('confirmed') === '1';
   const emailNotVerified = searchParams.get('error') === 'EmailNotVerified';
@@ -48,13 +50,12 @@ function LoginContent() {
     const user = session.user as any;
     const role = user.role as string | undefined;
 
-    const dashboardUrls: Record<string, string> = {
-      ADMIN: '/admin/dashboard',
-      GESTOR: '/gestor/home',
-      CLIENTE: '/',
-    };
-
-    const targetUrl = role && dashboardUrls[role] ? dashboardUrls[role] : '/';
+    const targetUrl =
+      role === 'ADMIN'
+        ? '/admin/dashboard'
+        : role === 'GESTOR'
+          ? '/gestor/home'
+          : callbackUrl;
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -63,13 +64,13 @@ function LoginContent() {
             Você já está autenticado
           </h2>
           <p className="text-gray-600 mb-4">
-            Clique abaixo para ir para o seu painel.
+            Clique abaixo para continuar.
           </p>
           <button
             onClick={() => router.replace(targetUrl)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Ir para o painel
+            Continuar
           </button>
         </div>
       </div>
@@ -130,6 +131,7 @@ function LoginContent() {
         isOpen={showRegisterModal}
         onClose={() => setShowRegisterModal(false)}
         initialReferralCode={refCode}
+        redirectAfterLogin={searchParams.get('callbackUrl') ?? undefined}
       />
     </div>
   );

@@ -19,6 +19,7 @@ import { TOKENS } from '@/styles/tokens';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Logo from '@/components/Logo';
+import { loginUrlWithCallback, signupUrlWithCallback } from '@/lib/safe-callback-url';
 
 interface GlobalStats {
   totalUsers: number;
@@ -109,9 +110,12 @@ export default function LandingPage() {
   const totalSavingsInReais = (stats.totalSavings / 100).toFixed(2);
   const savingsThisMonthInReais = (stats.savingsThisMonth / 100).toFixed(2);
 
+  const hrefListaNovaLogin = loginUrlWithCallback();
+  const hrefListaNovaSignup = signupUrlWithCallback();
+
   return (
     <>
-      <Header title="PRECIVOX" showUserInfo={true} />
+      <Header title="PRECIVOX" showUserInfo={true} loginHref={hrefListaNovaLogin} />
       <main style={styles.main}>
         {/* Hero Section */}
         <section style={styles.hero}>
@@ -135,7 +139,7 @@ export default function LandingPage() {
             Simples, rápido e grátis.
           </p>
           <div style={styles.ctaContainer}>
-            <Link href="/login" style={{ textDecoration: 'none', width: '100%' }}>
+            <Link href={hrefListaNovaLogin} style={{ textDecoration: 'none', width: '100%' }}>
               <Button
                 variant="primary"
                 size="lg"
@@ -147,6 +151,15 @@ export default function LandingPage() {
             
             <p style={styles.ctaSubtext}>
               ✓ Sem cartão de crédito • ✓ Grátis para sempre
+            </p>
+            <p style={{ ...styles.ctaSubtext, marginTop: TOKENS.spacing[3] }}>
+              <Link href={hrefListaNovaSignup} style={{ color: 'rgba(255,255,255,0.95)', textDecoration: 'underline', fontWeight: 600 }}>
+                Criar conta nova
+              </Link>
+              {' · '}
+              <Link href={hrefListaNovaLogin} style={{ color: 'rgba(255,255,255,0.95)', textDecoration: 'underline', fontWeight: 600 }}>
+                Já tenho conta
+              </Link>
             </p>
           </div>
 
@@ -217,7 +230,7 @@ export default function LandingPage() {
           </div>
 
           <div style={styles.ctaContainer}>
-            <Link href="/login" style={{ textDecoration: 'none', width: '100%' }}>
+            <Link href={hrefListaNovaLogin} style={{ textDecoration: 'none', width: '100%' }}>
               <Button variant="secondary" size="lg" fullWidth>
                 Criar Minha Primeira Lista
               </Button>
@@ -355,7 +368,7 @@ export default function LandingPage() {
           </p>
           
           <div style={styles.ctaContainer}>
-            <Link href="/login" style={{ textDecoration: 'none', width: '100%' }}>
+            <Link href={hrefListaNovaLogin} style={{ textDecoration: 'none', width: '100%' }}>
               <Button variant="primary" size="lg" fullWidth>
                 Começar Agora - É Grátis
               </Button>

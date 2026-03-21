@@ -87,14 +87,28 @@ function validateRow(row: Record<string, unknown>, lineNumber: number): { produt
     const marca = String(row.marca || row.brand || row.fabricante || '').trim() || inferBrand(nome) || undefined;
     const codigoBarras = String(row.codigo_barras || row.codigo || row.ean || row.barcode || row.gtin || '').replace(/\D/g, '') || undefined;
     const descricao = String(row.descricao || row.descrição || row.description || '').trim() || undefined;
-    const unidadeMedida = String(row.unidade_medida || row.unidade || row.unit || '').trim().toUpperCase() || 'UN';
+    // peso (ex.: "1kg", "500g") costuma vir em JSONs de catálogo; usa como unidade se não houver unidade_medida
+    const unidadeMedida = String(
+      row.unidade_medida || row.unidade || row.unit || row.peso || ''
+    )
+      .trim()
+      .toUpperCase() || 'UN';
 
-    const precoPromoRaw = normalizePrice(row.preco_promocional || row.preço_promocional || row.promo_price || row.valor_promocional);
+    let precoPromoRaw = normalizePrice(row.preco_promocional || row.preço_promocional || row.promo_price || row.valor_promocional);
+    const promocaoFlag =
+      row.em_promocao === true || row.em_promocao === 'true' || row.em_promocao === '1'
+      || row.promocao === true || row.promocao === 'true' || row.promocao === '1';
+    // JSONs com desconto em % (ex.: desconto: 10) sem preço promocional explícito
+    if (precoPromoRaw == null && promocaoFlag && preco > 0) {
+      const d = Number(row.desconto);
+      if (!Number.isNaN(d) && d > 0 && d < 100) {
+        precoPromoRaw = Math.round(preco * (100 - d)) / 100;
+      }
+    }
     const precoPromocional = precoPromoRaw && precoPromoRaw > 0 && precoPromoRaw < preco ? precoPromoRaw : undefined;
 
-    const emPromocao = row.em_promocao === true || row.em_promocao === 'true' || row.em_promocao === '1'
-      || row.promocao === true || row.promocao === 'true' || row.promocao === '1'
-      || !!precoPromocional;
+    const emPromocao =
+      promocaoFlag || !!precoPromocional;
 
     return {
       produto: { nome, preco, quantidade, categoria, marca, codigoBarras, descricao, unidadeMedida, precoPromocional, emPromocao },
@@ -232,6 +246,8 @@ export async function processarUpload(
               categoria: produtoData.categoria || produto.categoria,
               marca: produtoData.marca || produto.marca,
               unidadeMedida: produtoData.unidadeMedida || produto.unidadeMedida,
+              // Reativar no catálogo ao reimportar (evita sumir da busca do cliente)
+              ativo: true,
               dataAtualizacao: new Date(),
             },
           });

@@ -6,15 +6,23 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterInput } from '@/lib/validations';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { safeCallbackUrl } from '@/lib/safe-callback-url';
 
 interface RegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
   /** Código de indicação da URL (ex: /signup?ref=ABC) */
   initialReferralCode?: string | null;
+  /** Após cadastro + login automático, para onde ir (ex: /cliente/listas/nova) */
+  redirectAfterLogin?: string;
 }
 
-export default function RegisterModal({ isOpen, onClose, initialReferralCode }: RegisterModalProps) {
+export default function RegisterModal({
+  isOpen,
+  onClose,
+  initialReferralCode,
+  redirectAfterLogin,
+}: RegisterModalProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -72,17 +80,22 @@ export default function RegisterModal({ isOpen, onClose, initialReferralCode }: 
           email: data.email,
           senha: data.senha,
           redirect: false,
+          callbackUrl: safeCallbackUrl(redirectAfterLogin),
         });
 
         if (signInResult?.ok) {
+          const next = safeCallbackUrl(redirectAfterLogin);
           setTimeout(() => {
-            router.push('/cliente/home');
+            router.push(next);
           }, 1000);
         } else {
           setSuccessMessage('Cadastro realizado! Redirecionando para login...');
           setTimeout(() => {
             onClose();
-            router.push('/login');
+            const q = redirectAfterLogin
+              ? `?callbackUrl=${encodeURIComponent(redirectAfterLogin)}`
+              : '';
+            router.push(`/login${q}`);
           }, 1500);
         }
       } else {

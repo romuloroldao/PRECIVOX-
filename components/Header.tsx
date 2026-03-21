@@ -10,9 +10,11 @@ import Logo from '@/components/Logo';
 interface HeaderProps {
   title?: string;
   showUserInfo?: boolean;
+  /** Destino do botão "Entrar" (ex.: /login?callbackUrl=%2Fcliente%2Flistas%2Fnova) */
+  loginHref?: string;
 }
 
-export default function Header({ title = 'PRECIVOX', showUserInfo = true }: HeaderProps) {
+export default function Header({ title = 'PRECIVOX', showUserInfo = true, loginHref = '/login' }: HeaderProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +123,7 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true }: Head
             ) : (
               // Usuário não autenticado: mostrar botão de entrar (tamanho mínimo garantido)
               <Link
-                href="/login"
+                href={loginHref}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 style={{ minHeight: '40px', fontSize: '1rem' }}
               >

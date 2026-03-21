@@ -5,12 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginInput } from '@/lib/validations';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import SocialLoginButtons from './SocialLoginButtons';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { safeCallbackUrl } from '@/lib/safe-callback-url';
 
 export default function LoginForm({ onShowRegister }: { onShowRegister: () => void }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'));
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -30,12 +32,13 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
       const result = await signIn('credentials', {
         email: data.email,
         senha: data.senha,
-        callbackUrl: '/cliente/home',
+        callbackUrl,
         redirect: false,
       });
 
-      if (result?.ok && result?.url) {
-        router.push(result.url);
+      if (result?.ok) {
+        const next = typeof result.url === 'string' && result.url ? result.url : callbackUrl;
+        router.push(next);
         return;
       }
 
@@ -95,7 +98,7 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
           <div className="space-y-3 mb-6">
             <button 
               type="button"
-              onClick={() => signIn('google')}
+              onClick={() => signIn('google', { callbackUrl })}
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
             >
@@ -109,7 +112,7 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
             </button>
             <button 
               type="button"
-              onClick={() => signIn('facebook')}
+              onClick={() => signIn('facebook', { callbackUrl })}
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
             >

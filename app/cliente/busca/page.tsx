@@ -254,7 +254,7 @@ export default function BuscaPage() {
                 <p className="text-gray-500 text-sm">
                   {busca || categoria || temFiltros
                     ? 'Tente ajustar os filtros de busca'
-                    : 'Os produtos aparecerão aqui quando forem cadastrados'}
+                    : 'Só aparecem produtos com preço e estoque em alguma unidade. Se você já importou uma planilha, faça um novo upload ou peça ao gestor para reativar os itens no painel.'}
                 </p>
               </div>
             ) : (

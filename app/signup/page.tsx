@@ -4,32 +4,44 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import RegisterModal from '@/components/RegisterModal';
+import { safeCallbackUrl } from '@/lib/safe-callback-url';
+
+function buildLoginHref(ref: string | null, callbackUrl: string | null): string {
+  const p = new URLSearchParams();
+  if (ref) p.set('ref', ref);
+  if (callbackUrl) p.set('callbackUrl', callbackUrl);
+  const q = p.toString();
+  return q ? `/login?${q}` : '/login';
+}
 
 /**
  * Página de cadastro (inscrição).
- * URLs de indicação: /signup?ref=CODIGO
+ * URLs: /signup?ref=CODIGO&callbackUrl=/cliente/listas/nova
  */
 function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const refCode = searchParams.get('ref');
+  const callbackRaw = searchParams.get('callbackUrl');
+  const callbackUrl = safeCallbackUrl(callbackRaw);
   const { data: session, status } = useSession();
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
-  // Se já está autenticado, redireciona para o painel do cliente
+  // Se já está autenticado, respeita callback (ex.: criar lista) para CLIENTE
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       const user = session.user as { role?: string };
-      const dashboardUrls: Record<string, string> = {
-        ADMIN: '/admin/dashboard',
-        GESTOR: '/gestor/home',
-        CLIENTE: '/cliente/home',
-      };
-      const target = user.role && dashboardUrls[user.role] ? dashboardUrls[user.role] : '/cliente/home';
+      const role = user.role;
+      const target =
+        role === 'ADMIN'
+          ? '/admin/dashboard'
+          : role === 'GESTOR'
+            ? '/gestor/home'
+            : callbackUrl;
       router.replace(target);
       return;
     }
-  }, [status, session, router]);
+  }, [status, session, router, callbackUrl]);
 
   // Abrir modal de cadastro ao entrar na página de signup (com ou sem ref)
   useEffect(() => {
@@ -40,7 +52,7 @@ function SignupContent() {
 
   const handleCloseModal = () => {
     setShowRegisterModal(false);
-    router.push(refCode ? `/login?ref=${refCode}` : '/login');
+    router.push(buildLoginHref(refCode, callbackRaw));
   };
 
   if (status === 'loading') {
@@ -65,7 +77,7 @@ function SignupContent() {
           Não tem conta? O formulário de cadastro está logo abaixo.
         </p>
         <div className="text-center">
-          <a href={refCode ? `/login?ref=${refCode}` : '/login'} className="text-blue-600 hover:underline">
+          <a href={buildLoginHref(refCode, callbackRaw)} className="text-blue-600 hover:underline">
             Já tenho conta — Fazer login
           </a>
         </div>
@@ -74,6 +86,7 @@ function SignupContent() {
         isOpen={showRegisterModal}
         onClose={handleCloseModal}
         initialReferralCode={refCode}
+        redirectAfterLogin={callbackRaw ?? undefined}
       />
     </div>
   );
