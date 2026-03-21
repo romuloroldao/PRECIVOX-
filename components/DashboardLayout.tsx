@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { getRoleLabel } from '@/lib/redirect';
+import Logo from '@/components/Logo';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -93,7 +94,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-precivox-blue">PRECIVOX</h1>
+              <Logo height={34} href="" />
               <span className="ml-4 px-3 py-1 bg-precivox-blue text-white text-sm rounded-full">
                 {getRoleLabel(role)}
               </span>

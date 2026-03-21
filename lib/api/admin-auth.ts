@@ -88,3 +88,48 @@ export async function requireAdmin(request: NextRequest): Promise<AdminAuthResul
   }
 }
 
+/**
+ * Helper que autentica qualquer usuário logado (ADMIN, GESTOR ou CLIENTE).
+ * Use quando a rota precisa de autenticação mas a verificação de role é feita depois.
+ */
+export async function requireAuth(request: NextRequest): Promise<AdminAuthResult> {
+  try {
+    const secret = process.env.NEXTAUTH_SECRET;
+    let token = await getToken({ req: request as any, secret });
+    if (!token) {
+      const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
+      if (sessionToken && secret) {
+        token = await decode({ token: sessionToken, secret });
+      }
+    }
+
+    if (!token?.email) {
+      return { user: null, hasSession: false };
+    }
+
+    const email = token.email as string;
+
+    const dbUser = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true, email: true, role: true, nome: true },
+    });
+
+    if (!dbUser) {
+      return { user: null, hasSession: true };
+    }
+
+    return {
+      user: {
+        id: dbUser.id,
+        email: dbUser.email,
+        role: dbUser.role as 'ADMIN' | 'GESTOR' | 'CLIENTE',
+        nome: dbUser.nome,
+      },
+      hasSession: true,
+    };
+  } catch (error) {
+    console.error('[requireAuth] auth error:', error);
+    return { user: null, hasSession: false };
+  }
+}
+

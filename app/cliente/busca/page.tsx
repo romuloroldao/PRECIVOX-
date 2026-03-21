@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductList } from '@/components/ProductList';
@@ -25,7 +25,7 @@ export default function BuscaPage() {
   const [emPromocao, setEmPromocao] = useState<boolean | undefined>(undefined);
   const [disponivel, setDisponivel] = useState<boolean | undefined>(undefined);
 
-  const { produtos, loading, error } = useProdutos({
+  const { produtos, loading, loadingMore, error, total, hasMore, loadMore } = useProdutos({
     busca,
     categoria: categoria || undefined,
     marca: marca || undefined,
@@ -34,7 +34,27 @@ export default function BuscaPage() {
     emPromocao,
     disponivel,
     debounceDelay: 0,
+    initialLimit: 100,
   });
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: '250px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, loadMore]);
 
   const limparFiltros = () => {
     setCategoria('');
@@ -188,7 +208,8 @@ export default function BuscaPage() {
               {/* Contador de resultados */}
               {!loading && (
                 <div className="text-sm text-gray-600 mb-4">
-                  {produtos.length} {produtos.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+                  {total > 0 ? `${Math.min(produtos.length, total)} de ${total}` : produtos.length}{' '}
+                  {total === 1 || produtos.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
                   {busca && (
                     <span className="ml-2">para "{busca}"</span>
                   )}
@@ -242,6 +263,19 @@ export default function BuscaPage() {
                   <ProductCard produtos={produtos} />
                 ) : (
                   <ProductList produtos={produtos} />
+                )}
+                {/* Lazy load incremental */}
+                {hasMore && (
+                  <div className="mt-8 flex flex-col items-center gap-3">
+                    <div ref={sentinelRef} className="h-1 w-full" />
+                    <button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium disabled:opacity-50"
+                    >
+                      {loadingMore ? 'Carregando mais produtos...' : 'Carregar mais produtos'}
+                    </button>
+                  </div>
                 )}
               </>
             )}

@@ -5,6 +5,10 @@ import { Providers } from './providers';
 export const metadata: Metadata = {
   title: 'PRECIVOX - Buscar Produtos',
   description: 'Plataforma inteligente de comparação e gestão de preços',
+  icons: {
+    icon: '/logo-precivox.svg',
+    apple: '/logo-precivox.svg',
+  },
 };
 
 export default function RootLayout({

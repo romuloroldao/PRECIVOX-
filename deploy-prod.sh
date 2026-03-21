@@ -8,6 +8,27 @@ set -o pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
+# Carregar variáveis de ambiente para migrations/build.
+# Prioriza .env.production; fallback para .env
+if [ -f "$PROJECT_ROOT/.env.production" ]; then
+  set -a
+  . "$PROJECT_ROOT/.env.production"
+  set +a
+  echo "🔐 Variáveis carregadas de .env.production"
+elif [ -f "$PROJECT_ROOT/.env" ]; then
+  set -a
+  . "$PROJECT_ROOT/.env"
+  set +a
+  echo "🔐 Variáveis carregadas de .env"
+else
+  echo "⚠️  Nenhum arquivo .env(.production) encontrado."
+fi
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "❌ DATABASE_URL não está definida. Configure no ambiente ou no .env.production."
+  exit 1
+fi
+
 echo "🚀 === DEPLOY PRODUÇÃO PRECIVOX ==="
 echo "📁 Raiz: $PROJECT_ROOT"
 echo "Node version: $(node -v)"
@@ -18,7 +39,7 @@ echo "🔄 1. Atualizando código..."
 git pull origin main
 
 echo "📦 2. Instalando dependências (root)..."
-npm ci
+npm ci --include=dev
 
 echo "🧠 3. Build das AI engines..."
 npm run build:ai
@@ -30,7 +51,7 @@ echo "🌐 5. Build frontend..."
 if [ -d "apps/frontend" ]; then
   cd apps/frontend
   rm -rf .next
-  npm ci
+  npm ci --include=dev
   npm run build
   cd "$PROJECT_ROOT"
 else

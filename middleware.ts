@@ -44,7 +44,11 @@ export function middleware(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/login',
+    '/signup',
     '/register',
+    '/resetar-senha',
+    '/confirmar-email',
+    '/setup',
     '/login-simple',
     '/simple',
     '/onboarding',

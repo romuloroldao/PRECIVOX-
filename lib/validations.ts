@@ -31,6 +31,11 @@ export const registerSchema = z.object({
     .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
     .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
     .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
+  aceiteTermos: z.boolean().refine((v) => v === true, {
+    message: 'Você precisa aceitar os Termos de Uso',
+  }),
+  aceiteNewsletter: z.boolean().default(false),
+  referralCode: z.string().optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

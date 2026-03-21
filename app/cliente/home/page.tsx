@@ -105,6 +105,10 @@ export default function DashboardCliente() {
     router.push('/cliente/listas/nova');
   };
 
+  const handleGoBusca = () => {
+    router.push('/cliente/busca');
+  };
+
   return (
     <main style={styles.main}>
       <div style={styles.container}>
@@ -115,14 +119,24 @@ export default function DashboardCliente() {
             <p style={styles.subtitle}>Veja sua economia e listas</p>
           </div>
 
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleCreateList}
-            leftIcon={<span>➕</span>}
-          >
-            Nova Lista
-          </Button>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: TOKENS.spacing[3], alignItems: 'center' }}>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={handleGoBusca}
+              leftIcon={<span>🔍</span>}
+            >
+              Buscar produtos
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleCreateList}
+              leftIcon={<span>➕</span>}
+            >
+              Nova Lista
+            </Button>
+          </div>
         </header>
 
         {/* Economy Card */}

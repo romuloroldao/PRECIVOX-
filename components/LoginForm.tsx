@@ -7,6 +7,7 @@ import { loginSchema, LoginInput } from '@/lib/validations';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import SocialLoginButtons from './SocialLoginButtons';
+import Logo from '@/components/Logo';
 
 export default function LoginForm({ onShowRegister }: { onShowRegister: () => void }) {
   const router = useRouter();
@@ -26,22 +27,44 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
     setErrorMessage('');
 
     try {
-      // Deixar o NextAuth cuidar do redirect em uma única etapa.
-      // Para admin, usamos /admin/dashboard como callback padrão.
       const result = await signIn('credentials', {
         email: data.email,
         senha: data.senha,
-        callbackUrl: '/admin/dashboard',
+        callbackUrl: '/cliente/home',
+        redirect: false,
       });
 
-      // Quando redirect=true (padrão), se chegar aqui é porque houve erro.
+      if (result?.ok && result?.url) {
+        router.push(result.url);
+        return;
+      }
+
       if (result?.error) {
-        setErrorMessage('Email ou senha inválidos');
+        const url = typeof result.url === 'string' ? result.url : '';
+        const isEmailNotVerified = url.includes('EmailNotVerified');
+
+        if (isEmailNotVerified) {
+          setErrorMessage('E-mail ainda não confirmado. Redirecionando para você poder reenviar o link de confirmação...');
+          router.push('/login?error=EmailNotVerified');
+          setIsLoading(false);
+          return;
+        }
+
+        if (result.error === 'CredentialsSignin') {
+          setErrorMessage('E-mail ou senha incorretos. Verifique os dados e tente novamente.');
+        } else {
+          setErrorMessage('Não foi possível entrar. Tente novamente ou use "Esqueci minha senha" se precisar redefinir.');
+        }
         setIsLoading(false);
+        return;
+      }
+
+      if (result?.url) {
+        router.push(result.url);
       }
     } catch (error) {
-      console.error('Erro no onSubmit:', error);
-      setErrorMessage('Erro de conexão. Tente novamente.');
+      console.error('Erro no login:', error);
+      setErrorMessage('Erro de conexão. Verifique sua internet e tente novamente.');
       setIsLoading(false);
     }
   };
@@ -53,14 +76,18 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <Logo height={48} href="" />
+            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Acesse sua Conta</h1>
-            <p className="text-gray-600">Tenha acesso ao firewall PRECIVOX</p>
+            <p className="text-gray-600">Entre na plataforma PRECIVOX</p>
           </div>
 
-          {/* Mensagem de Erro */}
+          {/* Mensagem de Erro - sempre visível para o usuário */}
           {errorMessage && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {errorMessage}
+            <div className="mb-6 p-4 bg-red-50 border-2 border-red-300 text-red-800 rounded-lg text-sm shadow-sm" role="alert">
+              <p className="font-semibold mb-1">Não foi possível entrar</p>
+              <p className="mb-0">{errorMessage}</p>
             </div>
           )}
 
@@ -117,9 +144,17 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
 
             {/* Campo Senha */}
             <div>
-              <label htmlFor="senha" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor="senha" className="block text-sm font-medium text-gray-700">
+                  Senha
+                </label>
+                <a
+                  href="/resetar-senha"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Esqueci minha senha
+                </a>
+              </div>
               <div className="relative">
                 <input
                   {...register('senha')}
@@ -197,15 +232,7 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
         <div className="relative z-10 flex flex-col justify-center items-center text-white p-8 w-full">
           {/* Logo */}
           <div className="absolute top-8 left-8">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-teal-400 rounded"></div>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">PRECIVOX</h3>
-                <p className="text-sm text-blue-100">Inteligência em Preços</p>
-              </div>
-            </div>
+            <Logo height={44} href="" variant="white" />
           </div>
 
           {/* Main Content */}

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 interface HeaderProps {
   title?: string;
@@ -72,9 +73,7 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true }: Head
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
-                {title}
-              </Link>
+              <Logo height={36} />
             </div>
             <div className="animate-pulse">
               <div className="h-8 w-32 bg-gray-200 rounded"></div>
@@ -90,9 +89,7 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true }: Head
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
-            <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
-              {title}
-            </Link>
+            <Logo height={36} />
             {user && userRole && (
               <span className={`ml-3 px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(userRole)}`}>
                 {getRoleLabel(userRole)}

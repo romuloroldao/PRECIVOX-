@@ -46,6 +46,18 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Credenciais inválidas');
         }
 
+        // Exigir e-mail verificado para login com e-mail/senha (sinal para o callback signIn bloquear)
+        if (!usuario.emailVerified) {
+          return {
+            id: usuario.id,
+            email: usuario.email,
+            name: usuario.nome,
+            image: usuario.imagem,
+            role: usuario.role,
+            _emailNotVerified: true,
+          } as any;
+        }
+
         // Atualizar último login
         await prisma.user.update({
           where: { id: usuario.id },
@@ -87,6 +99,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
     error: '/login',
+    verifyRequest: '/login',
   },
 
   session: {
@@ -114,11 +127,13 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Permitir login
       if (!user.email) {
         return false;
       }
-      
+      // Bloquear login por e-mail/senha quando e-mail não foi confirmado
+      if (account?.provider === 'credentials' && (user as any)?._emailNotVerified) {
+        return '/login?error=EmailNotVerified';
+      }
       try {
         // Para login social, criar ou atualizar usuário
         if (account?.provider !== 'credentials') {

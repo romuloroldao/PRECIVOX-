@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterInput } from '@/lib/validations';
@@ -10,9 +10,11 @@ import { useRouter } from 'next/navigation';
 interface RegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Código de indicação da URL (ex: /signup?ref=ABC) */
+  initialReferralCode?: string | null;
 }
 
-export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
+export default function RegisterModal({ isOpen, onClose, initialReferralCode }: RegisterModalProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -23,9 +25,21 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(registerSchema) as any,
+    defaultValues: {
+      aceiteTermos: false,
+      aceiteNewsletter: false,
+      referralCode: '',
+    },
   });
+
+  useEffect(() => {
+    if (isOpen && initialReferralCode?.trim()) {
+      setValue('referralCode', initialReferralCode.trim());
+    }
+  }, [isOpen, initialReferralCode, setValue]);
 
   const onSubmit = async (data: RegisterInput) => {
     setIsLoading(true);
@@ -34,10 +48,18 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
 
     try {
       // Registrar usuário
+      const payload = {
+        nome: data.nome,
+        email: data.email,
+        senha: data.senha,
+        aceiteTermos: data.aceiteTermos,
+        aceiteNewsletter: data.aceiteNewsletter ?? false,
+        ...(data.referralCode?.trim() ? { referralCode: data.referralCode.trim() } : {}),
+      };
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -54,7 +76,7 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
 
         if (signInResult?.ok) {
           setTimeout(() => {
-            router.push('/');
+            router.push('/cliente/home');
           }, 1000);
         } else {
           setSuccessMessage('Cadastro realizado! Redirecionando para login...');
@@ -162,11 +184,61 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
               type="password"
               id="register-senha"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mín. 8 caracteres, 1 maiúscula, 1 minúscula, 1 número"
             />
             {errors.senha && (
               <p className="text-red-500 text-sm mt-1">{errors.senha.message}</p>
             )}
+          </div>
+
+          {/* Código de indicação (opcional, pré-preenchido se vier da URL) */}
+          <div>
+            <label htmlFor="register-ref" className="block text-sm font-medium text-gray-700 mb-1">
+              Código de indicação (opcional)
+            </label>
+            <input
+              {...register('referralCode')}
+              type="text"
+              id="register-ref"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              placeholder="Ex: ABC123"
+            />
+          </div>
+
+          {/* Aceite dos termos */}
+          <div className="flex items-start gap-2">
+            <input
+              {...register('aceiteTermos')}
+              type="checkbox"
+              id="aceite-termos"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="aceite-termos" className="text-sm text-gray-700">
+              Li e aceito os{' '}
+              <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                Termos de Uso
+              </a>
+              {' '}e a{' '}
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                Política de Privacidade
+              </a>
+            </label>
+          </div>
+          {errors.aceiteTermos && (
+            <p className="text-red-500 text-sm mt-1">{errors.aceiteTermos.message}</p>
+          )}
+
+          {/* Newsletter (opcional) */}
+          <div className="flex items-start gap-2">
+            <input
+              {...register('aceiteNewsletter')}
+              type="checkbox"
+              id="aceite-newsletter"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="aceite-newsletter" className="text-sm text-gray-700">
+              Desejo receber dicas e ofertas por e-mail (opcional)
+            </label>
           </div>
 
           {/* Botão Cadastrar */}

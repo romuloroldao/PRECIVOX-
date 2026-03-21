@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TokenManager } from '@/lib/token-manager';
-import jwt from 'jsonwebtoken';
-import { internalFetch } from '@/lib/internal-backend';
+import { requireAuth } from '@/lib/api/admin-auth';
+import { prisma } from '@/lib/prisma';
+import { processarUpload } from '@/lib/upload-handler';
 
 export async function POST(
   request: NextRequest,
@@ -17,95 +17,124 @@ export async function POST(
       );
     }
 
-    // ✅ Validar sessão com TokenManager
-    console.log('[Upload] Validando sessão com TokenManager...');
-    const user = await TokenManager.validateRoles(['ADMIN', 'GESTOR']);
+    const { user } = await requireAuth(request);
 
     if (!user) {
-      console.log('[Upload] ❌ Usuário não autenticado ou sem permissão');
       return NextResponse.json(
         { success: false, error: 'Não autenticado ou sem permissão' },
         { status: 401 }
       );
     }
 
-    console.log('[Upload] ✅ Usuário autenticado:', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
+    const allowedRoles = ['ADMIN', 'GESTOR'];
+    if (!allowedRoles.includes(user.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Permissão insuficiente' },
+        { status: 403 }
+      );
+    }
+
+    const mercado = await prisma.mercados.findUnique({
+      where: { id: marketId },
+      include: { unidades: { where: { ativa: true }, select: { id: true, nome: true } } },
     });
 
-    // Obter FormData do request
+    if (!mercado) {
+      return NextResponse.json(
+        { success: false, error: 'Mercado não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    if (user.role === 'GESTOR' && mercado.gestorId !== user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Acesso negado a este mercado' },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+    const unidadeId = formData.get('unidadeId') as string | null;
 
-    const JWT_SECRET =
-      process.env.JWT_SECRET ||
-      process.env.NEXTAUTH_SECRET ||
-      'seu-secret-super-seguro';
-
-    const signedToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, nome: user.nome || '' },
-      JWT_SECRET,
-      { expiresIn: '30m' }
-    );
-
-    const backendResponse = await internalFetch(
-      `/api/v1/products/upload-smart/${marketId}`,
-      { method: 'POST', body: formData, jwtToken: signedToken, skipContentType: true }
-    );
-
-    // Parse da resposta do backend
-    let data;
-    const contentType = backendResponse.headers.get('content-type');
-
-    try {
-      if (contentType && contentType.includes('application/json')) {
-        data = await backendResponse.json();
-      } else {
-        const text = await backendResponse.text();
-        data = {
-          success: false,
-          error: 'Resposta inválida do backend',
-          message: text || 'Erro desconhecido',
-        };
-      }
-    } catch (parseError: any) {
-      console.error('Erro ao parsear resposta do backend:', parseError);
+    if (!file) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Erro ao processar resposta do backend',
-          message: parseError.message || 'Resposta do backend não é um JSON válido',
-        },
-        { status: backendResponse.status || 500 }
+        { success: false, error: 'Arquivo não fornecido. Envie um arquivo no campo "file".' },
+        { status: 400 }
       );
     }
 
-    if (!backendResponse.ok) {
+    if (!unidadeId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: data.error || 'Erro no backend',
-          message: data.message || 'Erro desconhecido',
-        },
-        { status: backendResponse.status }
+        { success: false, error: 'Selecione uma unidade de destino (unidadeId).' },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json(data, { status: 200 });
-  } catch (error: any) {
-    console.error('❌ Erro no upload-smart (Next.js BFF):', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Erro interno no servidor',
-        message: error.message || 'Erro desconhecido',
+    const unidadeValida = mercado.unidades.some(u => u.id === unidadeId);
+    if (!unidadeValida) {
+      return NextResponse.json(
+        { success: false, error: 'Unidade não encontrada ou não pertence a este mercado.' },
+        { status: 400 }
+      );
+    }
+
+    const allowedExtensions = ['.csv', '.xlsx', '.xls', '.json'];
+    const ext = '.' + (file.name.split('.').pop()?.toLowerCase() || '');
+    if (!allowedExtensions.includes(ext)) {
+      return NextResponse.json(
+        { success: false, error: `Formato não suportado: ${ext}. Use CSV, XLSX ou JSON.` },
+        { status: 400 }
+      );
+    }
+
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json(
+        { success: false, error: 'Arquivo excede o limite de 50MB.' },
+        { status: 400 }
+      );
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const resultado = await processarUpload(
+      buffer,
+      file.name,
+      file.size,
+      marketId,
+      unidadeId,
+    );
+
+    const mensagem = `Upload concluído: ${resultado.sucesso} produtos importados`
+      + (resultado.erros > 0 ? `, ${resultado.erros} erros` : '')
+      + (resultado.duplicados > 0 ? `, ${resultado.duplicados} atualizados` : '');
+
+    return NextResponse.json({
+      success: true,
+      message: mensagem,
+      data: {
+        resultado: {
+          totalLinhas: resultado.totalLinhas,
+          sucesso: resultado.sucesso,
+          erros: resultado.erros,
+          duplicados: resultado.duplicados,
+        },
+        detalhesErros: resultado.detalhesErros.length > 0
+          ? resultado.detalhesErros.slice(0, 20)
+          : undefined,
       },
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('[upload-smart] Erro:', message);
+    return NextResponse.json(
+      { success: false, error: 'Erro ao processar upload', message },
       { status: 500 }
     );
   }
 }
 
-// Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';

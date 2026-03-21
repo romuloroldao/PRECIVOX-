@@ -67,6 +67,17 @@ const nextConfig = {
     ];
   },
 
+  // Rotas antigas / atalhos → evita 404 quando o usuário acessa /busca em vez de /cliente/busca
+  async redirects() {
+    return [
+      {
+        source: '/busca',
+        destination: '/cliente/busca',
+        permanent: true,
+      },
+    ];
+  },
+
   // Otimizações
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',

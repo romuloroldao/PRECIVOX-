@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Logo from '@/components/Logo';
 
 interface MenuItem {
   name: string;
@@ -133,7 +134,7 @@ export default function AdminSidebar() {
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           {!isCollapsed && (
-            <h2 className="text-xl font-bold text-blue-600">PRECIVOX</h2>
+            <Logo height={32} href="/admin/dashboard" />
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}

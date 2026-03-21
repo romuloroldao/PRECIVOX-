@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { z } from 'zod';
 import { autoUnlockBadgesServer } from '@/lib/gamification-server';
 import { invalidate } from '@/lib/redis';
+import { sendVerificationEmail } from '@/lib/email';
 
 const registerSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
-  senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-  referralCode: z.string().optional(), // Código de referral opcional
+  senha: z
+    .string()
+    .min(8, 'Senha deve ter pelo menos 8 caracteres')
+    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
+  aceiteTermos: z.boolean().refine((v) => v === true, 'Aceite dos termos é obrigatório'),
+  aceiteNewsletter: z.boolean().optional().default(false),
+  referralCode: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -90,6 +99,27 @@ export async function POST(request: NextRequest) {
         // Não bloquear registro se referral falhar
       }
     }
+
+    // Token de confirmação de e-mail (24h)
+    const verifyPrefix = 'precivox_verify:';
+    const verifyIdentifier = `${verifyPrefix}${newUser.email}`;
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const baseUrl =
+      process.env.NEXTAUTH_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const confirmLink = `${baseUrl}/confirmar-email?token=${encodeURIComponent(verifyToken)}`;
+
+    await prisma.verification_tokens.deleteMany({ where: { identifier: verifyIdentifier } });
+    await prisma.verification_tokens.create({
+      data: { identifier: verifyIdentifier, token: verifyToken, expires: verifyExpires },
+    });
+
+    sendVerificationEmail({
+      nome: newUser.nome || '',
+      email: newUser.email,
+      confirmLink,
+    }).catch((err) => console.error('Erro ao enviar e-mail de confirmação:', err));
 
     return NextResponse.json({
       success: true,

@@ -18,6 +18,7 @@ import { Button } from '@/components/shared';
 import { TOKENS } from '@/styles/tokens';
 import Link from 'next/link';
 import Header from '@/components/Header';
+import Logo from '@/components/Logo';
 
 interface GlobalStats {
   totalUsers: number;
@@ -117,7 +118,7 @@ export default function LandingPage() {
         <div style={styles.container}>
           {/* Logo */}
           <div style={styles.logoContainer}>
-            <h1 style={styles.logo}>PRECIVOX</h1>
+            <Logo height={60} href="" variant="white" />
             <p style={styles.tagline}>Economia Inteligente</p>
           </div>
 
@@ -288,6 +289,60 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Seus Dados - Transparência (exigência Google OAuth) */}
+      <section style={styles.dataTransparency}>
+        <div style={styles.container}>
+          <h3 style={styles.sectionTitle}>Seus Dados, Sua Segurança</h3>
+          <p style={styles.dataIntro}>
+            O PRECIVOX valoriza sua privacidade. Veja como utilizamos seus dados de forma transparente e segura.
+          </p>
+
+          <div style={styles.dataGrid}>
+            <div style={styles.dataCard}>
+              <div style={styles.dataIcon}>🔐</div>
+              <h4 style={styles.dataCardTitle}>Login Seguro</h4>
+              <p style={styles.dataCardText}>
+                Coletamos seu nome e e-mail para criar sua conta. Você pode entrar com e-mail/senha
+                ou com Google e Facebook. Nunca acessamos sua senha dos provedores sociais.
+              </p>
+            </div>
+
+            <div style={styles.dataCard}>
+              <div style={styles.dataIcon}>📋</div>
+              <h4 style={styles.dataCardTitle}>Listas e Economia</h4>
+              <p style={styles.dataCardText}>
+                Suas listas de compras e histórico de economia são usados exclusivamente para
+                gerar recomendações personalizadas e calcular sua economia.
+              </p>
+            </div>
+
+            <div style={styles.dataCard}>
+              <div style={styles.dataIcon}>🚫</div>
+              <h4 style={styles.dataCardTitle}>Sem Venda de Dados</h4>
+              <p style={styles.dataCardText}>
+                Seus dados pessoais nunca são vendidos a terceiros. Não utilizamos cookies de
+                rastreamento publicitário. Seus dados ficam armazenados no Brasil.
+              </p>
+            </div>
+
+            <div style={styles.dataCard}>
+              <div style={styles.dataIcon}>⚖️</div>
+              <h4 style={styles.dataCardTitle}>LGPD</h4>
+              <p style={styles.dataCardText}>
+                Estamos em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
+                Você pode solicitar acesso, correção ou exclusão dos seus dados a qualquer momento.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center' as const, marginTop: TOKENS.spacing[8] }}>
+            <Link href="/privacidade" style={styles.dataLink}>
+              Leia nossa Política de Privacidade completa →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Final */}
       <section style={styles.finalCta}>
         <div style={styles.container}>
@@ -309,18 +364,49 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer Completo */}
       <footer style={styles.footer}>
-        <div style={styles.container}>
-          <p style={styles.footerText}>
-            © 2025 PRECIVOX - Economia Inteligente para Todos
-          </p>
-          <div style={styles.footerLinks}>
-            <a href="/privacidade" style={styles.footerLink}>Privacidade</a>
-            <span style={styles.footerSeparator}>•</span>
-            <a href="/termos" style={styles.footerLink}>Termos de Uso</a>
-            <span style={styles.footerSeparator}>•</span>
-            <a href="/contato" style={styles.footerLink}>Contato</a>
+        <div style={styles.footerInner}>
+          <div style={styles.footerTop}>
+            <div style={styles.footerBrand}>
+              <Logo height={40} href="" variant="white" />
+              <p style={styles.footerBrandText}>
+                Plataforma de comparação inteligente de preços de supermercados.
+                Ajudamos consumidores a economizar nas compras do dia a dia comparando
+                preços em estabelecimentos da sua região.
+              </p>
+            </div>
+
+            <div style={styles.footerCol}>
+              <h4 style={styles.footerColTitle}>Funcionalidades</h4>
+              <ul style={styles.footerList}>
+                <li>Comparação de preços</li>
+                <li>Listas de compras inteligentes</li>
+                <li>Alertas de ofertas e promoções</li>
+                <li>Recomendações por IA</li>
+                <li>Gestão para mercados</li>
+              </ul>
+            </div>
+
+            <div style={styles.footerCol}>
+              <h4 style={styles.footerColTitle}>Legal</h4>
+              <ul style={styles.footerList}>
+                <li><Link href="/privacidade" style={styles.footerLink}>Política de Privacidade</Link></li>
+                <li><Link href="/termos" style={styles.footerLink}>Termos de Serviço</Link></li>
+              </ul>
+            </div>
+
+            <div style={styles.footerCol}>
+              <h4 style={styles.footerColTitle}>Contato</h4>
+              <ul style={styles.footerList}>
+                <li><a href="mailto:suporte@precivox.com.br" style={styles.footerLink}>suporte@precivox.com.br</a></li>
+                <li><a href="mailto:privacidade@precivox.com.br" style={styles.footerLink}>privacidade@precivox.com.br</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={styles.footerBottom}>
+            <p>© {new Date().getFullYear()} PRECIVOX Tecnologia Ltda. — Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>
@@ -617,6 +703,59 @@ const styles = {
     color: TOKENS.colors.text.secondary,
   },
   
+  dataTransparency: {
+    padding: `${TOKENS.spacing[16]} 0`,
+    backgroundColor: TOKENS.colors.background,
+  },
+
+  dataIntro: {
+    textAlign: 'center' as const,
+    fontSize: TOKENS.typography.fontSize.lg,
+    color: TOKENS.colors.text.secondary,
+    maxWidth: '700px',
+    margin: `0 auto ${TOKENS.spacing[10]} auto`,
+    lineHeight: TOKENS.typography.lineHeight.relaxed,
+  },
+
+  dataGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: TOKENS.spacing[6],
+  },
+
+  dataCard: {
+    backgroundColor: TOKENS.colors.surface,
+    padding: TOKENS.spacing[6],
+    borderRadius: TOKENS.borderRadius.lg,
+    boxShadow: TOKENS.shadows.sm,
+    border: `1px solid ${TOKENS.colors.gray[200]}`,
+  },
+
+  dataIcon: {
+    fontSize: '36px',
+    marginBottom: TOKENS.spacing[3],
+  },
+
+  dataCardTitle: {
+    fontSize: TOKENS.typography.fontSize.lg,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    marginBottom: TOKENS.spacing[2],
+    color: TOKENS.colors.text.primary,
+  },
+
+  dataCardText: {
+    fontSize: TOKENS.typography.fontSize.sm,
+    color: TOKENS.colors.text.secondary,
+    lineHeight: TOKENS.typography.lineHeight.relaxed,
+  },
+
+  dataLink: {
+    color: TOKENS.colors.primary[600],
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    fontSize: TOKENS.typography.fontSize.base,
+    textDecoration: 'none',
+  },
+
   finalCta: {
     padding: `${TOKENS.spacing[16]} 0`,
     background: `linear-gradient(135deg, ${TOKENS.colors.secondary[600]} 0%, ${TOKENS.colors.secondary[800]} 100%)`,
@@ -635,35 +774,71 @@ const styles = {
     marginBottom: TOKENS.spacing[8],
     opacity: 0.95,
   },
-  
+
   footer: {
-    padding: `${TOKENS.spacing[8]} 0`,
     backgroundColor: TOKENS.colors.gray[900],
     color: TOKENS.colors.text.inverse,
-    textAlign: 'center' as const,
+    padding: `${TOKENS.spacing[12]} 0 0 0`,
   },
-  
-  footerText: {
+
+  footerInner: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: `0 ${TOKENS.spacing[4]}`,
+  },
+
+  footerTop: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: TOKENS.spacing[8],
+    paddingBottom: TOKENS.spacing[10],
+    borderBottom: `1px solid rgba(255,255,255,0.15)`,
+  },
+
+  footerBrand: {
+    maxWidth: '300px',
+  },
+
+  footerBrandText: {
     fontSize: TOKENS.typography.fontSize.sm,
+    opacity: 0.8,
+    marginTop: TOKENS.spacing[3],
+    lineHeight: TOKENS.typography.lineHeight.relaxed,
+  },
+
+  footerCol: {} as React.CSSProperties,
+
+  footerColTitle: {
+    fontSize: TOKENS.typography.fontSize.sm,
+    fontWeight: TOKENS.typography.fontWeight.semibold,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '1px',
     marginBottom: TOKENS.spacing[4],
+    opacity: 0.7,
+  },
+
+  footerList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: TOKENS.spacing[2],
+    fontSize: TOKENS.typography.fontSize.sm,
     opacity: 0.8,
   },
-  
-  footerLinks: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: TOKENS.spacing[2],
-    flexWrap: 'wrap' as const,
-  },
-  
+
   footerLink: {
     color: TOKENS.colors.text.inverse,
     textDecoration: 'none',
+    opacity: 0.85,
     fontSize: TOKENS.typography.fontSize.sm,
-    opacity: 0.8,
   },
-  
-  footerSeparator: {
-    opacity: 0.5,
+
+  footerBottom: {
+    textAlign: 'center' as const,
+    padding: `${TOKENS.spacing[6]} 0`,
+    fontSize: TOKENS.typography.fontSize.xs,
+    opacity: 0.6,
   },
 };
