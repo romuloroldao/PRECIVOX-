@@ -286,70 +286,6 @@ export function ListaInteligentePanel({
         </div>
       )}
 
-      {/* IA: rota + sugestões (compra presencial) */}
-      {itens.length > 0 && (
-        <div className="border-b border-emerald-200/80 bg-emerald-50/50 px-3 py-2">
-          <button
-            type="button"
-            onClick={() => setSecaoIaAberta(!secaoIaAberta)}
-            className="flex w-full items-center justify-between gap-2 rounded-xl bg-[#f4f7f5] px-3 py-2 text-left shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_6px_rgba(0,0,0,0.06)]"
-          >
-            <span className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
-              <Sparkles className="h-4 w-4 text-emerald-600" />
-              IA · rota e dicas
-            </span>
-            <span className="text-xs text-emerald-700">{secaoIaAberta ? 'Ocultar' : 'Mostrar'}</span>
-          </button>
-
-          {secaoIaAberta && (
-            <div className="mt-3 space-y-3 pb-1">
-              <p className="text-xs text-emerald-900/85">{dicaDeslocamento(insights?.mercados ?? 1)}</p>
-
-              <div className="rounded-xl bg-white/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_2px_8px_rgba(0,0,0,0.06)]">
-                <div className="mb-2 flex items-center gap-2 text-emerald-900">
-                  <MapPin className="h-4 w-4 text-emerald-600" />
-                  <span className="text-xs font-bold uppercase tracking-wide">Rota sugerida</span>
-                </div>
-                <p className="mb-2 text-[11px] leading-snug text-gray-600">
-                  Ordem para ir às lojas (compra presencial). Distâncias exatas em breve com localização.
-                </p>
-                <ol className="space-y-2">
-                  {rota.map((passo) => (
-                    <li
-                      key={passo.mercadoId}
-                      className="flex gap-2 rounded-lg border border-emerald-100/80 bg-emerald-50/40 px-2 py-2 text-xs"
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white">
-                        {passo.ordem}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-gray-900">{passo.mercadoNome}</p>
-                        <p className="text-[11px] text-gray-600">
-                          {passo.qtdLinhas} {passo.qtdLinhas === 1 ? 'produto' : 'produtos'} · Subtotal{' '}
-                          <span className="font-medium text-emerald-700">
-                            R$ {passo.subtotal.toFixed(2).replace('.', ',')}
-                          </span>
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              <div className="flex gap-2 rounded-xl bg-amber-50/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                <div className="text-[11px] leading-relaxed text-amber-950/90">
-                  <strong className="block text-amber-900">Sugestão</strong>
-                  Quer trocar um item por outro mais barato? Use a busca e adicione de novo — a lista
-                  atualiza na hora. O comparativo detalhado por mercado fica para quando precisar; aqui o
-                  foco é sair para comprar.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="px-4 py-3">
         {itens.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center text-text-secondary">
@@ -457,77 +393,146 @@ export function ListaInteligentePanel({
           </div>
         )}
       </div>
-        </div>
 
-        <div className="relative z-10 shrink-0 border-t border-gray-200 bg-bg-paper px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-6px_16px_rgba(0,0,0,0.06)]">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <span className="text-xs text-text-secondary">Total estimado</span>
-            <p className="text-2xl font-bold tabular-nums text-emerald-600">
-              R$ {total.toFixed(2).replace('.', ',')}
-            </p>
-          </div>
-          {listasSalvas.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setMostrarSeletorListas(!mostrarSeletorListas)}
-              className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <ListOrdered className="h-3.5 w-3.5" />
-              Trocar lista
-            </button>
+      {/* IA após os produtos: ao rolar, rota + “trocar por mais barato” ficam logo acima do fim do scroll */}
+      {itens.length > 0 && (
+        <div className="border-b border-emerald-200/80 bg-emerald-50/50 px-3 py-3">
+          <button
+            type="button"
+            onClick={() => setSecaoIaAberta(!secaoIaAberta)}
+            className="flex w-full items-center justify-between gap-2 rounded-xl bg-[#f4f7f5] px-3 py-2.5 text-left shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_6px_rgba(0,0,0,0.06)]"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+              <Sparkles className="h-4 w-4 shrink-0 text-emerald-600" />
+              IA · rota e dicas
+            </span>
+            <span className="shrink-0 text-xs font-medium text-emerald-800">
+              {secaoIaAberta ? 'Ocultar' : 'Mostrar'}
+            </span>
+          </button>
+
+          {secaoIaAberta && (
+            <div className="mt-3 space-y-3 pb-1">
+              <p className="text-xs leading-relaxed text-emerald-900/85">{dicaDeslocamento(insights?.mercados ?? 1)}</p>
+
+              <div className="rounded-xl bg-white/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_2px_8px_rgba(0,0,0,0.06)]">
+                <div className="mb-2 flex items-center gap-2 text-emerald-900">
+                  <MapPin className="h-4 w-4 text-emerald-600" />
+                  <span className="text-xs font-bold uppercase tracking-wide">Rota sugerida</span>
+                </div>
+                <p className="mb-2 text-[11px] leading-snug text-gray-600">
+                  Ordem para ir às lojas (compra presencial). Distâncias exatas em breve com localização.
+                </p>
+                <ol className="space-y-2">
+                  {rota.map((passo) => (
+                    <li
+                      key={passo.mercadoId}
+                      className="flex gap-2 rounded-lg border border-emerald-100/80 bg-emerald-50/40 px-2 py-2 text-xs"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white">
+                        {passo.ordem}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900">{passo.mercadoNome}</p>
+                        <p className="text-[11px] text-gray-600">
+                          {passo.qtdLinhas} {passo.qtdLinhas === 1 ? 'produto' : 'produtos'} · Subtotal{' '}
+                          <span className="font-medium text-emerald-700">
+                            R$ {passo.subtotal.toFixed(2).replace('.', ',')}
+                          </span>
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="flex gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50 p-3 shadow-sm">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div className="min-w-0 text-[11px] leading-relaxed text-amber-950">
+                  <span className="mb-1 block text-xs font-bold text-amber-900">Trocar por mais barato</span>
+                  Na busca, encontre o mesmo tipo de produto com preço menor e adicione à lista; remova o item
+                  anterior se quiser. A lista atualiza na hora — ideal para economizar antes de ir às lojas.
+                </div>
+              </div>
+            </div>
           )}
         </div>
+      )}
 
-        {itens.length > 0 && (
-          <div className="mb-3 space-y-2">
-            <label htmlFor="nome-lista-lateral" className="text-xs font-medium text-text-secondary">
-              Nome da lista
-            </label>
-            <input
-              id="nome-lista-lateral"
-              type="text"
-              value={nomeLista || listaAtiva?.nome || ''}
-              onChange={(e) => setNomeLista(e.target.value)}
-              placeholder="Ex.: Lista do fim de semana"
-              className="min-w-0 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-precivox-blue focus:outline-none focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Link
-            href="/cliente/listas"
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-50"
-          >
-            Minhas listas
-          </Link>
         </div>
 
-        {itens.length > 0 && (
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full border border-transparent text-red-600 hover:bg-red-50"
-              onClick={limparLista}
-            >
-              Limpar lista
-            </Button>
-            <Button type="button" variant="success" className="w-full" onClick={handleSalvarLista}>
-              {listaAtiva ? 'Atualizar lista' : 'Salvar lista'}
-            </Button>
+        <div className="relative z-10 shrink-0 border-t border-gray-200/90 bg-gradient-to-b from-slate-50/90 to-bg-paper px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
+          <div className="flex items-start justify-between gap-3 border-b border-gray-200/80 pb-4">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Total estimado</span>
+              <p className="mt-0.5 text-2xl font-bold tabular-nums text-emerald-600">
+                R$ {total.toFixed(2).replace('.', ',')}
+              </p>
+            </div>
+            {listasSalvas.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setMostrarSeletorListas(!mostrarSeletorListas)}
+                className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 shadow-sm hover:bg-gray-50"
+              >
+                <ListOrdered className="h-3.5 w-3.5" />
+                Trocar lista
+              </button>
+            )}
           </div>
-        )}
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-4 flex w-full items-center justify-center gap-2 text-sm font-medium text-precivox-blue hover:underline"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Continuar comprando
-        </button>
+          {itens.length > 0 && (
+            <div className="mt-4 space-y-1.5">
+              <label htmlFor="nome-lista-lateral" className="text-xs font-medium text-gray-700">
+                Nome da lista
+              </label>
+              <input
+                id="nome-lista-lateral"
+                type="text"
+                value={nomeLista || listaAtiva?.nome || ''}
+                onChange={(e) => setNomeLista(e.target.value)}
+                placeholder="Ex.: Lista do fim de semana"
+                className="min-w-0 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
+          )}
+
+          <div className="mt-5 flex flex-col gap-3">
+            <Link
+              href="/cliente/listas"
+              className="flex w-full items-center justify-center rounded-xl border border-violet-200 bg-white px-4 py-3 text-sm font-semibold text-violet-800 shadow-sm transition-colors hover:bg-violet-50"
+            >
+              Minhas listas
+            </Link>
+
+            {itens.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={limparLista}
+                  className="rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                >
+                  Limpar lista
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSalvarLista}
+                  className="rounded-xl bg-emerald-600 px-3 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                >
+                  {listaAtiva ? 'Atualizar lista' : 'Salvar lista'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium text-precivox-blue hover:bg-blue-50/80"
+          >
+            <ChevronLeft className="h-4 w-4 shrink-0" />
+            Continuar comprando
+          </button>
         </div>
       </div>
     </div>
