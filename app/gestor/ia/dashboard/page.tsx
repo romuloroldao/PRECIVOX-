@@ -17,6 +17,7 @@ import { Button, Card } from '@/components/shared';
 import { TOKENS } from '@/styles/tokens';
 import { TrendingUp, Package, AlertTriangle, DollarSign, RefreshCw, Lightbulb } from 'lucide-react';
 import { fetchDashboardData } from '@/lib/ai-api';
+import DashboardLayout from '@/components/DashboardLayout';
 
 export default function AIInsightsDashboard() {
   const { data: session } = useSession();
@@ -236,50 +237,56 @@ export default function AIInsightsDashboard() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Carregando insights de IA...</p>
-          <p className="text-gray-400 text-sm mt-2">Analisando dados do mercado</p>
+      <DashboardLayout role="GESTOR">
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg">Carregando insights de IA...</p>
+            <p className="text-gray-400 text-sm mt-2">Analisando dados do mercado</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Erro ao Carregar Dashboard</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Button
-            variant="primary"
-            onClick={loadDashboardData}
-          >
-            <RefreshCw className="h-5 w-5" style={{ marginRight: TOKENS.spacing[2] }} />
-            Tentar Novamente
-          </Button>
+      <DashboardLayout role="GESTOR">
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="text-center max-w-md">
+            <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Erro ao Carregar Dashboard</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <Button
+              variant="primary"
+              onClick={loadDashboardData}
+            >
+              <RefreshCw className="h-5 w-5" style={{ marginRight: TOKENS.spacing[2] }} />
+              Tentar Novamente
+            </Button>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   // No data state
   if (!dashboardData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">Nenhum dado disponível</p>
+      <DashboardLayout role="GESTOR">
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="text-center">
+            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Nenhum dado disponível</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <DashboardLayout role="GESTOR">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
@@ -437,7 +444,7 @@ export default function AIInsightsDashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
 
