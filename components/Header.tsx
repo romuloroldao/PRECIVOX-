@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { fullLogout } from '@/lib/logout-client';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 
@@ -28,22 +29,9 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true, loginH
 
   const handleLogout = async () => {
     try {
-      // Limpar tokens do authClient
-      try {
-        const { authClient } = await import('@/lib/auth-client');
-        authClient.clearTokens();
-      } catch (error) {
-        console.warn('[Header] Erro ao limpar tokens:', error);
-      }
-      
-      // Usar signOut do NextAuth que limpa cookies automaticamente
-      await signOut({ 
-        callbackUrl: '/',
-        redirect: true 
-      });
+      await fullLogout('/');
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      // Fallback: redirecionar mesmo se houver erro
+      console.error('[Header] Erro ao fazer logout:', error);
       window.location.href = '/';
     }
   };

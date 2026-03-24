@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { getRoleLabel } from '@/lib/redirect';
+import { fullLogout } from '@/lib/logout-client';
 import Logo from '@/components/Logo';
 
 interface DashboardLayoutProps {
@@ -19,35 +20,10 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   const isLoading = status === 'loading';
 
   const handleLogout = async () => {
-    // Limpar tokens do authClient
     try {
-      const { authClient } = await import('@/lib/auth-client');
-      authClient.clearTokens();
+      await fullLogout('/login');
     } catch (error) {
-      console.warn('[DashboardLayout] Erro ao limpar tokens:', error);
-    }
-    try {
-      // Limpar todos os dados locais primeiro
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Limpar cookies
-      document.cookie = 'token=; path=/; max-age=0';
-      document.cookie = 'next-auth.session-token=; path=/; max-age=0';
-      document.cookie = '__Secure-next-auth.session-token=; path=/; max-age=0';
-      
-      // Fazer logout do NextAuth
-      await signOut({ 
-        callbackUrl: '/login',
-        redirect: true 
-      });
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      // Forçar redirecionamento mesmo com erro
-      localStorage.clear();
-      sessionStorage.clear();
-      document.cookie = 'token=; path=/; max-age=0';
-      document.cookie = 'next-auth.session-token=; path=/; max-age=0';
+      console.error('[DashboardLayout] Erro ao fazer logout:', error);
       window.location.href = '/login';
     }
   };

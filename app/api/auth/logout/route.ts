@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { internalFetch } from '@/lib/internal-backend';
 
+const production = process.env.NODE_ENV === 'production';
+const cookiePrefix = production ? '__Secure-' : '';
+const domain = production ? '.precivox.com.br' : undefined;
+
+/** Expira cookie igual ao usado no login (path + domain + flags). */
+function expireCookie(
+  response: NextResponse,
+  name: string,
+  options: { httpOnly?: boolean } = {}
+) {
+  const isHostOnly = name.startsWith('__Host-');
+  response.cookies.set(name, '', {
+    path: '/',
+    ...(isHostOnly ? {} : { domain }),
+    maxAge: 0,
+    httpOnly: options.httpOnly ?? false,
+    sameSite: 'lax',
+    secure: production,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const cookiePrefix = process.env.NODE_ENV === 'production' ? '__Secure-' : '';
     const refreshCookieName = `${cookiePrefix}precivox-refresh-token`;
 
     const refreshToken = request.cookies.get(refreshCookieName)?.value;
@@ -21,18 +41,20 @@ export async function POST(request: NextRequest) {
       message: 'Logout realizado com sucesso',
     });
 
-    const sessionCookieName = `${cookiePrefix}next-auth.session-token`;
+    // NextAuth — mesmos nomes que lib/auth.ts (httpOnly no session token)
+    expireCookie(response, `${cookiePrefix}next-auth.session-token`, { httpOnly: true });
+    expireCookie(response, 'next-auth.session-token', { httpOnly: true });
+    expireCookie(response, '__Secure-next-auth.session-token', { httpOnly: true });
 
-    response.cookies.delete(sessionCookieName);
-    response.cookies.delete('next-auth.csrf-token');
-    response.cookies.delete('next-auth.callback-url');
-    response.cookies.delete('__Secure-next-auth.session-token');
-    response.cookies.delete('next-auth.session-token');
+    expireCookie(response, 'next-auth.csrf-token');
+    expireCookie(response, '__Host-next-auth.csrf-token');
+    expireCookie(response, 'next-auth.callback-url');
+    expireCookie(response, '__Secure-next-auth.callback-url');
 
-    response.cookies.delete(`${cookiePrefix}precivox-access-token`);
-    response.cookies.delete('precivox-access-token');
-    response.cookies.delete('__Secure-precivox-access-token');
-    response.cookies.delete(refreshCookieName);
+    expireCookie(response, `${cookiePrefix}precivox-access-token`, { httpOnly: true });
+    expireCookie(response, 'precivox-access-token', { httpOnly: true });
+    expireCookie(response, '__Secure-precivox-access-token', { httpOnly: true });
+    expireCookie(response, refreshCookieName, { httpOnly: true });
 
     return response;
   } catch (error) {
