@@ -174,7 +174,7 @@ export function ListaInteligentePanel({
         // flex-1 + min-h-0: encaixa no drawer/viewport (h-full falha em vários mobile/Safari)
         'flex min-h-0 flex-1 flex-col overflow-hidden',
         variant === 'inline' &&
-          'bg-[#e6e9ee] shadow-[inset_4px_0_12px_rgba(0,0,0,0.05),4px_0_16px_rgba(0,0,0,0.06)] lg:max-h-[calc(100vh-5rem)]',
+          'bg-[#e6e9ee] shadow-[inset_4px_0_12px_rgba(0,0,0,0.05),4px_0_16px_rgba(0,0,0,0.06)] lg:max-h-[calc(100dvh-2rem)] lg:min-h-0',
         omitHeader && 'bg-bg-paper'
       )}
     >

@@ -86,7 +86,8 @@ export default function BuscaPage() {
   return (
     <DashboardLayout role="CLIENTE">
       {/* lg: painel empurra o grid; mobile: drawer por cima */}
-      <div className="flex min-h-[calc(100vh-10rem)] flex-col gap-0 lg:flex-row lg:items-stretch">
+      {/* items-start: coluna da lista não acompanha altura do main — permite sticky no aside (lg) */}
+      <div className="flex min-h-[calc(100vh-10rem)] flex-col gap-0 lg:flex-row lg:items-start">
         <main className="min-w-0 flex-1 transition-[padding] duration-300">
           <div className="mx-auto max-w-7xl p-4 md:p-6">
             {/* Header */}

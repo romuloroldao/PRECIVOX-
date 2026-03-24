@@ -47,7 +47,13 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
     return (
       <aside
         id="lista-inteligente-panel"
-        className="relative hidden h-full min-h-0 w-full max-w-md shrink-0 overflow-hidden rounded-l-2xl border-y border-l border-gray-300/50 lg:flex lg:flex-col"
+        className={cn(
+          'relative hidden w-full max-w-md shrink-0 overflow-hidden rounded-l-2xl border-y border-l border-gray-300/50',
+          'lg:flex lg:flex-col',
+          // Fixa no viewport ao rolar a página — lista permanece visível ao navegar nos produtos
+          'lg:sticky lg:top-4 lg:z-20 lg:self-start',
+          'lg:max-h-[calc(100dvh-2rem)]'
+        )}
         aria-label="Lista inteligente de compras"
       >
         <ListaInteligentePanel variant="inline" onClose={onToggle} />
