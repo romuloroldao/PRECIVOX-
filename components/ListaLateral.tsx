@@ -47,7 +47,7 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
     return (
       <aside
         id="lista-inteligente-panel"
-        className="relative hidden h-full min-h-0 w-full max-w-md shrink-0 flex-col overflow-hidden rounded-l-2xl border-y border-l border-gray-300/50 lg:flex"
+        className="relative hidden h-full min-h-0 w-full max-w-md shrink-0 overflow-hidden rounded-l-2xl border-y border-l border-gray-300/50 lg:flex lg:flex-col"
         aria-label="Lista inteligente de compras"
       >
         <ListaInteligentePanel variant="inline" onClose={onToggle} />
@@ -64,6 +64,7 @@ export function ListaLateral({ expandida, onToggle }: ListaLateralProps) {
       size="lg"
       titleBarClassName="border-0 bg-gradient-to-br from-emerald-600 to-emerald-700 p-0 text-white shadow-md"
       innerClassName="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f4f6f8] p-0"
+      innerNoScroll
       title={<ListaInteligenteHeaderBlock onClose={onToggle} showCloseButton={false} />}
       drawerClassName="border-l border-emerald-900/10 max-h-[100dvh]"
       closeButtonClassName="text-white hover:bg-white/15"

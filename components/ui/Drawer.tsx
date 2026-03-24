@@ -22,6 +22,8 @@ export interface DrawerProps {
   closeButtonClassName?: string;
   /** id para aria-controls / testes */
   id?: string;
+  /** true = sem scroll no wrapper (filho controla overflow, ex.: painel com rodapé fixo) */
+  innerNoScroll?: boolean;
 }
 
 export function Drawer({
@@ -37,6 +39,7 @@ export function Drawer({
   innerClassName,
   closeButtonClassName,
   id,
+  innerNoScroll = false,
 }: DrawerProps) {
   useEffect(() => {
     if (isOpen) {
@@ -105,11 +108,12 @@ export function Drawer({
         id={id}
         className={cn(
           'fixed z-50 bg-bg-paper shadow-xl',
-          'flex h-full max-h-screen flex-col',
+          // top+bottom fixam altura útil no viewport (melhor que h-full em mobile / Safari)
+          'flex max-h-[100dvh] flex-col overflow-hidden',
           'transition-transform duration-300 ease-in-out',
           // Painel visível quando isOpen (componente só monta aberto)
-          mobilePosition === 'left' && 'left-0 top-0 w-full translate-x-0 md:w-96',
-          mobilePosition === 'right' && 'right-0 top-0 w-full translate-x-0 md:w-96',
+          mobilePosition === 'left' && 'left-0 top-0 bottom-0 w-full translate-x-0 md:w-96',
+          mobilePosition === 'right' && 'right-0 top-0 bottom-0 w-full translate-x-0 md:w-96',
           mobilePosition === 'bottom' &&
             'bottom-0 left-0 right-0 max-h-[90vh] translate-y-0 md:right-0 md:left-auto md:top-0 md:h-full md:max-h-screen md:w-96',
           size === 'sm' && effectivePosition !== 'bottom' && 'md:w-80',
@@ -143,7 +147,10 @@ export function Drawer({
         )}
         <div
           className={cn(
-            'min-h-0 flex-1 overflow-y-auto p-4',
+            'min-h-0 w-full flex-1 p-4',
+            innerNoScroll
+              ? 'flex min-h-0 flex-col overflow-hidden [&>*]:min-h-0 [&>*]:flex-1'
+              : 'overflow-y-auto',
             innerClassName
           )}
         >
