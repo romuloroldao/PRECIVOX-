@@ -85,14 +85,10 @@ export default function BuscaPage() {
 
   return (
     <DashboardLayout role="CLIENTE">
-      <div className="relative min-h-screen">
-        {/* Conteúdo Principal */}
-        <main
-          className={`transition-all duration-300 ${
-            expandida ? 'md:mr-96' : 'mr-0'
-          }`}
-        >
-          <div className="max-w-7xl mx-auto p-4 md:p-6">
+      {/* lg: painel empurra o grid; mobile: drawer por cima */}
+      <div className="flex min-h-[calc(100vh-10rem)] flex-col gap-0 lg:flex-row lg:items-stretch">
+        <main className="min-w-0 flex-1 transition-[padding] duration-300">
+          <div className="mx-auto max-w-7xl p-4 md:p-6">
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
@@ -336,7 +332,6 @@ export default function BuscaPage() {
           </div>
         </main>
 
-        {/* Lista Lateral */}
         <ListaLateral expandida={expandida} onToggle={() => setExpandida(!expandida)} />
       </div>
     </DashboardLayout>
