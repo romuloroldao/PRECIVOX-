@@ -90,7 +90,7 @@ export default function ListasPage() {
   };
 
   const handleCreateList = () => {
-    router.push('/cliente/listas/nova');
+    router.push('/cliente/busca');
   };
 
   const handleDuplicate = (list: List) => {
@@ -129,9 +129,7 @@ export default function ListasPage() {
             size="md"
             onClick={handleCreateList}
             leftIcon={<span>➕</span>}
-          >
-            Nova Lista
-          </Button>
+          >Começar compra</Button>
         </header>
 
         {/* Filters */}
@@ -211,9 +209,7 @@ export default function ListasPage() {
                 : 'Você ainda não tem listas'}
             </p>
             {!searchQuery && filter === 'all' && (
-              <Button variant="primary" onClick={handleCreateList}>
-                Criar Primeira Lista
-              </Button>
+              <Button variant="primary" onClick={handleCreateList}>Buscar produtos</Button>
             )}
           </div>
         )}

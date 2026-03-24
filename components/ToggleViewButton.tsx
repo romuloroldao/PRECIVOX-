@@ -9,7 +9,7 @@ interface ToggleViewButtonProps {
 
 export function ToggleViewButton({ modo, setModo }: ToggleViewButtonProps) {
   return (
-    <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+    <div className="flex items-center gap-1 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-200/80">
       <button
         onClick={() => setModo('cards')}
         className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${

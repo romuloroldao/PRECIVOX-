@@ -109,7 +109,7 @@ export default function ReferralPage() {
     function copyToClipboard() {
         if (!stats) return;
 
-        const referralLink = `https://precivox.com.br/registrar?ref=${stats.code}`;
+        const referralLink = `https://precivox.com.br/signup?ref=${stats.code}`;
         navigator.clipboard.writeText(referralLink);
 
         setCopied(true);
@@ -119,7 +119,7 @@ export default function ReferralPage() {
     function shareWhatsApp() {
         if (!stats) return;
 
-        const referralLink = `https://precivox.com.br/registrar?ref=${stats.code}`;
+        const referralLink = `https://precivox.com.br/signup?ref=${stats.code}`;
         const message = encodeURIComponent(
             `🛒 Use o PRECIVOX e economize nas compras!\n\n` +
             `Cadastre-se com meu código ${stats.code} e ganhe R$ 5,00 de desconto na primeira compra!\n\n` +

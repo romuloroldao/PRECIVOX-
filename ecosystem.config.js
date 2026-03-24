@@ -71,11 +71,12 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'https://www.precivox.com.br',
+        // Canônico: apex (igual .env.production). Cookie NextAuth usa domain .precivox.com.br (www incluído).
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'https://precivox.com.br',
         NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
         JWT_SECRET: process.env.JWT_SECRET,
         DATABASE_URL: process.env.DATABASE_URL,
-        NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL,
+        NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL || 'https://precivox.com.br',
       },
       error_file: '/var/log/precivox-frontend-error.log',
       out_file: '/var/log/precivox-frontend-out.log',

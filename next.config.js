@@ -75,6 +75,11 @@ const nextConfig = {
         destination: '/cliente/busca',
         permanent: true,
       },
+      {
+        source: '/registrar',
+        destination: '/signup',
+        permanent: true,
+      },
     ];
   },
 
@@ -83,9 +88,9 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
 
-  // Imagens
+  // Imagens (URLs absolutas do próprio site em produção)
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'precivox.com.br', 'www.precivox.com.br'],
     formats: ['image/avif', 'image/webp'],
   },
 

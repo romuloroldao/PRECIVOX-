@@ -36,16 +36,11 @@ export default function RegisterModal({
     setValue,
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema) as any,
-    defaultValues: {
-      aceiteTermos: false,
-      aceiteNewsletter: false,
-      referralCode: '',
-    },
   });
 
   useEffect(() => {
     if (isOpen && initialReferralCode?.trim()) {
-      setValue('referralCode', initialReferralCode.trim());
+      (setValue as any)('referralCode', initialReferralCode.trim());
     }
   }, [isOpen, initialReferralCode, setValue]);
 

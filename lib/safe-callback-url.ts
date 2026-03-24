@@ -3,7 +3,7 @@
  */
 export function safeCallbackUrl(
   raw: string | null | undefined,
-  defaultPath = '/cliente/home'
+  defaultPath = '/cliente/busca'
 ): string {
   if (raw == null || typeof raw !== 'string') return defaultPath;
   try {
@@ -16,7 +16,7 @@ export function safeCallbackUrl(
 }
 
 /** Destino padrão da jornada “criar lista” a partir da landing. */
-export const CALLBACK_LISTA_NOVA = '/cliente/listas/nova';
+export const CALLBACK_LISTA_NOVA = '/cliente/busca';
 
 export function loginUrlWithCallback(path: string = CALLBACK_LISTA_NOVA): string {
   return `/login?callbackUrl=${encodeURIComponent(path)}`;

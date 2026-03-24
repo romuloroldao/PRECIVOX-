@@ -14,6 +14,14 @@ export interface DrawerProps {
   size?: 'sm' | 'md' | 'lg';
   overlayClassName?: string;
   drawerClassName?: string;
+  /** Classes do cabeçalho (ex.: fundo colorido) */
+  titleBarClassName?: string;
+  /** Substitui o wrapper padrão do conteúdo (scroll + padding) */
+  innerClassName?: string;
+  /** Estilo do botão fechar (ex.: texto branco em header escuro) */
+  closeButtonClassName?: string;
+  /** id para aria-controls / testes */
+  id?: string;
 }
 
 export function Drawer({
@@ -25,6 +33,10 @@ export function Drawer({
   size = 'md',
   overlayClassName,
   drawerClassName,
+  titleBarClassName,
+  innerClassName,
+  closeButtonClassName,
+  id,
 }: DrawerProps) {
   useEffect(() => {
     if (isOpen) {
@@ -90,44 +102,53 @@ export function Drawer({
       
       {/* Drawer */}
       <div
+        id={id}
         className={cn(
           'fixed z-50 bg-bg-paper shadow-xl',
-          'flex flex-col',
+          'flex h-full max-h-screen flex-col',
           'transition-transform duration-300 ease-in-out',
-          // Mobile positioning and size
-          mobilePosition === 'left' && 'left-0 top-0 h-full w-full md:w-96',
-          mobilePosition === 'right' && 'right-0 top-0 h-full w-full md:w-96',
-          mobilePosition === 'bottom' && 'bottom-0 left-0 right-0 h-2/3 md:h-full md:right-0 md:left-auto md:w-96',
-          // Mobile animations
-          mobilePosition === 'left' && '-translate-x-full md:translate-x-0',
-          mobilePosition === 'right' && 'translate-x-full md:translate-x-0',
-          mobilePosition === 'bottom' && 'translate-y-full md:translate-y-0',
-          // Desktop size overrides
+          // Painel visível quando isOpen (componente só monta aberto)
+          mobilePosition === 'left' && 'left-0 top-0 w-full translate-x-0 md:w-96',
+          mobilePosition === 'right' && 'right-0 top-0 w-full translate-x-0 md:w-96',
+          mobilePosition === 'bottom' &&
+            'bottom-0 left-0 right-0 max-h-[90vh] translate-y-0 md:right-0 md:left-auto md:top-0 md:h-full md:max-h-screen md:w-96',
           size === 'sm' && effectivePosition !== 'bottom' && 'md:w-80',
-          size === 'lg' && effectivePosition !== 'bottom' && 'md:w-[32rem]',
+          size === 'lg' && effectivePosition !== 'bottom' && 'md:w-[min(32rem,92vw)]',
           drawerClassName
         )}
       >
         {title && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div
+            className={cn(
+              'flex shrink-0 items-center justify-between border-b border-gray-200 p-4',
+              titleBarClassName
+            )}
+          >
             {typeof title === 'string' ? (
               <h2 className="text-lg md:text-xl font-bold text-text-primary">{title}</h2>
             ) : (
-              <div className="flex-1">{title}</div>
+              <div className="min-w-0 flex-1">{title}</div>
             )}
             <Button
               variant="ghost"
               size="sm"
               icon={X}
               onClick={onClose}
-              className="ml-2"
+              className={cn('ml-2 shrink-0', closeButtonClassName)}
               aria-label="Fechar"
             >
               <span className="sr-only">Fechar</span>
             </Button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto p-4',
+            innerClassName
+          )}
+        >
+          {children}
+        </div>
       </div>
     </>
   );

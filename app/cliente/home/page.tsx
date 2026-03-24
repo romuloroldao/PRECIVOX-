@@ -102,7 +102,7 @@ export default function DashboardCliente() {
   }, [userId, status]);
 
   const handleCreateList = () => {
-    router.push('/cliente/listas/nova');
+    router.push('/cliente/busca');
   };
 
   const handleGoBusca = () => {
@@ -133,9 +133,7 @@ export default function DashboardCliente() {
               size="md"
               onClick={handleCreateList}
               leftIcon={<span>➕</span>}
-            >
-              Nova Lista
-            </Button>
+            >Começar compra</Button>
           </div>
         </header>
 

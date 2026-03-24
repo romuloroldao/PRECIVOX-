@@ -9,11 +9,26 @@ import { ToggleViewButton } from '@/components/ToggleViewButton';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { useProdutos } from '@/app/hooks/useProdutos';
-import { Filter, X } from 'lucide-react';
+import { useLista } from '@/app/context/ListaContext';
+import { Filter, ShoppingCart, X } from 'lucide-react';
 
 export default function BuscaPage() {
   const [modo, setModo] = useState<'cards' | 'lista'>('cards');
   const [expandida, setExpandida] = useState(false);
+  const { totalItens } = useLista();
+  const totalItensRef = useRef<number | null>(null);
+
+  /** Abre o painel lateral ao adicionar itens (ignora o primeiro snapshot pós-mount / localStorage). */
+  useEffect(() => {
+    if (totalItensRef.current === null) {
+      totalItensRef.current = totalItens;
+      return;
+    }
+    if (totalItens > totalItensRef.current) {
+      setExpandida(true);
+    }
+    totalItensRef.current = totalItens;
+  }, [totalItens]);
   const [busca, setBusca] = useState('');
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   
@@ -84,30 +99,69 @@ export default function BuscaPage() {
                 Buscar Produtos
               </h1>
 
-              {/* Barra de Busca com Autocomplete */}
-              <div className="flex gap-2 md:gap-4 mb-4">
+              {/* Busca */}
+              <div className="mb-3 flex gap-2 md:gap-4">
                 <SearchAutocomplete
                   value={busca}
                   onChange={setBusca}
                   placeholder="Digite o nome do produto, marca ou código de barras..."
                 />
+              </div>
+
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Filtros da busca, visualização e lista inteligente
+              </p>
+              <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2 shadow-sm">
                 <button
+                  type="button"
                   onClick={() => setFiltrosAbertos(!filtrosAbertos)}
-                  className={`px-4 md:px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
                     filtrosAbertos || temFiltros
                       ? 'bg-precivox-blue text-white hover:bg-blue-700'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-white text-gray-800 shadow-sm ring-1 ring-gray-200/80 hover:bg-gray-100'
                   }`}
                 >
-                  <Filter className="w-5 h-5" />
-                  <span className="hidden sm:inline">Filtros</span>
+                  <Filter className="h-5 w-5 shrink-0" />
+                  <span>Filtros</span>
                   {temFiltros && (
-                    <span className="bg-white text-precivox-blue px-2 py-0.5 rounded-full text-xs font-bold">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                        filtrosAbertos || temFiltros
+                          ? 'bg-white text-precivox-blue'
+                          : 'bg-precivox-blue text-white'
+                      }`}
+                    >
                       !
                     </span>
                   )}
                 </button>
+
                 <ToggleViewButton modo={modo} setModo={setModo} />
+
+                <button
+                  type="button"
+                  onClick={() => setExpandida(true)}
+                  className={`relative flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+                    expandida
+                      ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300'
+                      : 'bg-white text-emerald-800 shadow-sm ring-1 ring-emerald-200/90 hover:bg-emerald-50'
+                  }`}
+                  aria-expanded={expandida}
+                  aria-controls="lista-inteligente-panel"
+                >
+                  <ShoppingCart className="h-5 w-5 shrink-0" />
+                  <span className="hidden sm:inline">Lista inteligente</span>
+                  <span className="sm:hidden">Lista</span>
+                  {totalItens > 0 && (
+                    <span
+                      className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-xs font-bold ${
+                        expandida ? 'bg-white/25 text-white' : 'bg-emerald-600 text-white'
+                      }`}
+                    >
+                      {totalItens > 99 ? '99+' : totalItens}
+                    </span>
+                  )}
+                </button>
               </div>
 
               {/* Filtro de Categorias - SEMPRE VISÍVEL */}
