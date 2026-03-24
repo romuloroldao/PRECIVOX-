@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginInput } from '@/lib/validations';
-import { signIn } from 'next-auth/react';
+import { getSession, signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/Logo';
 import { safeCallbackUrl } from '@/lib/safe-callback-url';
+import { getDashboardUrl } from '@/lib/redirect';
 
 export default function LoginForm({ onShowRegister }: { onShowRegister: () => void }) {
   const router = useRouter();
@@ -37,6 +38,16 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
       });
 
       if (result?.ok) {
+        await router.refresh();
+        const session = await getSession();
+        const role = (session?.user as { role?: string })?.role;
+
+        // Evita enviar gestor/admin para callback padrão (/cliente/busca)
+        if (role === 'GESTOR' || role === 'ADMIN') {
+          router.push(getDashboardUrl(role));
+          return;
+        }
+
         const next = typeof result.url === 'string' && result.url ? result.url : callbackUrl;
         router.push(next);
         return;

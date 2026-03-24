@@ -5,10 +5,25 @@ import { useSession } from 'next-auth/react';
 import { getRoleLabel } from '@/lib/redirect';
 import { fullLogout } from '@/lib/logout-client';
 import Logo from '@/components/Logo';
+import { GestorNav } from '@/components/gestor/GestorNav';
+
+type DashboardRole = 'ADMIN' | 'GESTOR' | 'CLIENTE';
+
+function logoHrefForRole(role: DashboardRole): string {
+  switch (role) {
+    case 'GESTOR':
+      return '/gestor/home';
+    case 'ADMIN':
+      return '/admin/dashboard';
+    case 'CLIENTE':
+    default:
+      return '/cliente/home';
+  }
+}
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  role: 'ADMIN' | 'GESTOR' | 'CLIENTE';
+  role: DashboardRole;
 }
 
 export default function DashboardLayout({ children, role }: DashboardLayoutProps) {
@@ -70,7 +85,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <Logo height={34} href="" />
+              <Logo height={34} href={logoHrefForRole(role)} />
               <span className="ml-4 px-3 py-1 bg-precivox-blue text-white text-sm rounded-full">
                 {getRoleLabel(role)}
               </span>
@@ -99,6 +114,8 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
           </div>
         </div>
       </header>
+
+      {role === 'GESTOR' && <GestorNav />}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ease-in-out">
