@@ -8,6 +8,8 @@ import { ListaLateral } from '@/components/ListaLateral';
 import { ToggleViewButton } from '@/components/ToggleViewButton';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
 import { CategoryFilter } from '@/components/CategoryFilter';
+import { BuscaSemResultadoInteligente } from '@/components/cliente/BuscaSemResultadoInteligente';
+import { ListaSugestoesInline } from '@/components/cliente/ListaSugestoesInline';
 import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
 import { Filter, ShoppingCart, X } from 'lucide-react';
@@ -15,8 +17,40 @@ import { Filter, ShoppingCart, X } from 'lucide-react';
 export default function BuscaPage() {
   const [modo, setModo] = useState<'cards' | 'lista'>('cards');
   const [expandida, setExpandida] = useState(false);
-  const { totalItens } = useLista();
+  const { totalItens, itens } = useLista();
   const totalItensRef = useRef<number | null>(null);
+  const [mercadoSugestao, setMercadoSugestao] = useState<string | null>(null);
+
+  /** Mercado inferido por eventos recentes ou pela primeira linha da lista. */
+  const mercadoContexto = mercadoSugestao ?? itens[0]?.unidade?.mercado?.id ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/nps/suggest-mercado', { cache: 'no-store' });
+        const data = await res.json();
+        if (!cancelled && data.mercadoId) setMercadoSugestao(data.mercadoId);
+      } catch {
+        if (!cancelled) setMercadoSugestao(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (totalItens < 3 || typeof window === 'undefined') return;
+    const k = 'precivox_nps_lista3';
+    if (sessionStorage.getItem(k)) return;
+    sessionStorage.setItem(k, '1');
+    window.dispatchEvent(
+      new CustomEvent('precivox-nps-prompt', {
+        detail: { gatilho: 'lista_3_itens', delayMs: 2000, mercadoId: mercadoContexto },
+      })
+    );
+  }, [totalItens, mercadoContexto]);
 
   /** Abre o painel lateral ao adicionar itens (ignora o primeiro snapshot pós-mount / localStorage). */
   useEffect(() => {
@@ -40,6 +74,12 @@ export default function BuscaPage() {
   const [emPromocao, setEmPromocao] = useState<boolean | undefined>(undefined);
   const [disponivel, setDisponivel] = useState<boolean | undefined>(undefined);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const pref = new URLSearchParams(window.location.search).get('pref');
+    if (pref?.trim()) setBusca(pref.trim());
+  }, []);
+
   const { produtos, loading, loadingMore, error, total, hasMore, loadMore } = useProdutos({
     busca,
     categoria: categoria || undefined,
@@ -50,6 +90,8 @@ export default function BuscaPage() {
     disponivel,
     debounceDelay: 0,
     initialLimit: 100,
+    mercado: mercadoContexto ?? undefined,
+    includeReferencia: Boolean(mercadoContexto),
   });
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -300,16 +342,37 @@ export default function BuscaPage() {
                 </div>
               </div>
             ) : produtos.length === 0 ? (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                <p className="text-gray-600 text-lg mb-2">Nenhum produto encontrado</p>
-                <p className="text-gray-500 text-sm">
-                  {busca || categoria || temFiltros
-                    ? 'Tente ajustar os filtros de busca'
-                    : 'Só aparecem produtos com preço e estoque em alguma unidade. Se você já importou uma planilha, faça um novo upload ou peça ao gestor para reativar os itens no painel.'}
-                </p>
-              </div>
+              busca.trim().length >= 2 && mercadoContexto ? (
+                <BuscaSemResultadoInteligente
+                  busca={busca}
+                  mercadoId={mercadoContexto}
+                  onEquivalenteAdicionado={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(
+                        new CustomEvent('precivox-nps-prompt', {
+                          detail: {
+                            gatilho: 'busca_sem_resultado_adicionou_equivalente',
+                            delayMs: 4000,
+                            mercadoId: mercadoContexto,
+                          },
+                        })
+                      );
+                    }
+                  }}
+                />
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                  <p className="text-gray-600 text-lg mb-2">Nenhum produto encontrado</p>
+                  <p className="text-gray-500 text-sm">
+                    {busca || categoria || temFiltros
+                      ? 'Tente ajustar os filtros de busca'
+                      : 'Só aparecem produtos com preço e estoque em alguma unidade. Se você já importou uma planilha, faça um novo upload ou peça ao gestor para reativar os itens no painel.'}
+                  </p>
+                </div>
+              )
             ) : (
               <>
+                <ListaSugestoesInline mercadoId={mercadoContexto} />
                 {modo === 'cards' ? (
                   <ProductCard produtos={produtos} />
                 ) : (

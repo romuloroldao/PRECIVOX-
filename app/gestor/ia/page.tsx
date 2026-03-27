@@ -99,6 +99,18 @@ export default function PainelIAGestor() {
           </div>
         </div>
 
+        <Link
+          href="/gestor/ia/resumo"
+          className="block rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4 shadow-sm transition hover:border-amber-400 hover:shadow-md"
+        >
+          <p className="text-sm font-semibold text-amber-950">Resumo inteligente para o dia a dia</p>
+          <p className="mt-1 text-sm text-amber-900/90">
+            Prioridades da semana: busca sem resultado, lista, NPS com temas, estoque baixo — uma narrativa
+            só.
+          </p>
+          <span className="mt-2 inline-block text-sm font-medium text-amber-800 underline">Abrir resumo</span>
+        </Link>
+
         {/* Alertas Críticos */}
         {dashboard.alertasCriticos && dashboard.alertasCriticos.length > 0 && (
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">

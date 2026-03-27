@@ -198,6 +198,7 @@ model mercados {
   planos_de_pagamento  planos_de_pagamento? @relation(fields: [planoId], references: [id])
   metricas_dashboard   metricas_dashboard[]
   unidades             unidades[]
+  npsResponses         NpsResponse[]
 }
 
 model metricas_dashboard {
@@ -268,6 +269,9 @@ model produtos {
   scoreSazonalidade                                                          Float?                  @default(0.5)
   categoriaABC                                                               String?                 @default("C")
   ultimaAtualizacaoIA                                                        DateTime?
+  // nome_chave: tokens normalizados; chave_insight: EAN ou nome+marca+cat para agregação regional
+  nomeChave                                                                    String?                 @map("nome_chave") @db.VarChar(512)
+  chaveInsight                                                                 String?                 @map("chave_insight") @db.VarChar(768)
   alertas_ia                                                                 alertas_ia[]
   analises_ia                                                                analises_ia[]
   estoques                                                                   estoques[]
@@ -277,6 +281,9 @@ model produtos {
   vendas                                                                     vendas[]
   itens_lista                                                                itens_lista[]
   savingsHistory                                                             SavingsHistory[]
+
+  @@index([nomeChave])
+  @@index([chaveInsight])
 }
 
 model produtos_relacionados {
@@ -383,6 +390,7 @@ model User {
   referralsAsReferrer       Referral[]                 @relation("referrer")
   referralsAsReferee        Referral[]                 @relation("referee")
   notificationSubscriptions NotificationSubscription[]
+  npsResponses              NpsResponse[]
 
   @@map("usuarios")
 }
@@ -552,4 +560,22 @@ model UserEvent {
   @@index([mercadoId, timestamp])
   @@index([type, timestamp])
   @@map("user_events")
+}
+
+/// Resposta NPS (0–10) associada ao mercado avaliado (ex.: após compra ou pesquisa in-app).
+model NpsResponse {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  mercadoId String   @map("mercado_id")
+  score     Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  // Motivo do disparo NPS (ex.: busca_sem_resultado, substituicao_aceita, lista_3_itens)
+  gatilho   String?  @map("nps_gatilho") @db.VarChar(64)
+
+  mercados mercados @relation(fields: [mercadoId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([mercadoId, createdAt])
+  @@map("nps_responses")
 }

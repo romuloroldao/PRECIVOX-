@@ -1,113 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { TokenManager } from '@/lib/token-manager';
+import { EventCollector } from '@/lib/ai/event-collector';
+import {
+  buildProdutoWhereFromBuscaParams,
+  buscaParamsFromSearchParams,
+  whereProdutoComMercado,
+} from '@/lib/produtos-busca-where';
+import { getPrecoReferenciaRegionalParaProduto } from '@/lib/ai/conversao-metrics';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-/**
- * Monta o filtro aplicado a cada linha de estoque (mesmo objeto em
- * `produtos.estoques.some` e no `include.estoques.where` quando não vazio).
- * Quando não há filtros opcionais, retorna {} → "algum estoque existe".
- */
-function buildEstoqueFilter(params: {
-  disponivel: string | null;
-  emPromocao: string | null;
-  precoMin: string | null;
-  precoMax: string | null;
-  mercado: string | null;
-  cidade: string | null;
-}): Record<string, unknown> {
-  const f: Record<string, unknown> = {};
+async function registrarBuscasSemResultadoPorMercado(
+  request: NextRequest,
+  buscaTrim: string,
+  page: number,
+  baseWhere: Record<string, unknown>,
+  estoqueFilter: Record<string, unknown>,
+  mercadoFiltroUrl: string | null
+): Promise<void> {
+  if (page !== 1 || buscaTrim.length < 2) return;
 
-  if (params.disponivel === 'true') {
-    f.disponivel = true;
-    f.quantidade = { gt: 0 };
+  const user = await TokenManager.validateSession({
+    headers: request.headers,
+    cookies: request.cookies,
+  });
+  if (!user || user.id === 'anonymous') return;
+
+  const termo = buscaTrim.slice(0, 200);
+
+  const registrarSeZero = async (mercadoId: string) => {
+    const whereM = whereProdutoComMercado(baseWhere, estoqueFilter, mercadoId);
+    const count = await prisma.produtos.count({ where: whereM });
+    if (count === 0) {
+      await EventCollector.recordEvent(user.id, mercadoId, 'produto_buscado', {
+        searchQuery: termo,
+        resultados: 0,
+      });
+    }
+  };
+
+  if (mercadoFiltroUrl) {
+    await registrarSeZero(mercadoFiltroUrl);
+    return;
   }
 
-  if (params.emPromocao === 'true') {
-    f.emPromocao = true;
-  }
+  const mercados = await prisma.mercados.findMany({
+    where: { ativo: true },
+    select: { id: true },
+  });
 
-  if (params.precoMin || params.precoMax) {
-    const preco: Record<string, number> = {};
-    if (params.precoMin) preco.gte = parseFloat(params.precoMin);
-    if (params.precoMax) preco.lte = parseFloat(params.precoMax);
-    f.preco = preco;
-  }
-
-  const unidadeWhere: Record<string, string> = {};
-  if (params.mercado) unidadeWhere.mercadoId = params.mercado;
-  if (params.cidade) unidadeWhere.cidade = params.cidade;
-
-  if (Object.keys(unidadeWhere).length > 0) {
-    f.unidades = unidadeWhere;
-  }
-
-  return f;
+  await Promise.all(mercados.map((m) => registrarSeZero(m.id)));
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const busca = searchParams.get('busca');
-    const categoria = searchParams.get('categoria');
-    const marca = searchParams.get('marca');
-    const precoMin = searchParams.get('precoMin');
-    const precoMax = searchParams.get('precoMax');
-    const disponivel = searchParams.get('disponivel');
-    const emPromocao = searchParams.get('emPromocao');
-    const mercado = searchParams.get('mercado');
-    const cidade = searchParams.get('cidade');
     const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1);
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '100', 10), 1), 100);
     const skip = (page - 1) * limit;
 
-    const estoqueFilter = buildEstoqueFilter({
-      disponivel,
-      emPromocao,
-      precoMin,
-      precoMax,
-      mercado,
-      cidade,
-    });
+    const params = buscaParamsFromSearchParams(searchParams);
+    const { whereProduct, estoqueFilter, hasEstoqueWhere } = buildProdutoWhereFromBuscaParams(params);
+    const busca = params.busca?.trim() || '';
 
-    const whereProduct: Record<string, unknown> = { ativo: true };
-    const andClauses: Record<string, unknown>[] = [];
-
-    if (busca) {
-      andClauses.push({
-        OR: [
-          { nome: { contains: busca, mode: 'insensitive' } },
-          { marca: { contains: busca, mode: 'insensitive' } },
-          { codigoBarras: { contains: busca, mode: 'insensitive' } },
-        ],
-      });
+    if (busca.length >= 2) {
+      void registrarBuscasSemResultadoPorMercado(
+        request,
+        busca,
+        page,
+        whereProduct,
+        estoqueFilter,
+        params.mercado
+      ).catch(() => {});
     }
-
-    if (categoria) {
-      andClauses.push({ categoria });
-    }
-
-    if (marca && !busca) {
-      andClauses.push({
-        marca: { contains: marca, mode: 'insensitive' },
-      });
-    }
-
-    // Catálogo do cliente: só produtos que tenham pelo menos uma linha de estoque
-    // (evita lista “vazia” por produto sem oferta e alinha com dados reais de upload)
-    andClauses.push({
-      estoques: {
-        some: estoqueFilter,
-      },
-    });
-
-    if (andClauses.length > 0) {
-      whereProduct.AND = andClauses;
-    }
-
-    const hasEstoqueWhere = Object.keys(estoqueFilter).length > 0;
 
     const [produtos, total] = await Promise.all([
       prisma.produtos.findMany({
@@ -164,10 +132,40 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const includeRef =
+      request.nextUrl.searchParams.get('includeReferencia') === 'true' && params.mercado;
+    const mercadoRef = params.mercado;
+
+    let dataOut = produtosFormatados;
+    if (includeRef && mercadoRef) {
+      const cap = 36;
+      const head = produtosFormatados.slice(0, cap);
+      const tail = produtosFormatados.slice(cap);
+      const enriched = await Promise.all(
+        head.map(async (row) => {
+          const pid = (row.produto as { id?: string })?.id;
+          const preco =
+            row.emPromocao && row.precoPromocional != null ? row.precoPromocional : row.preco;
+          if (!pid || preco <= 0) {
+            return { ...row, referenciaRegiao: null as { media: number; diferencaPct: number | null } | null };
+          }
+          const ref = await getPrecoReferenciaRegionalParaProduto(mercadoRef, pid, preco, 'ampla', 25);
+          return {
+            ...row,
+            referenciaRegiao:
+              ref.media != null
+                ? { media: ref.media, diferencaPct: ref.diferencaPct }
+                : null,
+          };
+        })
+      );
+      dataOut = [...enriched, ...tail];
+    }
+
     return NextResponse.json(
       {
         success: true,
-        data: produtosFormatados,
+        data: dataOut,
         pagination: {
           page,
           limit,

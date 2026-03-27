@@ -1,4 +1,5 @@
 // Handler de Upload e Processamento de CSV/XLSX/JSON/DB
+import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
 import { PrismaClient } from '@prisma/client';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -314,7 +315,13 @@ export async function processarArquivoUpload(
         if (!produto) {
           // Gera ID único para o produto
           const produtoId = `prod-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-          
+          const chaves = computeCamposChaveProduto({
+            nome: produtoData.nome,
+            codigoBarras: produtoData.codigoBarras || null,
+            marca: produtoData.marca || null,
+            categoria: produtoData.categoria || null,
+          });
+
           produto = await prisma.produtos.create({
             data: {
               id: produtoId,
@@ -324,12 +331,20 @@ export async function processarArquivoUpload(
               codigoBarras: produtoData.codigoBarras || null,
               marca: produtoData.marca || null,
               unidadeMedida: produtoData.unidadeMedida || 'UN',
+              nomeChave: chaves.nomeChave,
+              chaveInsight: chaves.chaveInsight,
               ativo: true,
               dataCriacao: new Date(),
               dataAtualizacao: new Date(),
             },
           });
         } else {
+          const chaves = computeCamposChaveProduto({
+            nome: produtoData.nome || produto.nome,
+            codigoBarras: produtoData.codigoBarras ?? produto.codigoBarras,
+            marca: produtoData.marca ?? produto.marca,
+            categoria: produtoData.categoria ?? produto.categoria,
+          });
           // Atualiza produto existente com novos dados (se houver)
           await prisma.produtos.update({
             where: { id: produto.id },
@@ -338,6 +353,8 @@ export async function processarArquivoUpload(
               categoria: produtoData.categoria || produto.categoria,
               marca: produtoData.marca || produto.marca,
               unidadeMedida: produtoData.unidadeMedida || produto.unidadeMedida,
+              nomeChave: chaves.nomeChave,
+              chaveInsight: chaves.chaveInsight,
               dataAtualizacao: new Date(),
             },
           });

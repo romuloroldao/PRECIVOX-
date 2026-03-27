@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
+import UploadDatabase from '@/components/UploadDatabase';
 
 interface Produto {
   id: string;
@@ -33,6 +34,7 @@ interface Produto {
 
 export default function GestorProdutosPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const toast = useToast();
 
@@ -46,9 +48,17 @@ export default function GestorProdutosPage() {
   const [total, setTotal] = useState(0);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [unidades, setUnidades] = useState<any[]>([]);
+  const [mercadoId, setMercadoId] = useState('');
 
   // Debounce para busca
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const sugestao = searchParams.get('sugestaoNome') || searchParams.get('q');
+    if (sugestao) {
+      setSearchTerm(sugestao);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -68,6 +78,13 @@ export default function GestorProdutosPage() {
   }, [session, router, toast]);
 
   // Carregar categorias e unidades
+  useEffect(() => {
+    const sid = (session?.user as any)?.mercadoId as string | undefined;
+    if (sid) {
+      setMercadoId(sid);
+    }
+  }, [session]);
+
   useEffect(() => {
     if (session?.user && (session.user as any).role === 'GESTOR') {
       loadCategorias();
@@ -102,6 +119,9 @@ export default function GestorProdutosPage() {
         const result = await response.json();
         if (result.success) {
           const mercados = result.data || [];
+          if (!mercadoId && mercados.length > 0) {
+            setMercadoId(mercados[0].id);
+          }
           
           // Buscar unidades de todos os mercados em paralelo
           const unidadesPromises = mercados.map((mercado: any) =>
@@ -198,6 +218,17 @@ export default function GestorProdutosPage() {
             <p className="text-gray-600 mt-1">Gerencie os produtos do seu mercado</p>
           </div>
         </div>
+
+        {/* Upload em massa */}
+        {mercadoId && (
+          <UploadDatabase
+            mercadoId={mercadoId}
+            unidades={unidades}
+            onUploadComplete={async () => {
+              await Promise.all([loadProdutos(), loadCategorias()]);
+            }}
+          />
+        )}
 
         {/* Filtros */}
         <div className="bg-white rounded-xl shadow-md p-6">

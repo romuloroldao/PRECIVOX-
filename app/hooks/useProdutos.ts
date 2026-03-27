@@ -14,6 +14,9 @@ export interface Produto {
   categoria?: string;
   marca?: string;
   imagem?: string;
+  /** Catálogo `produtos.id` quando a API envia `produto.id`. */
+  produtoCatalogoId?: string;
+  referenciaRegiao?: { media: number; diferencaPct: number | null } | null;
   unidade: {
     id: string;
     nome: string;
@@ -25,7 +28,7 @@ export interface Produto {
       nome: string;
     };
   };
-  produto?: any;
+  produto?: { id?: string } & Record<string, unknown>;
 }
 
 interface UseProdutosParams {
@@ -40,6 +43,8 @@ interface UseProdutosParams {
   cidade?: string;
   debounceDelay?: number;
   initialLimit?: number;
+  /** Com `mercado`, pede preço médio regional na API (primeiros itens da página). */
+  includeReferencia?: boolean;
 }
 
 // Hook para debounce
@@ -85,6 +90,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
     cidade,
     debounceDelay = 400,
     initialLimit = 100,
+    includeReferencia = false,
   } = params;
 
   // Debounce na busca
@@ -109,6 +115,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
       if (emPromocao !== undefined) queryParams.append('emPromocao', emPromocao.toString());
       if (mercado) queryParams.append('mercado', mercado);
       if (cidade) queryParams.append('cidade', cidade);
+      if (includeReferencia && mercado) queryParams.append('includeReferencia', 'true');
       queryParams.append('page', targetPage.toString());
       queryParams.append('limit', initialLimit.toString());
 
@@ -149,6 +156,8 @@ export function useProdutos(params: UseProdutosParams = {}) {
         categoria: item.categoria || item.produto?.categoria || '',
         marca: item.marca || item.produto?.marca || '',
         imagem: item.imagem || item.produto?.imagem || '',
+        produtoCatalogoId: item.produto?.id || undefined,
+        referenciaRegiao: item.referenciaRegiao ?? undefined,
         unidade: {
           id: item.unidade?.id || '',
           nome: item.unidade?.nome || '',
@@ -200,6 +209,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
     mercado,
     cidade,
     initialLimit,
+    includeReferencia,
   ]);
 
   useEffect(() => {

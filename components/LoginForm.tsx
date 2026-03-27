@@ -78,7 +78,12 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
       }
     } catch (error) {
       console.error('Erro no login:', error);
-      setErrorMessage('Erro de conexão. Verifique sua internet e tente novamente.');
+      const mensagem = error instanceof Error ? error.message : '';
+      if (mensagem && /EmailNotVerified/i.test(mensagem)) {
+        setErrorMessage('E-mail ainda não confirmado. Confira sua caixa de entrada.');
+      } else {
+        setErrorMessage('Não foi possível concluir o login agora. Tente novamente em instantes.');
+      }
       setIsLoading(false);
     }
   };

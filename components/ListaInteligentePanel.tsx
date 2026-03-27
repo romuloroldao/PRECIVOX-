@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { useLista } from '@/app/context/ListaContext';
+import { useLista, type ItemLista } from '@/app/context/ListaContext';
+import { recordRemocaoListaConfirmada, recordRotaConsolidacaoLista } from '@/lib/events/frontend-events';
+import type { PropostaRotaOtimizacao } from '@/lib/lista-rota-proposta';
 import {
   ShoppingCart,
   Plus,
@@ -15,6 +17,8 @@ import {
   MapPin,
   X,
   Lightbulb,
+  Route,
+  Undo2,
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -82,9 +86,13 @@ export function ListaInteligentePanel({
   onClose,
   omitHeader = false,
 }: ListaInteligentePanelProps) {
+  const [remocaoPendente, setRemocaoPendente] = useState<ItemLista | null>(null);
+
   const {
     itens,
     removerItem,
+    aplicarTrocaRota,
+    restaurarItens,
     atualizarQuantidade,
     limparLista,
     total,
@@ -100,8 +108,16 @@ export function ListaInteligentePanel({
   const [nomeLista, setNomeLista] = useState('');
   const [mostrarSeletorListas, setMostrarSeletorListas] = useState(false);
   const [secaoIaAberta, setSecaoIaAberta] = useState(true);
+  const [propostaRota, setPropostaRota] = useState<PropostaRotaOtimizacao | null>(null);
+  const [dismissedRotaChave, setDismissedRotaChave] = useState<string | null>(null);
+  const [snapshotUndoRota, setSnapshotUndoRota] = useState<ItemLista[] | null>(null);
 
   const listaAtiva = listasSalvas.find((l) => l.id === listaAtivaId);
+
+  const chaveListaRota = useMemo(
+    () => itens.map((i) => `${i.id}:${i.quantidade}`).join('|'),
+    [itens]
+  );
 
   const insights = useMemo(() => {
     if (itens.length === 0) return null;
@@ -131,6 +147,69 @@ export function ListaInteligentePanel({
   const rota = useMemo(() => computeShoppingRoute(itens), [itens]);
 
   useEffect(() => {
+    if (itens.length < 2 || (insights?.mercados ?? 0) < 2) {
+      setPropostaRota(null);
+      return;
+    }
+    if (dismissedRotaChave === chaveListaRota) return;
+    const t = setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch('/api/cliente/rota-proposta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              itens: itens.map((i) => ({
+                lineId: i.id,
+                estoqueId: i.estoqueId,
+                mercadoId: i.unidade.mercado.id,
+                unidadeId: i.unidade.id,
+                quantidade: i.quantidade,
+              })),
+            }),
+          });
+          const data = await res.json();
+          if (data.proposal) setPropostaRota(data.proposal as PropostaRotaOtimizacao);
+        } catch {
+          setPropostaRota(null);
+        }
+      })();
+    }, 700);
+    return () => clearTimeout(t);
+  }, [chaveListaRota, itens, insights?.mercados, dismissedRotaChave]);
+
+  const aceitarPropostaRota = useCallback(() => {
+    if (!propostaRota) return;
+    const snap = itens.map((i) => ({ ...i }));
+    const ids = propostaRota.movimentos.map((m) => m.removerLineId);
+    const novos = propostaRota.movimentos.map((m) => ({ ...m.itemLista }));
+    aplicarTrocaRota(ids, novos);
+    setSnapshotUndoRota(snap);
+    setPropostaRota(null);
+    success('Rota otimizada: você pode desfazer se preferir o jeito anterior.');
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || 'anonymous' : 'anonymous';
+    const mid = propostaRota.movimentos[0]?.itemLista.unidade.mercado.id ?? 'unknown';
+    void recordRotaConsolidacaoLista(userId, mid, {
+      acao: 'aceita',
+      deltaTotal: propostaRota.resumo.deltaTotal,
+      mercadosAntes: propostaRota.resumo.mercadosAntes,
+      mercadosDepois: propostaRota.resumo.mercadosDepois,
+      anchorNome: propostaRota.resumo.anchorNome,
+    });
+  }, [propostaRota, itens, aplicarTrocaRota, success]);
+
+  const desfazerPropostaRota = useCallback(() => {
+    if (!snapshotUndoRota?.length) return;
+    restaurarItens(snapshotUndoRota);
+    setSnapshotUndoRota(null);
+    success('Lista restaurada como antes da otimização.');
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || 'anonymous' : 'anonymous';
+    const mid = snapshotUndoRota[0]?.unidade.mercado.id ?? 'unknown';
+    void recordRotaConsolidacaoLista(userId, mid, { acao: 'desfeita' });
+  }, [snapshotUndoRota, restaurarItens, success]);
+
+  useEffect(() => {
     if (itens.length > 0) setSecaoIaAberta(true);
   }, [itens.length]);
 
@@ -153,6 +232,22 @@ export function ListaInteligentePanel({
       console.error('Erro ao salvar lista:', storageError);
       error('Não foi possível salvar a lista. Tente novamente.');
     }
+  };
+
+  const confirmarRemocao = () => {
+    if (!remocaoPendente) return;
+    const item = remocaoPendente;
+    setRemocaoPendente(null);
+    if (typeof window !== 'undefined') {
+      const userId = localStorage.getItem('userId') || 'anonymous';
+      const mercadoId = item.unidade.mercado.id;
+      void recordRemocaoListaConfirmada(userId, mercadoId, {
+        produtoId: item.id,
+        listaId: listaAtivaId ?? undefined,
+        aposInterrupcao: false,
+      });
+    }
+    removerItem(item.id);
   };
 
   const handleCriarNovaLista = () => {
@@ -297,6 +392,40 @@ export function ListaInteligentePanel({
           </div>
         ) : (
           <div className="space-y-3 pb-4">
+            {remocaoPendente && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-amber-950">Antes de remover</p>
+                <p className="mt-2 text-xs leading-relaxed text-amber-950/90">
+                  Esse tipo de item costuma ter ruptura na loja. Quer ver alternativas na busca antes de tirar da lista?
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-amber-950/90">
+                  Confira também a disponibilidade na unidade para não precisar remover depois por frustração.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <Link
+                    href={`/cliente/busca?pref=${encodeURIComponent(remocaoPendente.nome.slice(0, 80))}`}
+                    onClick={() => setRemocaoPendente(null)}
+                    className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-amber-950 shadow-sm ring-1 ring-amber-300 hover:bg-amber-100"
+                  >
+                    Ver alternativas (abre a busca)
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => confirmarRemocao()}
+                    className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700"
+                  >
+                    Remover mesmo assim
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRemocaoPendente(null)}
+                    className="rounded-lg border border-amber-300 bg-transparent px-3 py-2 text-xs font-medium text-amber-950 hover:bg-amber-100/80"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
             {itens.map((item, index) => {
               const precoFinal =
                 item.emPromocao && item.precoPromocional ? item.precoPromocional : item.preco;
@@ -374,7 +503,7 @@ export function ListaInteligentePanel({
                           variant="ghost"
                           size="sm"
                           icon={Trash2}
-                          onClick={() => removerItem(item.id)}
+                          onClick={() => setRemocaoPendente(item)}
                           className="ml-auto h-8 w-8 p-0 text-red-600 hover:bg-red-50"
                           title="Remover item"
                           aria-label="Remover item"
@@ -445,6 +574,80 @@ export function ListaInteligentePanel({
                   ))}
                 </ol>
               </div>
+
+              {propostaRota && (insights?.mercados ?? 0) >= 2 && (
+                <div className="rounded-xl border border-sky-200/90 bg-gradient-to-br from-sky-50 to-white p-3 shadow-sm">
+                  <div className="mb-2 flex items-center gap-2 text-sky-950">
+                    <Route className="h-4 w-4 shrink-0 text-sky-600" />
+                    <span className="text-xs font-bold uppercase tracking-wide">Menos idas na rota</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-sky-950/90">
+                    Trocar itens de <span className="font-semibold">{propostaRota.resumo.sateliteNome}</span> por
+                    equivalentes de mesma categoria em{' '}
+                    <span className="font-semibold">{propostaRota.resumo.anchorNome}</span> — de{' '}
+                    {propostaRota.resumo.mercadosAntes} para {propostaRota.resumo.mercadosDepois}{' '}
+                    {propostaRota.resumo.mercadosDepois === 1 ? 'mercado' : 'mercados'}.
+                  </p>
+                  <p className="mt-2 text-[11px] text-sky-900/85">
+                    {propostaRota.resumo.deltaTotal > 0.01 ? (
+                      <>
+                        Impacto no total:{' '}
+                        <span className="font-semibold text-amber-800">
+                          +R$ {propostaRota.resumo.deltaTotal.toFixed(2).replace('.', ',')}
+                        </span>{' '}
+                        (trade-off: um pouco mais caro para concentrar a compra).
+                      </>
+                    ) : propostaRota.resumo.deltaTotal < -0.01 ? (
+                      <>
+                        Você economiza cerca de{' '}
+                        <span className="font-semibold text-emerald-800">
+                          R$ {Math.abs(propostaRota.resumo.deltaTotal).toFixed(2).replace('.', ',')}
+                        </span>{' '}
+                        no total estimado.
+                      </>
+                    ) : (
+                      <>Impacto no total estimado: neutro.</>
+                    )}
+                  </p>
+                  <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto text-[10px] text-sky-900/80">
+                    {propostaRota.movimentos.map((m) => (
+                      <li key={m.removerLineId} className="line-clamp-2">
+                        · {m.nomeAnterior} → {m.nomeNovo}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={aceitarPropostaRota}
+                      className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-sky-700"
+                    >
+                      Aceitar e aplicar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPropostaRota(null);
+                        setDismissedRotaChave(chaveListaRota);
+                      }}
+                      className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-medium text-sky-900 hover:bg-sky-50"
+                    >
+                      Ignorar sugestão
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {snapshotUndoRota && snapshotUndoRota.length > 0 && (
+                <button
+                  type="button"
+                  onClick={desfazerPropostaRota}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-semibold text-violet-900 shadow-sm hover:bg-violet-100/80"
+                >
+                  <Undo2 className="h-3.5 w-3.5 shrink-0" />
+                  Desfazer última otimização de rota
+                </button>
+              )}
 
               <div className="flex gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50 p-3 shadow-sm">
                 <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />

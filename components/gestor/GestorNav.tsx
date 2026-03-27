@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Tag,
   LineChart,
+  Lightbulb,
 } from 'lucide-react';
 
 const NAV_ITEMS: {
@@ -43,6 +44,12 @@ const NAV_ITEMS: {
     label: 'Métricas IA',
     icon: BarChart3,
     isActive: (p) => p.startsWith('/gestor/ia/dashboard'),
+  },
+  {
+    href: '/gestor/ia/resumo',
+    label: 'Resumo inteligente',
+    icon: Lightbulb,
+    isActive: (p) => p.startsWith('/gestor/ia/resumo'),
   },
   {
     href: '/gestor/ia/compras',

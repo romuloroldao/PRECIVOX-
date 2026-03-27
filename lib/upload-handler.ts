@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -224,6 +225,12 @@ export async function processarUpload(
         }
 
         if (!produto) {
+          const chaves = computeCamposChaveProduto({
+            nome: produtoData.nome,
+            codigoBarras: produtoData.codigoBarras || null,
+            marca: produtoData.marca || null,
+            categoria: produtoData.categoria || null,
+          });
           produto = await prisma.produtos.create({
             data: {
               id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
@@ -233,12 +240,20 @@ export async function processarUpload(
               codigoBarras: produtoData.codigoBarras || null,
               marca: produtoData.marca || null,
               unidadeMedida: produtoData.unidadeMedida || 'UN',
+              nomeChave: chaves.nomeChave,
+              chaveInsight: chaves.chaveInsight,
               ativo: true,
               dataCriacao: new Date(),
               dataAtualizacao: new Date(),
             },
           });
         } else {
+          const chaves = computeCamposChaveProduto({
+            nome: produtoData.nome || produto.nome,
+            codigoBarras: produtoData.codigoBarras ?? produto.codigoBarras,
+            marca: produtoData.marca ?? produto.marca,
+            categoria: produtoData.categoria ?? produto.categoria,
+          });
           await prisma.produtos.update({
             where: { id: produto.id },
             data: {
@@ -246,6 +261,8 @@ export async function processarUpload(
               categoria: produtoData.categoria || produto.categoria,
               marca: produtoData.marca || produto.marca,
               unidadeMedida: produtoData.unidadeMedida || produto.unidadeMedida,
+              nomeChave: chaves.nomeChave,
+              chaveInsight: chaves.chaveInsight,
               // Reativar no catálogo ao reimportar (evita sumir da busca do cliente)
               ativo: true,
               dataAtualizacao: new Date(),

@@ -46,8 +46,9 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Credenciais inválidas');
         }
 
-        // Exigir e-mail verificado para login com e-mail/senha (sinal para o callback signIn bloquear)
-        if (!usuario.emailVerified) {
+        // Exigir e-mail verificado apenas para CLIENTE.
+        // Perfis de operação (GESTOR/ADMIN) podem entrar com credenciais mesmo com confirmação pendente.
+        if (!usuario.emailVerified && usuario.role === 'CLIENTE') {
           return {
             id: usuario.id,
             email: usuario.email,

@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 import { prisma } from '@/lib/prisma';
+import { sincronizarGeocodificacaoUnidade } from '@/lib/unidade-geocode';
 
 import { NextResponse } from 'next/server';
 
@@ -148,6 +149,10 @@ export async function POST(
     });
 
     console.log('✅ Unidade criada com sucesso:', novaUnidade.id);
+
+    void sincronizarGeocodificacaoUnidade(novaUnidade.id).catch((err) =>
+      console.warn('[markets/unidades POST] geocodificação:', err)
+    );
 
     return NextResponse.json({
       success: true,

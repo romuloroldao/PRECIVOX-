@@ -5,6 +5,8 @@ import { recordProductAddedToList, recordProductRemovedFromList } from '@/lib/ev
 
 export interface ItemLista {
   id: string;
+  /** id em `produtos` (catálogo); usado em métricas de conversão */
+  produtoCatalogoId?: string;
   estoqueId: string;
   nome: string;
   preco: number;
@@ -38,6 +40,10 @@ interface ListaContextType {
   listasSalvas: ListaSalva[];
   adicionarItem: (item: ItemLista) => void;
   removerItem: (id: string) => void;
+  /** Troca vários itens de uma vez (ex.: consolidar rota) sem incrementar quantidade por id existente. */
+  aplicarTrocaRota: (removerIds: string[], novosItens: ItemLista[]) => void;
+  /** Restaura lista a um snapshot (desfazer otimização de rota). */
+  restaurarItens: (snapshot: ItemLista[]) => void;
   atualizarQuantidade: (id: string, quantidade: number) => void;
   limparLista: () => void;
   criarNovaLista: (nome: string) => string;
@@ -227,20 +233,32 @@ export function ListaProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined' && listaAtivaId) {
       const userId = localStorage.getItem('userId') || 'anonymous';
       const mercadoId = item.unidade?.mercado?.id || 'unknown';
-      
+
       recordProductAddedToList(
         userId,
         mercadoId,
         item.id,
         listaAtivaId,
         item.quantidade || 1,
-        item.preco
+        item.preco,
+        item.produtoCatalogoId
       ).catch(err => {
         console.error('Erro ao registrar evento:', err);
         // Não quebrar o fluxo
       });
     }
   }, [listaAtivaId]);
+
+  const aplicarTrocaRota = useCallback((removerIds: string[], novosItens: ItemLista[]) => {
+    setItens((prev) => {
+      const rest = prev.filter((i) => !removerIds.includes(i.id));
+      return [...rest, ...novosItens];
+    });
+  }, []);
+
+  const restaurarItens = useCallback((snapshot: ItemLista[]) => {
+    setItens(snapshot.map((i) => ({ ...i })));
+  }, []);
 
   const removerItem = useCallback((id: string) => {
     const itemRemovido = itens.find(i => i.id === id);
@@ -256,7 +274,8 @@ export function ListaProvider({ children }: { children: ReactNode }) {
         userId,
         mercadoId,
         itemRemovido.id,
-        listaAtivaId
+        listaAtivaId,
+        itemRemovido.produtoCatalogoId
       ).catch(err => {
         console.error('Erro ao registrar evento:', err);
         // Não quebrar o fluxo
@@ -297,6 +316,8 @@ export function ListaProvider({ children }: { children: ReactNode }) {
         listasSalvas,
         adicionarItem,
         removerItem,
+        aplicarTrocaRota,
+        restaurarItens,
         atualizarQuantidade,
         limparLista,
         criarNovaLista,

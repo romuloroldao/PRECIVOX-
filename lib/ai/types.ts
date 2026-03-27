@@ -18,7 +18,10 @@ export type UserEventType =
   | 'produto_visualizado'
   | 'compra_realizada'
   | 'promocao_visualizada'
-  | 'horario_acesso';
+  | 'horario_acesso'
+  | 'produto_substituicao_aceita'
+  | 'remocao_lista_confirmada'
+  | 'rota_consolidacao_lista';
 
 export interface UserEvent {
   id: string;

@@ -51,13 +51,15 @@ export async function recordProductAddedToList(
   produtoId: string,
   listaId: string,
   quantidade: number,
-  preco?: number
+  preco?: number,
+  produtoCatalogoId?: string
 ): Promise<void> {
   await postEvent('produto_adicionado_lista', userId, mercadoId, {
     produtoId,
     listaId,
     quantidade,
     ...(preco !== undefined ? { preco } : {}),
+    ...(produtoCatalogoId ? { produtoCatalogoId } : {}),
   });
 }
 
@@ -65,11 +67,13 @@ export async function recordProductRemovedFromList(
   userId: string,
   mercadoId: string,
   produtoId: string,
-  listaId: string
+  listaId: string,
+  produtoCatalogoId?: string
 ): Promise<void> {
   await postEvent('produto_removido_lista', userId, mercadoId, {
     produtoId,
     listaId,
+    ...(produtoCatalogoId ? { produtoCatalogoId } : {}),
   });
 }
 
@@ -105,4 +109,43 @@ export async function recordAccessTime(userId: string, mercadoId: string): Promi
   await postEvent('horario_acesso', userId, mercadoId, {
     timestamp: new Date().toISOString(),
   });
+}
+
+export async function recordProdutoSubstituicaoAceita(
+  userId: string,
+  mercadoId: string,
+  metadata: {
+    produtoId: string;
+    substitutoId: string;
+    modo: 'categoria' | 'equivalente';
+    listaId?: string;
+  }
+): Promise<void> {
+  await postEvent('produto_substituicao_aceita', userId, mercadoId, metadata as Record<string, unknown>);
+}
+
+export async function recordRotaConsolidacaoLista(
+  userId: string,
+  mercadoId: string,
+  metadata: {
+    acao: 'aceita' | 'desfeita';
+    deltaTotal?: number;
+    mercadosAntes?: number;
+    mercadosDepois?: number;
+    anchorNome?: string;
+  }
+): Promise<void> {
+  await postEvent('rota_consolidacao_lista', userId, mercadoId, metadata as Record<string, unknown>);
+}
+
+export async function recordRemocaoListaConfirmada(
+  userId: string,
+  mercadoId: string,
+  metadata: {
+    produtoId: string;
+    listaId?: string;
+    aposInterrupcao?: boolean;
+  }
+): Promise<void> {
+  await postEvent('remocao_lista_confirmada', userId, mercadoId, metadata as Record<string, unknown>);
 }

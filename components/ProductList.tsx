@@ -16,6 +16,7 @@ export function ProductList({ produtos }: ProductListProps) {
   const handleAdicionar = (produto: Produto) => {
     adicionarItem({
       id: produto.id,
+      produtoCatalogoId: produto.produtoCatalogoId ?? produto.produto?.id,
       estoqueId: produto.estoqueId,
       nome: produto.nome,
       preco: produto.preco,

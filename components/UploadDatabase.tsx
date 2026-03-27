@@ -8,9 +8,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Inpu
 interface UploadDatabaseProps {
   mercadoId: string;
   unidades: Array<{ id: string; nome: string }>;
+  onUploadComplete?: () => void | Promise<void>;
 }
 
-export default function UploadDatabase({ mercadoId, unidades }: UploadDatabaseProps) {
+export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }: UploadDatabaseProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -138,6 +139,13 @@ export default function UploadDatabase({ mercadoId, unidades }: UploadDatabasePr
 
       // Atualiza dados da página (histórico/listas) sem exigir callback do servidor
       try { router.refresh(); } catch (_) {}
+      if (onUploadComplete) {
+        try {
+          await onUploadComplete();
+        } catch (err) {
+          console.warn('Falha ao atualizar tela após upload:', err);
+        }
+      }
 
       // Limpa form
       setSelectedFile(null);

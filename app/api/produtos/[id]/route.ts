@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
@@ -176,6 +177,17 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateProdutoSchema.parse(body);
 
+    const mergedChaves = computeCamposChaveProduto({
+      nome: validatedData.nome ?? produtoExistente.nome,
+      codigoBarras:
+        validatedData.codigoBarras !== undefined
+          ? validatedData.codigoBarras
+          : produtoExistente.codigoBarras,
+      marca: validatedData.marca !== undefined ? validatedData.marca : produtoExistente.marca,
+      categoria:
+        validatedData.categoria !== undefined ? validatedData.categoria : produtoExistente.categoria,
+    });
+
     // Atualizar produto
     const produtoAtualizado = await prisma.produtos.update({
       where: { id: params.id },
@@ -187,6 +199,8 @@ export async function PUT(
         ...(validatedData.marca !== undefined && { marca: validatedData.marca }),
         ...(validatedData.unidadeMedida !== undefined && { unidadeMedida: validatedData.unidadeMedida }),
         ...(validatedData.ativo !== undefined && { ativo: validatedData.ativo }),
+        nomeChave: mergedChaves.nomeChave,
+        chaveInsight: mergedChaves.chaveInsight,
         dataAtualizacao: new Date(),
       },
       include: {

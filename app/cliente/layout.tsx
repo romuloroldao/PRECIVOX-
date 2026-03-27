@@ -1,4 +1,5 @@
 import RouteGuard from '@/components/RouteGuard';
+import { NpsSurveyWidget } from '@/components/cliente/NpsSurveyWidget';
 
 export default function ClienteLayout({
   children,
@@ -8,6 +9,7 @@ export default function ClienteLayout({
   return (
     <RouteGuard allowedRoles={['CLIENTE', 'GESTOR', 'ADMIN']}>
       {children}
+      <NpsSurveyWidget />
     </RouteGuard>
   );
 }

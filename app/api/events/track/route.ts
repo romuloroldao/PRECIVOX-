@@ -11,6 +11,9 @@ const ALLOWED_TYPES: UserEventType[] = [
   'compra_realizada',
   'promocao_visualizada',
   'horario_acesso',
+  'produto_substituicao_aceita',
+  'remocao_lista_confirmada',
+  'rota_consolidacao_lista',
 ];
 
 /**
