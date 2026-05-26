@@ -14,6 +14,11 @@ import { Button } from '@/components/shared';
 import { EconomyCard } from '@/components/cliente/EconomyCard';
 import { RecentLists } from '@/components/cliente/RecentLists';
 import { StreakCounter } from '@/components/cliente/StreakCounter';
+import { CestaProvavelCard } from '@/components/cliente/CestaProvavelCard';
+import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
+import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
+import { ShareEconomiaCard } from '@/components/cliente/ShareEconomiaCard';
+import { NotificacaoPermissaoBanner } from '@/components/cliente/NotificacaoPermissaoBanner';
 import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -41,6 +46,7 @@ export default function DashboardCliente() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mercadoId, setMercadoId] = useState<string | null>(null);
   const router = useRouter();
   const { data: session, status } = useSession();
   const userId = (session?.user as any)?.id ?? null;
@@ -100,6 +106,18 @@ export default function DashboardCliente() {
 
     fetchDashboardData();
   }, [userId, status]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/nps/suggest-mercado', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.mercadoId) setMercadoId(data.mercadoId);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, []);
 
   const handleCreateList = () => {
     router.push('/cliente/busca');
@@ -182,6 +200,16 @@ export default function DashboardCliente() {
         {!isLoading && (
           <section style={styles.streakSection}>
             <StreakCounter userId={userId} />
+          </section>
+        )}
+
+        {!isLoading && mercadoId && (
+          <section style={{ marginBottom: TOKENS.spacing[6], display: 'flex', flexDirection: 'column' as const, gap: TOKENS.spacing[4] }}>
+            <NotificacaoPermissaoBanner />
+            <CestaProvavelCard mercadoId={mercadoId} />
+            <InflacaoCestaCard mercadoId={mercadoId} />
+            <EconomiaStreakCard />
+            <ShareEconomiaCard />
           </section>
         )}
 

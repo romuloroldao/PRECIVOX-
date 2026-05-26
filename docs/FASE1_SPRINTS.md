@@ -100,19 +100,21 @@ Complemento de [`ROADMAP_PRECIVOX.md`](./ROADMAP_PRECIVOX.md).
 
 **Métricas:** D7 · % sessões 24h antes de `compra_confirmada` · gestores acessando radar.
 
+**Status (código):** ✅ ver [`ISSUES_SPRINT3.md`](./ISSUES_SPRINT3.md)
+
 ---
 
 ## Release Fase 1 (fim sprint 3)
 
 Checklist de release:
 
-- [ ] Economia Líquida em busca + lista
-- [ ] Truth layer visível (fonte, frescor, confiança)
-- [ ] Crowd confirmar preço operacional
-- [ ] Confirmação pós-compra
-- [ ] Perfil PRECI + Intent + 1 push semanal
-- [ ] Dashboard + radar demanda (gestor)
-- [ ] Documentação parceiro Tier 1–3
+- [x] Economia Líquida em busca + lista
+- [x] Truth layer visível (fonte, frescor, confiança)
+- [x] Crowd confirmar preço operacional
+- [x] Confirmação pós-compra
+- [x] Perfil PRECI + Intent + notificações cesta/dia mercado
+- [x] Dashboard + radar demanda (gestor)
+- [x] Documentação parceiro Tier 1–3
 
 ---
 

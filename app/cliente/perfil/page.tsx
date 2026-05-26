@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { ContribuidorBadge } from '@/components/cliente/ContribuidorBadge';
+import { RelatorioSemanaCard } from '@/components/cliente/RelatorioSemanaCard';
 import type { EixoPreci, PerfilPreciScores } from '@/lib/perfil-preci';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -40,6 +41,7 @@ export default function PerfilPreciPage() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [mercadoId, setMercadoId] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -55,6 +57,13 @@ export default function PerfilPreciPage() {
         setAjustes(pJson.data.ajustesUsuario ?? {});
       }
       if (iJson.success) setIntent(iJson.data);
+      try {
+        const mRes = await fetch('/api/nps/suggest-mercado', { cache: 'no-store' });
+        const mJson = await mRes.json();
+        if (mJson.mercadoId) setMercadoId(mJson.mercadoId);
+      } catch {
+        /* ignore */
+      }
     } finally {
       setLoading(false);
     }
@@ -113,6 +122,8 @@ export default function PerfilPreciPage() {
         </p>
 
         {loading && <p className="text-gray-500">Carregando…</p>}
+
+        {mercadoId && <RelatorioSemanaCard mercadoId={mercadoId} />}
 
         {intent && (
           <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">

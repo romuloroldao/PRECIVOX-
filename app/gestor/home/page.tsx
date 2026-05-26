@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
+import { RadarDemandaCard } from '@/components/gestor/RadarDemandaCard';
 
 interface Mercado {
   id: string;
@@ -178,7 +179,12 @@ export default function GestorHomePage() {
           </div>
         </div>
 
-        {mercado && <CatalogoSaudeCard mercadoId={mercado.id} />}
+        {mercado && (
+          <>
+            <CatalogoSaudeCard mercadoId={mercado.id} />
+            <RadarDemandaCard mercadoId={mercado.id} />
+          </>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

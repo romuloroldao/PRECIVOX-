@@ -56,6 +56,16 @@ export function CompraConfirmacaoPrompt({
         itensCount,
         valorEstimado,
       });
+      try {
+        await fetch('/api/cliente/economia-streak', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ valorEstimado: valorEstimado * 0.08 }),
+        });
+      } catch {
+        /* não bloqueia fluxo */
+      }
     } else if (tipo === 'parcial') {
       await recordCompraParcial(userId, mercadoId, {
         listaId: listaId ?? undefined,
