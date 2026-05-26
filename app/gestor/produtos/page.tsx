@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
 import UploadDatabase from '@/components/UploadDatabase';
+import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 
 interface Produto {
   id: string;
@@ -218,6 +219,8 @@ export default function GestorProdutosPage() {
             <p className="text-gray-600 mt-1">Gerencie os produtos do seu mercado</p>
           </div>
         </div>
+
+        {mercadoId && <CatalogoSaudeCard mercadoId={mercadoId} />}
 
         {/* Upload em massa */}
         {mercadoId && (

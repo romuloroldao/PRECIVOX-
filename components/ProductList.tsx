@@ -4,6 +4,8 @@ import { useLista } from '@/app/context/ListaContext';
 import { Produto } from '@/app/hooks/useProdutos';
 import { useToast } from '@/components/ToastContainer';
 import { ShoppingCart } from 'lucide-react';
+import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
+import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
 
 interface ProductListProps {
   produtos: Produto[];
@@ -121,6 +123,27 @@ export function ProductList({ produtos }: ProductListProps) {
                       <span className="text-lg font-bold text-gray-900">
                         R$ {produto.preco.toFixed(2).replace('.', ',')}
                       </span>
+                    )}
+                    {produto.truth && (
+                      <div className="mt-1">
+                        <PrecoTruthBadge
+                          compact
+                          verificadoEm={produto.truth.verificadoEm}
+                          atualizadoEm={produto.truth.atualizadoEm}
+                          confianca={produto.truth.confianca}
+                        />
+                      </div>
+                    )}
+                    {produto.melhorAlternativa?.economiaLiquida && (
+                      <EconomiaLiquidaChip
+                        className="mt-1 max-w-xs"
+                        recomendacao={produto.melhorAlternativa.economiaLiquida.recomendacao}
+                        economiaLiquida={produto.melhorAlternativa.economiaLiquida.economiaLiquida}
+                        explicacao={produto.melhorAlternativa.economiaLiquida.explicacao}
+                        mercadoDestino={produto.melhorAlternativa.mercadoNome}
+                        distanciaKm={produto.melhorAlternativa.distanciaKm}
+                        tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
+                      />
                     )}
                   </div>
                 </td>

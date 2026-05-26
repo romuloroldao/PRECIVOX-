@@ -356,6 +356,32 @@ export function ListaInteligentePanel({
         </div>
       )}
 
+      {insights && insights.mercados >= 2 && (
+        <div className="border-b border-emerald-100 bg-emerald-50/90 px-4 py-3">
+          <div className="flex items-center gap-2 text-emerald-900">
+            <Route className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="text-sm font-semibold">Economia na rota</span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-emerald-900/90">
+            {propostaRota && propostaRota.resumo.deltaTotal > 0.01 ? (
+              <>
+                Consolidar em <span className="font-semibold">{propostaRota.resumo.anchorNome}</span> pode
+                economizar{' '}
+                <span className="font-bold tabular-nums">
+                  R$ {propostaRota.resumo.deltaTotal.toFixed(2).replace('.', ',')}
+                </span>{' '}
+                na cesta (além de menos deslocamento).
+              </>
+            ) : (
+              <>
+                Você está indo a {insights.mercados} mercados. Use a otimização de rota abaixo para ver se vale
+                concentrar compras — a Economia Líquida considera preço + tempo + deslocamento.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       {insights && (
         <div className="border-b border-violet-100 bg-violet-50/90 px-4 py-3">
           <div className="flex items-center gap-2 text-violet-900">

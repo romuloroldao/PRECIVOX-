@@ -7,6 +7,9 @@ import { useToast } from '@/components/ToastContainer';
 import { recordProdutoSubstituicaoAceita } from '@/lib/events/frontend-events';
 import { ShoppingCart } from 'lucide-react';
 import { Card, Button } from '@/components/ui';
+import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
+import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
+import { PrecoCrowdActions } from '@/components/cliente/PrecoCrowdActions';
 
 interface ProductCardProps {
   produtos: Produto[];
@@ -95,6 +98,10 @@ function CardLinhaSubstituto({
   const [modoSub, setModoSub] = useState<'categoria' | 'equivalente' | null>(null);
   const [subs, setSubs] = useState<Produto[]>([]);
   const [loadingSub, setLoadingSub] = useState(false);
+  const [confiancaLocal, setConfiancaLocal] = useState<number | null>(null);
+
+  const precoExibido =
+    produto.emPromocao && produto.precoPromocional ? produto.precoPromocional : produto.preco;
 
   const pid = produto.produtoCatalogoId ?? produto.produto?.id;
   const mercadoId = produto.unidade.mercado.id;
@@ -198,7 +205,35 @@ function CardLinhaSubstituto({
                   </span>
                 )}
               </div>
-              {produto.referenciaRegiao?.media != null && (
+              {produto.truth && (
+                <div className="mt-2">
+                  <PrecoTruthBadge
+                    compact
+                    verificadoEm={produto.truth.verificadoEm}
+                    atualizadoEm={produto.truth.atualizadoEm}
+                    confianca={confiancaLocal ?? produto.truth.confianca}
+                    fonte={produto.truth.fonte}
+                  />
+                </div>
+              )}
+              {produto.estoqueId && produto.disponivel && (
+                <PrecoCrowdActions
+                  estoqueId={produto.estoqueId}
+                  precoExibido={precoExibido}
+                  onFeedback={(c) => setConfiancaLocal(c)}
+                />
+              )}
+              {produto.melhorAlternativa?.economiaLiquida && (
+                <EconomiaLiquidaChip
+                  recomendacao={produto.melhorAlternativa.economiaLiquida.recomendacao}
+                  economiaLiquida={produto.melhorAlternativa.economiaLiquida.economiaLiquida}
+                  explicacao={produto.melhorAlternativa.economiaLiquida.explicacao}
+                  mercadoDestino={produto.melhorAlternativa.mercadoNome}
+                  distanciaKm={produto.melhorAlternativa.distanciaKm}
+                  tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
+                />
+              )}
+              {produto.referenciaRegiao?.media != null && !produto.melhorAlternativa && (
                 <p className="mt-2 text-xs leading-relaxed text-text-secondary">
                   Referência média na sua região:{' '}
                   <span className="font-semibold text-text-primary">

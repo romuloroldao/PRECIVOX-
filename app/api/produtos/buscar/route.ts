@@ -8,6 +8,7 @@ import {
   whereProdutoComMercado,
 } from '@/lib/produtos-busca-where';
 import { getPrecoReferenciaRegionalParaProduto } from '@/lib/ai/conversao-metrics';
+import { buscarMelhorAlternativa } from '@/lib/melhor-alternativa-preco';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
@@ -106,23 +107,39 @@ export async function GET(request: NextRequest) {
       const unidade = estoque?.unidades;
       const mercadoRel = unidade?.mercados;
 
+      const precoEfetivo =
+        estoque?.emPromocao && estoque.precoPromocional
+          ? estoque.precoPromocional.toNumber()
+          : estoque?.preco?.toNumber() ?? 0;
+
       return {
         id: estoque?.id ?? `produto-${produto.id}`,
         nome: produto.nome ?? 'Produto',
         preco: estoque?.preco?.toNumber() ?? 0,
         precoPromocional: estoque?.precoPromocional?.toNumber() ?? null,
+        precoEfetivo,
         emPromocao: estoque?.emPromocao || false,
         disponivel: estoque ? (estoque.quantidade ?? 0) > 0 : false,
         quantidade: estoque?.quantidade ?? 0,
         categoria: produto.categoria,
         marca: produto.marca,
         imagem: produto.imagem,
+        truth: estoque
+          ? {
+              fonte: estoque.fonte ?? 'UPLOAD_GESTOR',
+              confianca: estoque.confianca ?? 70,
+              verificadoEm: estoque.verificadoEm?.toISOString() ?? null,
+              atualizadoEm: estoque.atualizadoEm.toISOString(),
+            }
+          : null,
         unidade: {
           id: unidade?.id ?? 'sem-unidade',
           nome: unidade?.nome ?? 'Sem unidade',
           endereco: unidade?.endereco ?? '',
           cidade: unidade?.cidade ?? '',
           estado: unidade?.estado ?? '',
+          latitude: unidade?.latitude ?? null,
+          longitude: unidade?.longitude ?? null,
           mercado: {
             id: mercadoRel?.id ?? 'sem-mercado',
             nome: mercadoRel?.nome ?? 'Sem mercado',
@@ -134,18 +151,19 @@ export async function GET(request: NextRequest) {
 
     const includeRef =
       request.nextUrl.searchParams.get('includeReferencia') === 'true' && params.mercado;
+    const includeEconomia = request.nextUrl.searchParams.get('includeEconomia') === 'true';
     const mercadoRef = params.mercado;
 
     let dataOut = produtosFormatados;
+    const cap = 36;
+
     if (includeRef && mercadoRef) {
-      const cap = 36;
       const head = produtosFormatados.slice(0, cap);
       const tail = produtosFormatados.slice(cap);
       const enriched = await Promise.all(
         head.map(async (row) => {
           const pid = (row.produto as { id?: string })?.id;
-          const preco =
-            row.emPromocao && row.precoPromocional != null ? row.precoPromocional : row.preco;
+          const preco = row.precoEfetivo ?? row.preco;
           if (!pid || preco <= 0) {
             return { ...row, referenciaRegiao: null as { media: number; diferencaPct: number | null } | null };
           }
@@ -157,6 +175,47 @@ export async function GET(request: NextRequest) {
                 ? { media: ref.media, diferencaPct: ref.diferencaPct }
                 : null,
           };
+        })
+      );
+      dataOut = [...enriched, ...tail];
+    }
+
+    if (includeEconomia) {
+      const head = dataOut.slice(0, cap);
+      const tail = dataOut.slice(cap);
+      const enriched = await Promise.all(
+        head.map(async (row) => {
+          const pid = (row.produto as { id?: string })?.id;
+          const uid = row.unidade?.id;
+          const preco = row.precoEfetivo ?? row.preco;
+          if (!pid || !uid || preco <= 0) {
+            return { ...row, melhorAlternativa: null };
+          }
+          try {
+            const alt = await buscarMelhorAlternativa(pid, uid, preco);
+            if (!alt) return { ...row, melhorAlternativa: null };
+            return {
+              ...row,
+              melhorAlternativa: {
+                mercadoNome: alt.unidade.mercado.nome,
+                unidadeNome: alt.unidade.nome,
+                precoEfetivo:
+                  alt.emPromocao && alt.precoPromocional != null
+                    ? alt.precoPromocional
+                    : alt.preco,
+                distanciaKm: alt.distanciaKm,
+                economiaLiquida: {
+                  economiaBruta: alt.economiaLiquida.economiaBruta,
+                  economiaLiquida: alt.economiaLiquida.economiaLiquida,
+                  recomendacao: alt.economiaLiquida.recomendacao,
+                  explicacao: alt.economiaLiquida.explicacao,
+                  tempoMinutos: alt.economiaLiquida.tempoMinutos,
+                },
+              },
+            };
+          } catch {
+            return { ...row, melhorAlternativa: null };
+          }
         })
       );
       dataOut = [...enriched, ...tail];

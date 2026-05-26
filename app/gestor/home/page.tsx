@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
+import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 
 interface Mercado {
   id: string;
@@ -176,6 +177,8 @@ export default function GestorHomePage() {
             </Link>
           </div>
         </div>
+
+        {mercado && <CatalogoSaudeCard mercadoId={mercado.id} />}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

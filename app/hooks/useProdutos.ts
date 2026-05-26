@@ -2,6 +2,27 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+export type ProdutoTruth = {
+  fonte: string;
+  confianca: number;
+  verificadoEm: string | null;
+  atualizadoEm: string;
+};
+
+export type ProdutoMelhorAlternativa = {
+  mercadoNome: string;
+  unidadeNome: string;
+  precoEfetivo: number;
+  distanciaKm: number | null;
+  economiaLiquida: {
+    economiaBruta: number;
+    economiaLiquida: number;
+    recomendacao: 'ficar' | 'ir' | 'indeterminado';
+    explicacao: string;
+    tempoMinutos: number | null;
+  };
+};
+
 export interface Produto {
   id: string;
   estoqueId: string;
@@ -17,6 +38,9 @@ export interface Produto {
   /** Catálogo `produtos.id` quando a API envia `produto.id`. */
   produtoCatalogoId?: string;
   referenciaRegiao?: { media: number; diferencaPct: number | null } | null;
+  precoEfetivo?: number;
+  truth?: ProdutoTruth | null;
+  melhorAlternativa?: ProdutoMelhorAlternativa | null;
   unidade: {
     id: string;
     nome: string;
@@ -45,6 +69,8 @@ interface UseProdutosParams {
   initialLimit?: number;
   /** Com `mercado`, pede preço médio regional na API (primeiros itens da página). */
   includeReferencia?: boolean;
+  /** Calcula melhor alternativa + economia líquida (primeiros itens). */
+  includeEconomia?: boolean;
 }
 
 // Hook para debounce
@@ -91,6 +117,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
     debounceDelay = 400,
     initialLimit = 100,
     includeReferencia = false,
+    includeEconomia = false,
   } = params;
 
   // Debounce na busca
@@ -116,6 +143,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
       if (mercado) queryParams.append('mercado', mercado);
       if (cidade) queryParams.append('cidade', cidade);
       if (includeReferencia && mercado) queryParams.append('includeReferencia', 'true');
+      if (includeEconomia) queryParams.append('includeEconomia', 'true');
       queryParams.append('page', targetPage.toString());
       queryParams.append('limit', initialLimit.toString());
 
@@ -158,6 +186,9 @@ export function useProdutos(params: UseProdutosParams = {}) {
         imagem: item.imagem || item.produto?.imagem || '',
         produtoCatalogoId: item.produto?.id || undefined,
         referenciaRegiao: item.referenciaRegiao ?? undefined,
+        precoEfetivo: item.precoEfetivo != null ? Number(item.precoEfetivo) : undefined,
+        truth: item.truth ?? undefined,
+        melhorAlternativa: item.melhorAlternativa ?? undefined,
         unidade: {
           id: item.unidade?.id || '',
           nome: item.unidade?.nome || '',
@@ -210,6 +241,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
     cidade,
     initialLimit,
     includeReferencia,
+    includeEconomia,
   ]);
 
   useEffect(() => {

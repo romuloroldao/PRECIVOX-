@@ -202,7 +202,9 @@ export class MarketBehaviorEngine {
   }
 
   private static analyzePurchasePattern(eventos: any[]): UserBehaviorProfile['padraoCompras'] {
-    const compras = eventos.filter(e => e.type === 'compra_realizada');
+    const compras = eventos.filter((e) =>
+      ['compra_realizada', 'compra_confirmada'].includes(e.type)
+    );
     
     if (compras.length < 2) {
       return {
@@ -265,6 +267,22 @@ export class MarketBehaviorEngine {
     if (visualizacoes.length > 10) {
       score += 5;
       fatores.push('Alto engajamento com produtos');
+    }
+
+    const checkins = eventos.filter((e) => e.type === 'checkin_mercado');
+    if (checkins.length > 0) {
+      score += 15;
+      fatores.push('Check-in no mercado');
+    }
+
+    const compraConfirmada = eventos.some(
+      (e) =>
+        e.type === 'compra_confirmada' &&
+        new Date(e.timestamp) > new Date(Date.now() - 48 * 60 * 60 * 1000)
+    );
+    if (compraConfirmada) {
+      score = Math.max(0, score - 35);
+      fatores.push('Compra recente confirmada');
     }
 
     score = Math.min(100, Math.max(0, score));

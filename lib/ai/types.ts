@@ -21,7 +21,14 @@ export type UserEventType =
   | 'horario_acesso'
   | 'produto_substituicao_aceita'
   | 'remocao_lista_confirmada'
-  | 'rota_consolidacao_lista';
+  | 'rota_consolidacao_lista'
+  /** Sprint 0 — truth layer / crowd / hábito */
+  | 'preco_confirmado'
+  | 'preco_reportado'
+  | 'checkin_mercado'
+  | 'compra_confirmada'
+  | 'compra_parcial'
+  | 'compra_nao_realizada';
 
 export interface UserEvent {
   id: string;

@@ -96,6 +96,36 @@ export class EventCollector {
   }
 
   /**
+   * Eventos do usuário em todos os mercados (perfil / intent)
+   */
+  static async getUserEventsGlobal(
+    userId: string,
+    inicio: Date,
+    fim: Date
+  ): Promise<UserEvent[]> {
+    try {
+      const events = await prisma.userEvent.findMany({
+        where: {
+          userId,
+          timestamp: { gte: inicio, lte: fim },
+        },
+        orderBy: { timestamp: 'asc' },
+      });
+      return events.map((event) => ({
+        id: event.id,
+        userId: event.userId,
+        mercadoId: event.mercadoId,
+        type: event.type as UserEvent['type'],
+        timestamp: event.timestamp,
+        metadata: event.metadata as UserEvent['metadata'],
+      }));
+    } catch (error) {
+      console.error('[EventCollector] Erro ao buscar eventos globais:', error);
+      return [];
+    }
+  }
+
+  /**
    * Obtém eventos agregados de um mercado
    */
   static async getMarketEvents(

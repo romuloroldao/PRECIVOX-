@@ -103,6 +103,9 @@ model estoques {
   emPromocao       Boolean                 @default(false)
   disponivel       Boolean                 @default(true)
   atualizadoEm     DateTime
+  fonte            EstoqueFonte            @default(UPLOAD_GESTOR)
+  confianca        Int                     @default(70)
+  verificadoEm     DateTime?               @map("verificado_em")
   dataCriacao      DateTime                @default(now())
   unidadeId        String
   produtoId        String
@@ -391,6 +394,7 @@ model User {
   referralsAsReferee        Referral[]                 @relation("referee")
   notificationSubscriptions NotificationSubscription[]
   npsResponses              NpsResponse[]
+  perfilPreci               Json?                      @map("perfil_preci")
 
   @@map("usuarios")
 }
@@ -414,6 +418,14 @@ enum StatusImportacao {
   CONCLUIDO
   FALHA
   PARCIAL
+}
+
+/// Origem do preço no estoque (truth layer)
+enum EstoqueFonte {
+  UPLOAD_GESTOR
+  API_PARCEIRO
+  CROWD
+  MANUAL_GESTOR
 }
 
 // ============================================

@@ -123,6 +123,14 @@ export default function DashboardCliente() {
             <Button
               variant="outline"
               size="md"
+              onClick={() => router.push('/cliente/perfil')}
+              leftIcon={<span>✨</span>}
+            >
+              Meu Perfil PRECI
+            </Button>
+            <Button
+              variant="outline"
+              size="md"
               onClick={handleGoBusca}
               leftIcon={<span>🔍</span>}
             >

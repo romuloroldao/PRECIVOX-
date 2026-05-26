@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
+import { truthFromUpload } from '@/lib/estoque-truth';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -274,6 +275,8 @@ export async function processarUpload(
           where: { unidadeId_produtoId: { unidadeId, produtoId: produto.id } },
         });
 
+        const truth = truthFromUpload(!!estoqueExistente);
+
         if (estoqueExistente) {
           await prisma.estoques.update({
             where: { id: estoqueExistente.id },
@@ -284,6 +287,9 @@ export async function processarUpload(
               emPromocao: produtoData.emPromocao || false,
               disponivel: produtoData.quantidade > 0,
               atualizadoEm: new Date(),
+              fonte: truth.fonte,
+              confianca: truth.confianca,
+              verificadoEm: truth.verificadoEm,
             },
           });
           resultado.duplicados++;
@@ -299,6 +305,9 @@ export async function processarUpload(
               emPromocao: produtoData.emPromocao || false,
               disponivel: produtoData.quantidade > 0,
               atualizadoEm: new Date(),
+              fonte: truth.fonte,
+              confianca: truth.confianca,
+              verificadoEm: truth.verificadoEm,
               dataCriacao: new Date(),
             },
           });

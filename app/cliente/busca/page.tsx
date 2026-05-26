@@ -12,12 +12,32 @@ import { BuscaSemResultadoInteligente } from '@/components/cliente/BuscaSemResul
 import { ListaSugestoesInline } from '@/components/cliente/ListaSugestoesInline';
 import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
+import { CompraConfirmacaoPrompt } from '@/components/cliente/CompraConfirmacaoPrompt';
 import { Filter, ShoppingCart, X } from 'lucide-react';
 
 export default function BuscaPage() {
   const [modo, setModo] = useState<'cards' | 'lista'>('cards');
   const [expandida, setExpandida] = useState(false);
-  const { totalItens, itens } = useLista();
+  const { totalItens, itens, total, listaAtivaId } = useLista();
+  const [promptCompraAtivo, setPromptCompraAtivo] = useState(false);
+
+  useEffect(() => {
+    if (totalItens < 2) {
+      setPromptCompraAtivo(false);
+      return;
+    }
+    const t = setTimeout(() => setPromptCompraAtivo(true), 90_000);
+    const onVis = () => {
+      if (document.visibilityState === 'hidden' && totalItens > 0) {
+        setPromptCompraAtivo(true);
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [totalItens]);
   const totalItensRef = useRef<number | null>(null);
   const [mercadoSugestao, setMercadoSugestao] = useState<string | null>(null);
 
@@ -92,6 +112,7 @@ export default function BuscaPage() {
     initialLimit: 100,
     mercado: mercadoContexto ?? undefined,
     includeReferencia: Boolean(mercadoContexto),
+    includeEconomia: true,
   });
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -398,6 +419,14 @@ export default function BuscaPage() {
 
         <ListaLateral expandida={expandida} onToggle={() => setExpandida(!expandida)} />
       </div>
+
+      <CompraConfirmacaoPrompt
+        mercadoId={mercadoContexto}
+        listaId={listaAtivaId}
+        itensCount={totalItens}
+        valorEstimado={total}
+        ativo={promptCompraAtivo}
+      />
     </DashboardLayout>
   );
 }

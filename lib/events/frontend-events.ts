@@ -149,3 +149,70 @@ export async function recordRemocaoListaConfirmada(
 ): Promise<void> {
   await postEvent('remocao_lista_confirmada', userId, mercadoId, metadata as Record<string, unknown>);
 }
+
+/** Crowd: preço na prateleira está correto */
+export async function recordPrecoConfirmado(
+  userId: string,
+  mercadoId: string,
+  metadata: {
+    produtoId: string;
+    estoqueId?: string;
+    precoVisto?: number;
+    unidadeId?: string;
+  }
+): Promise<void> {
+  await postEvent('preco_confirmado', userId, mercadoId, metadata as Record<string, unknown>);
+}
+
+/** Crowd: mais caro / mais barato que o app */
+export async function recordPrecoReportado(
+  userId: string,
+  mercadoId: string,
+  metadata: {
+    produtoId: string;
+    direcao: 'mais_caro' | 'mais_barato';
+    precoVisto?: number;
+    estoqueId?: string;
+    unidadeId?: string;
+  }
+): Promise<void> {
+  await postEvent('preco_reportado', userId, mercadoId, metadata as Record<string, unknown>);
+}
+
+export async function recordCheckinMercado(
+  userId: string,
+  mercadoId: string,
+  metadata?: { unidadeId?: string; lat?: number; lon?: number }
+): Promise<void> {
+  await postEvent('checkin_mercado', userId, mercadoId, (metadata ?? {}) as Record<string, unknown>);
+}
+
+/** Pós-compra: substituto leve de PDV */
+export async function recordCompraConfirmada(
+  userId: string,
+  mercadoId: string,
+  metadata: {
+    listaId?: string;
+    unidadeId?: string;
+    itensCount?: number;
+    valorEstimado?: number;
+  }
+): Promise<void> {
+  await postEvent('compra_confirmada', userId, mercadoId, metadata as Record<string, unknown>);
+}
+
+export async function recordCompraParcial(
+  userId: string,
+  mercadoId: string,
+  metadata: { listaId?: string; itensComprados?: number; itensTotal?: number }
+): Promise<void> {
+  await postEvent('compra_parcial', userId, mercadoId, metadata as Record<string, unknown>);
+}
+
+export async function recordCompraNaoRealizada(
+  userId: string,
+  mercadoId: string,
+  metadata?: { listaId?: string; motivo?: string }
+): Promise<void> {
+  await postEvent('compra_nao_realizada', userId, mercadoId, (metadata ?? {}) as Record<string, unknown>);
+}
