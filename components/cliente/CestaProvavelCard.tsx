@@ -2,15 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBasket, Bell } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ShoppingBasket, Bell, Zap, Loader2 } from 'lucide-react';
+import { useLista } from '@/app/context/ListaContext';
+import { useToast } from '@/components/ToastContainer';
 
 interface Props {
   mercadoId: string | null;
 }
 
 export function CestaProvavelCard({ mercadoId }: Props) {
+  const router = useRouter();
+  const { criarNovaLista, adicionarItem } = useLista();
+  const { success, error: toastError } = useToast();
+  const [montando, setMontando] = useState(false);
   const [data, setData] = useState<{
-    itens: { nome: string; motivo: string }[];
+    itens: { produtoId?: string; nome: string; motivo: string }[];
     mensagem: string;
     notificacaoSugerida?: string;
     intentScore: number;
@@ -49,6 +56,43 @@ export function CestaProvavelCard({ mercadoId }: Props) {
     }
   }, [data, mercadoId]);
 
+  const montarCestaSemana = async () => {
+    if (!mercadoId || montando) return;
+    setMontando(true);
+    try {
+      const res = await fetch('/api/cliente/cesta-semana', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mercadoId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Não foi possível montar a cesta');
+      }
+
+      const { nome, itens, adicionados, resumo } = json.data;
+      criarNovaLista(nome);
+      for (const item of itens) {
+        adicionarItem(item);
+      }
+
+      success(
+        adicionados > 0
+          ? `Cesta da semana pronta — ${adicionados} item(ns) na lista`
+          : 'Cesta montada'
+      );
+      if (resumo) {
+        sessionStorage.setItem('precivox_cesta_semana_resumo', resumo);
+      }
+      router.push('/cliente/busca');
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : 'Erro ao montar cesta');
+    } finally {
+      setMontando(false);
+    }
+  };
+
   if (!mercadoId || !data?.itens?.length) return null;
 
   return (
@@ -66,18 +110,33 @@ export function CestaProvavelCard({ mercadoId }: Props) {
           )}
           <ul className="mt-2 space-y-1">
             {data.itens.slice(0, 5).map((item, i) => (
-              <li key={i} className="text-xs text-gray-700">
+              <li key={item.produtoId ?? i} className="text-xs text-gray-700">
                 <span className="font-medium">{item.nome}</span>
                 <span className="text-gray-500"> — {item.motivo}</span>
               </li>
             ))}
           </ul>
-          <Link
-            href="/cliente/busca"
-            className="mt-3 inline-block text-xs font-semibold text-precivox-blue hover:underline"
-          >
-            Revisar e montar lista →
-          </Link>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void montarCestaSemana()}
+              disabled={montando}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+            >
+              {montando ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Zap className="h-3.5 w-3.5" />
+              )}
+              Montar cesta da semana (1 toque)
+            </button>
+            <Link
+              href="/cliente/busca"
+              className="text-xs font-semibold text-precivox-blue hover:underline"
+            >
+              Revisar manualmente →
+            </Link>
+          </div>
         </div>
       </div>
     </div>

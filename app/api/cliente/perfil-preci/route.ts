@@ -73,10 +73,19 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'ajustes obrigatório' }, { status: 400 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { perfilPreci: true },
+    });
+    const base =
+      dbUser?.perfilPreci && typeof dbUser.perfilPreci === 'object'
+        ? (dbUser.perfilPreci as Record<string, unknown>)
+        : {};
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        perfilPreci: { ajustes, atualizadoEm: new Date().toISOString() },
+        perfilPreci: { ...base, ajustes, atualizadoEm: new Date().toISOString() },
         dataAtualizacao: new Date(),
       },
     });
