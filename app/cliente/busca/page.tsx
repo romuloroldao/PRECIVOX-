@@ -18,7 +18,7 @@ import { Filter, ShoppingCart, X } from 'lucide-react';
 export default function BuscaPage() {
   const [modo, setModo] = useState<'cards' | 'lista'>('cards');
   const [expandida, setExpandida] = useState(false);
-  const { totalItens, itens, total, listaAtivaId } = useLista();
+  const { totalItens, itens, total: totalLista, listaAtivaId } = useLista();
   const [promptCompraAtivo, setPromptCompraAtivo] = useState(false);
 
   useEffect(() => {
@@ -424,7 +424,7 @@ export default function BuscaPage() {
         mercadoId={mercadoContexto}
         listaId={listaAtivaId}
         itensCount={totalItens}
-        valorEstimado={total}
+        valorEstimado={totalLista}
         ativo={promptCompraAtivo}
       />
     </DashboardLayout>
