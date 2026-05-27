@@ -14,11 +14,12 @@ export type MercadoVivoDeteccao = {
 type Options = {
   enabled?: boolean;
   intervalMs?: number;
+  raioMetros?: number;
   onEntrou?: (d: MercadoVivoDeteccao) => void;
 };
 
 export function useMercadoVivoGeofence(options: Options = {}) {
-  const { enabled = true, intervalMs = 45_000, onEntrou } = options;
+  const { enabled = true, intervalMs = 45_000, raioMetros = 200, onEntrou } = options;
   const [deteccao, setDeteccao] = useState<MercadoVivoDeteccao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -40,7 +41,7 @@ export function useMercadoVivoGeofence(options: Options = {}) {
         try {
           const { latitude: lat, longitude: lon } = pos.coords;
           const res = await fetch(
-            `/api/cliente/modo-mercado-vivo?lat=${lat}&lon=${lon}`,
+            `/api/cliente/modo-mercado-vivo?lat=${lat}&lon=${lon}&raioMetros=${raioMetros}`,
             { credentials: 'include', cache: 'no-store' }
           );
           const json = await res.json();
@@ -73,7 +74,7 @@ export function useMercadoVivoGeofence(options: Options = {}) {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lat, lon }),
+                body: JSON.stringify({ lat, lon, raioMetros }),
               });
               onEntrouRef.current?.(resultado);
             }
@@ -90,14 +91,14 @@ export function useMercadoVivoGeofence(options: Options = {}) {
       },
       { enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 }
     );
-  }, [enabled]);
+  }, [enabled, raioMetros]);
 
   useEffect(() => {
     if (!enabled) return;
     void verificar();
     const t = setInterval(() => void verificar(), intervalMs);
     return () => clearInterval(t);
-  }, [enabled, intervalMs, verificar]);
+  }, [enabled, intervalMs, raioMetros, verificar]);
 
   return { deteccao, erro, carregando, verificar };
 }

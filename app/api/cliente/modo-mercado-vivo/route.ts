@@ -2,7 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TokenManager } from '@/lib/token-manager';
 import { prisma } from '@/lib/prisma';
 import { EventCollector } from '@/lib/ai/event-collector';
-import { detectarMercadoVivo, GEOFENCE_RAIO_METROS } from '@/lib/modo-mercado-vivo';
+import {
+  detectarMercadoVivo,
+  normalizarRaioGeofenceMetros,
+  parseRaioGeofencePerfil,
+} from '@/lib/modo-mercado-vivo';
+
+async function resolverRaioMetros(
+  userId: string,
+  override?: unknown
+): Promise<number> {
+  if (override != null && override !== '') {
+    return normalizarRaioGeofenceMetros(override);
+  }
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { perfilPreci: true },
+  });
+  return parseRaioGeofencePerfil(dbUser?.perfilPreci);
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -25,14 +43,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const deteccao = await detectarMercadoVivo(lat, lon);
+    const raioMetros = await resolverRaioMetros(
+      user.id,
+      req.nextUrl.searchParams.get('raioMetros')
+    );
+
+    const deteccao = await detectarMercadoVivo(lat, lon, raioMetros);
     if (!deteccao) {
       return NextResponse.json({
         success: true,
         data: {
           dentro: false,
-          raioMetros: GEOFENCE_RAIO_METROS,
-          mensagem: 'Nenhuma loja PRECIVOX próxima. Aproxime-se do mercado para ativar o modo corredor.',
+          raioMetros,
+          mensagem: `Nenhuma loja PRECIVOX em até ${raioMetros} m. Aumente a abrangência ou aproxime-se do mercado.`,
         },
       });
     }
@@ -41,8 +64,8 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         ...deteccao,
-        raioMetros: GEOFENCE_RAIO_METROS,
-        mensagem: `Você está a ~${deteccao.distanciaMetros} m de ${deteccao.unidadeNome}.`,
+        raioMetros,
+        mensagem: `Você está a ~${deteccao.distanciaMetros} m de ${deteccao.unidadeNome} (raio ${raioMetros} m).`,
       },
     });
   } catch (e) {
@@ -68,7 +91,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'lat e lon obrigatórios' }, { status: 400 });
     }
 
-    let deteccao = await detectarMercadoVivo(lat, lon);
+    const raioMetros = await resolverRaioMetros(user.id, body.raioMetros);
+
+    let deteccao = await detectarMercadoVivo(lat, lon, raioMetros);
     const mercadoIdManual = body.mercadoId as string | undefined;
 
     if (!deteccao && mercadoIdManual) {
@@ -104,6 +129,7 @@ export async function POST(req: NextRequest) {
         lon,
         modo: 'mercado_vivo',
         distanciaMetros: deteccao.distanciaMetros,
+        raioMetros,
       });
     } catch {
       /* não bloquear */
@@ -113,6 +139,7 @@ export async function POST(req: NextRequest) {
       success: true,
       data: {
         ...deteccao,
+        raioMetros,
         checkinEm: new Date().toISOString(),
         redirectUrl: '/cliente/mercado-vivo',
       },

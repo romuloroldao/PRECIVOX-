@@ -19,6 +19,8 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useGeofenceRaio } from '@/app/hooks/useGeofenceRaio';
+import { GeofenceRaioSelector } from '@/components/cliente/GeofenceRaioSelector';
 
 const SESSION_KEY = 'precivox_mercado_vivo';
 
@@ -38,13 +40,14 @@ export default function MercadoVivoPage() {
   const [comprados, setComprados] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
+  const { raioMetros } = useGeofenceRaio();
 
   const carregarSessao = useCallback(async (lat: number, lon: number) => {
     const res = await fetch('/api/cliente/modo-mercado-vivo', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lat, lon }),
+      body: JSON.stringify({ lat, lon, raioMetros }),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Não foi possível iniciar o modo corredor');
@@ -58,7 +61,7 @@ export default function MercadoVivoPage() {
     setSessao(s);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
     return s;
-  }, []);
+  }, [raioMetros]);
 
   const sincronizarLista = useCallback(
     async (mercadoId: string) => {
@@ -266,6 +269,13 @@ export default function MercadoVivoPage() {
             {comprados.size}/{corredor.length} itens · R${' '}
             {totalCorredor.toFixed(2).replace('.', ',')}
           </p>
+          <div className="mt-3 border-t border-emerald-800/60 pt-3">
+            <GeofenceRaioSelector
+              dark
+              compact
+              onChange={() => window.location.reload()}
+            />
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto px-3 py-4">
