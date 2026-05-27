@@ -16,6 +16,7 @@ import { RecentLists } from '@/components/cliente/RecentLists';
 import { StreakCounter } from '@/components/cliente/StreakCounter';
 import { CestaProvavelCard } from '@/components/cliente/CestaProvavelCard';
 import { ModoEmergenciaCard } from '@/components/cliente/ModoEmergenciaCard';
+import { EsperaQueValeCard } from '@/components/cliente/EsperaQueValeCard';
 import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
 import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
 import { ShareEconomiaCard } from '@/components/cliente/ShareEconomiaCard';
@@ -210,6 +211,7 @@ export default function DashboardCliente() {
             <CestaProvavelCard mercadoId={mercadoId} />
             <ModoEmergenciaCard mercadoId={mercadoId} />
             <InflacaoCestaCard mercadoId={mercadoId} />
+            <EsperaQueValeCard mercadoId={mercadoId} />
             <EconomiaStreakCard />
             <ShareEconomiaCard />
           </section>

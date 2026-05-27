@@ -10,6 +10,7 @@ import { Card, Button } from '@/components/ui';
 import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
 import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
 import { PrecoCrowdActions } from '@/components/cliente/PrecoCrowdActions';
+import { EsperaQueValeChip } from '@/components/cliente/EsperaQueValeChip';
 
 interface ProductCardProps {
   produtos: Produto[];
@@ -232,6 +233,9 @@ function CardLinhaSubstituto({
                   distanciaKm={produto.melhorAlternativa.distanciaKm}
                   tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
                 />
+              )}
+              {pid && mercadoId && (
+                <EsperaQueValeChip produtoId={String(pid)} mercadoId={mercadoId} />
               )}
               {produto.referenciaRegiao?.media != null && !produto.melhorAlternativa && (
                 <p className="mt-2 text-xs leading-relaxed text-text-secondary">
