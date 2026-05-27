@@ -18,6 +18,7 @@ import { CestaProvavelCard } from '@/components/cliente/CestaProvavelCard';
 import { ModoEmergenciaCard } from '@/components/cliente/ModoEmergenciaCard';
 import { EsperaQueValeCard } from '@/components/cliente/EsperaQueValeCard';
 import { AtacadoVarejoCard } from '@/components/cliente/AtacadoVarejoCard';
+import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
 import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
 import { ShareEconomiaCard } from '@/components/cliente/ShareEconomiaCard';
@@ -152,6 +153,14 @@ export default function DashboardCliente() {
             <Button
               variant="outline"
               size="md"
+              onClick={() => router.push('/cliente/mercado-vivo')}
+              leftIcon={<span>🛒</span>}
+            >
+              Modo corredor
+            </Button>
+            <Button
+              variant="outline"
+              size="md"
               onClick={handleGoBusca}
               leftIcon={<span>🔍</span>}
             >
@@ -209,6 +218,7 @@ export default function DashboardCliente() {
         {!isLoading && mercadoId && (
           <section style={{ marginBottom: TOKENS.spacing[6], display: 'flex', flexDirection: 'column' as const, gap: TOKENS.spacing[4] }}>
             <NotificacaoPermissaoBanner />
+            <MercadoVivoBanner />
             <CestaProvavelCard mercadoId={mercadoId} />
             <ModoEmergenciaCard mercadoId={mercadoId} />
             <InflacaoCestaCard mercadoId={mercadoId} />

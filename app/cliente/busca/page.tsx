@@ -13,6 +13,7 @@ import { ListaSugestoesInline } from '@/components/cliente/ListaSugestoesInline'
 import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
 import { CompraConfirmacaoPrompt } from '@/components/cliente/CompraConfirmacaoPrompt';
+import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { Filter, ShoppingCart, X } from 'lucide-react';
 
 export default function BuscaPage() {
@@ -158,6 +159,10 @@ export default function BuscaPage() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
                 Buscar Produtos
               </h1>
+
+              <div className="mb-4">
+                <MercadoVivoBanner />
+              </div>
 
               {/* Busca */}
               <div className="mb-3 flex gap-2 md:gap-4">
