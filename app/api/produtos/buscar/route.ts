@@ -9,6 +9,7 @@ import {
 } from '@/lib/produtos-busca-where';
 import { getPrecoReferenciaRegionalParaProduto } from '@/lib/ai/conversao-metrics';
 import { buscarMelhorAlternativa } from '@/lib/melhor-alternativa-preco';
+import { getProvaSocialBatch } from '@/lib/prova-social-hiperlocal';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
@@ -152,6 +153,7 @@ export async function GET(request: NextRequest) {
     const includeRef =
       request.nextUrl.searchParams.get('includeReferencia') === 'true' && params.mercado;
     const includeEconomia = request.nextUrl.searchParams.get('includeEconomia') === 'true';
+    const includeProvaSocial = request.nextUrl.searchParams.get('includeProvaSocial') === 'true';
     const mercadoRef = params.mercado;
 
     let dataOut = produtosFormatados;
@@ -218,6 +220,21 @@ export async function GET(request: NextRequest) {
           }
         })
       );
+      dataOut = [...enriched, ...tail];
+    }
+
+    if (includeProvaSocial && mercadoRef) {
+      const head = dataOut.slice(0, cap);
+      const tail = dataOut.slice(cap);
+      const pids = head
+        .map((row) => (row.produto as { id?: string })?.id)
+        .filter((id): id is string => Boolean(id));
+      const provaMap = await getProvaSocialBatch(mercadoRef, pids);
+      const enriched = head.map((row) => {
+        const pid = (row.produto as { id?: string })?.id;
+        const prova = pid ? provaMap.get(pid) : undefined;
+        return prova ? { ...row, provaSocial: prova } : row;
+      });
       dataOut = [...enriched, ...tail];
     }
 

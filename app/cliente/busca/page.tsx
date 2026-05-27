@@ -114,6 +114,7 @@ export default function BuscaPage() {
     mercado: mercadoContexto ?? undefined,
     includeReferencia: Boolean(mercadoContexto),
     includeEconomia: true,
+    includeProvaSocial: true,
   });
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);

@@ -41,6 +41,7 @@ export interface Produto {
   precoEfetivo?: number;
   truth?: ProdutoTruth | null;
   melhorAlternativa?: ProdutoMelhorAlternativa | null;
+  provaSocial?: ProdutoProvaSocial | null;
   unidade: {
     id: string;
     nome: string;
@@ -71,7 +72,14 @@ interface UseProdutosParams {
   includeReferencia?: boolean;
   /** Calcula melhor alternativa + economia líquida (primeiros itens). */
   includeEconomia?: boolean;
+  includeProvaSocial?: boolean;
 }
+
+export type ProdutoProvaSocial = {
+  mensagem: string;
+  familiasUnicas: number;
+  contexto: string;
+};
 
 // Hook para debounce
 function useDebounce<T>(value: T, delay: number): T {
@@ -118,6 +126,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
     initialLimit = 100,
     includeReferencia = false,
     includeEconomia = false,
+    includeProvaSocial = false,
   } = params;
 
   // Debounce na busca
@@ -144,6 +153,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
       if (cidade) queryParams.append('cidade', cidade);
       if (includeReferencia && mercado) queryParams.append('includeReferencia', 'true');
       if (includeEconomia) queryParams.append('includeEconomia', 'true');
+      if (includeProvaSocial && mercado) queryParams.append('includeProvaSocial', 'true');
       queryParams.append('page', targetPage.toString());
       queryParams.append('limit', initialLimit.toString());
 
@@ -189,6 +199,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
         precoEfetivo: item.precoEfetivo != null ? Number(item.precoEfetivo) : undefined,
         truth: item.truth ?? undefined,
         melhorAlternativa: item.melhorAlternativa ?? undefined,
+        provaSocial: item.provaSocial ?? undefined,
         unidade: {
           id: item.unidade?.id || '',
           nome: item.unidade?.nome || '',

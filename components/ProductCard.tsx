@@ -5,7 +5,7 @@ import { useLista } from '@/app/context/ListaContext';
 import { Produto } from '@/app/hooks/useProdutos';
 import { useToast } from '@/components/ToastContainer';
 import { recordProdutoSubstituicaoAceita } from '@/lib/events/frontend-events';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Users } from 'lucide-react';
 import { Card, Button } from '@/components/ui';
 import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
 import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
@@ -330,6 +330,12 @@ function CardLinhaSubstituto({
                   distanciaKm={produto.melhorAlternativa.distanciaKm}
                   tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
                 />
+              )}
+              {produto.provaSocial?.mensagem && (
+                <p className="mt-1 flex items-start gap-1 text-[11px] leading-snug text-sky-800">
+                  <Users className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                  <span>{produto.provaSocial.mensagem}</span>
+                </p>
               )}
               {pid && mercadoId && (
                 <>
