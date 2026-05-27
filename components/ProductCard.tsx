@@ -11,6 +11,7 @@ import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
 import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
 import { PrecoCrowdActions } from '@/components/cliente/PrecoCrowdActions';
 import { EsperaQueValeChip } from '@/components/cliente/EsperaQueValeChip';
+import { AtacadoVarejoChip } from '@/components/cliente/AtacadoVarejoChip';
 
 interface ProductCardProps {
   produtos: Produto[];
@@ -235,7 +236,10 @@ function CardLinhaSubstituto({
                 />
               )}
               {pid && mercadoId && (
-                <EsperaQueValeChip produtoId={String(pid)} mercadoId={mercadoId} />
+                <>
+                  <EsperaQueValeChip produtoId={String(pid)} mercadoId={mercadoId} />
+                  <AtacadoVarejoChip produtoId={String(pid)} mercadoId={mercadoId} />
+                </>
               )}
               {produto.referenciaRegiao?.media != null && !produto.melhorAlternativa && (
                 <p className="mt-2 text-xs leading-relaxed text-text-secondary">
