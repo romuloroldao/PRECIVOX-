@@ -21,6 +21,7 @@ import { AtacadoVarejoCard } from '@/components/cliente/AtacadoVarejoCard';
 import { TrocaHistoricoCard } from '@/components/cliente/TrocaHistoricoCard';
 import { ProvaSocialMercadoCard } from '@/components/cliente/ProvaSocialMercadoCard';
 import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry';
+import { RaioFamiliarCard } from '@/components/cliente/RaioFamiliarCard';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
 import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
@@ -223,6 +224,7 @@ export default function DashboardCliente() {
           <section style={{ marginBottom: TOKENS.spacing[6], display: 'flex', flexDirection: 'column' as const, gap: TOKENS.spacing[4] }}>
             <NotificacaoPermissaoBanner />
             <MercadoVivoBanner />
+            <RaioFamiliarCard />
             <CestaProvavelCard mercadoId={mercadoId} />
             <ModoEmergenciaCard mercadoId={mercadoId} />
             <InflacaoCestaCard mercadoId={mercadoId} />

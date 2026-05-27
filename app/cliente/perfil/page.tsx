@@ -120,6 +120,12 @@ export default function PerfilPreciPage() {
           Espelho do seu jeito de comprar — calculado pelo app, ajustável por você. Nada invasivo: só
           o que você faz no PRECIVOX.
         </p>
+        <Link
+          href="/cliente/familia"
+          className="inline-flex text-sm font-semibold text-indigo-700 hover:underline"
+        >
+          Raio familiar — listas e preferências da casa →
+        </Link>
 
         {loading && <p className="text-gray-500">Carregando…</p>}
 

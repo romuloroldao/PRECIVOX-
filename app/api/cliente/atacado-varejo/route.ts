@@ -5,6 +5,7 @@ import {
   listarAtacadoVarejoUsuario,
   analisarProdutoAtacadoVarejo,
 } from '@/lib/atacado-varejo';
+import { mesclarPerfilComCasa, obterRaioFamiliar } from '@/lib/raio-familiar';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,17 +24,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'mercadoId obrigatório' }, { status: 400 });
     }
 
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { perfilPreci: true },
-    });
+    const [dbUser, raio] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { perfilPreci: true },
+      }),
+      obterRaioFamiliar(user.id),
+    ]);
+    const perfilEfetivo = mesclarPerfilComCasa(dbUser?.perfilPreci, raio.circle);
 
     const produtoId = req.nextUrl.searchParams.get('produtoId');
     if (produtoId) {
       const analise = await analisarProdutoAtacadoVarejo(
         produtoId,
         mercadoId,
-        dbUser?.perfilPreci,
+        perfilEfetivo,
         user.id
       );
       if (!analise) {
@@ -45,7 +50,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: analise });
     }
 
-    const lista = await listarAtacadoVarejoUsuario(user.id, mercadoId, dbUser?.perfilPreci);
+    const lista = await listarAtacadoVarejoUsuario(user.id, mercadoId, perfilEfetivo);
     return NextResponse.json({ success: true, data: lista });
   } catch (e) {
     console.error('[atacado-varejo GET]', e);
