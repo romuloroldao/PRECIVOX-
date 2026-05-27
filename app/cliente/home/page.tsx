@@ -18,6 +18,7 @@ import { CestaProvavelCard } from '@/components/cliente/CestaProvavelCard';
 import { ModoEmergenciaCard } from '@/components/cliente/ModoEmergenciaCard';
 import { EsperaQueValeCard } from '@/components/cliente/EsperaQueValeCard';
 import { AtacadoVarejoCard } from '@/components/cliente/AtacadoVarejoCard';
+import { TrocaHistoricoCard } from '@/components/cliente/TrocaHistoricoCard';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
 import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
@@ -224,6 +225,7 @@ export default function DashboardCliente() {
             <InflacaoCestaCard mercadoId={mercadoId} />
             <EsperaQueValeCard mercadoId={mercadoId} />
             <AtacadoVarejoCard mercadoId={mercadoId} />
+            <TrocaHistoricoCard mercadoId={mercadoId} />
             <EconomiaStreakCard />
             <ShareEconomiaCard />
           </section>

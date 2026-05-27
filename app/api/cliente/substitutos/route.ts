@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { TokenManager } from '@/lib/token-manager';
 import { jaccardTokensDeNomes } from '@/lib/produtos-nome-normalize';
+import { enriquecerSubstitutos, type SubstitutoBase } from '@/lib/troca-inteligente';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,11 +86,81 @@ export async function GET(req: NextRequest) {
         id: true,
         nome: true,
         categoria: true,
+        marca: true,
         chaveInsight: true,
+        estoques: {
+          where: {
+            ...(unidadeId ? { unidadeId } : {}),
+            unidades: { mercadoId },
+            quantidade: { gt: 0 },
+          },
+          take: 1,
+          orderBy: [{ emPromocao: 'desc' }, { preco: 'asc' }],
+          select: { preco: true, precoPromocional: true, emPromocao: true },
+        },
       },
     });
     if (!orig) {
-      return NextResponse.json({ substitutos: [] });
+      return NextResponse.json({ substitutos: [], modo });
+    }
+
+    const estOrig = orig.estoques[0];
+    const origemBase: SubstitutoBase = {
+      produtoId: orig.id,
+      nome: orig.nome ?? 'Produto',
+      preco: estOrig?.preco.toNumber() ?? 0,
+      precoPromocional: estOrig?.precoPromocional?.toNumber() ?? null,
+      emPromocao: estOrig?.emPromocao ?? false,
+      categoria: orig.categoria,
+      marca: orig.marca,
+    };
+
+    async function responderComEnriquecimento(
+      rows: Parameters<typeof rowFromProduto>[0][]
+    ) {
+      const bases: SubstitutoBase[] = rows.map((r) => {
+        const e = r.estoques[0];
+        return {
+          produtoId: r.id,
+          nome: r.nome ?? 'Produto',
+          preco: e?.preco?.toNumber() ?? 0,
+          precoPromocional: e?.precoPromocional?.toNumber() ?? null,
+          emPromocao: e?.emPromocao ?? false,
+          categoria: r.categoria,
+          marca: r.marca,
+        };
+      });
+      const enriquecidos = await enriquecerSubstitutos(
+        user.id,
+        mercadoId,
+        origemBase,
+        bases,
+        modo
+      );
+      const porId = new Map(enriquecidos.map((x) => [x.produtoId, x]));
+      const substitutos = rows
+        .map((r) => {
+          const row = rowFromProduto(r);
+          const ex = porId.get(r.id);
+          if (!ex) return row;
+          return {
+            ...row,
+            produtoCatalogoId: r.id,
+            explicacao: ex.explicacao,
+            motivos: ex.motivos,
+            economiaVsOrigem: ex.economiaVsOrigem,
+            economiaPct: ex.economiaPct,
+            scorePessoal: ex.scorePessoal,
+            aceitesUsuario: ex.aceitesUsuario,
+            aceitesBairro: ex.aceitesBairro,
+          };
+        })
+        .sort(
+          (a, b) =>
+            ((b as { scorePessoal?: number }).scorePessoal ?? 0) -
+            ((a as { scorePessoal?: number }).scorePessoal ?? 0)
+        );
+      return NextResponse.json({ substitutos, modo, origem: origemBase });
     }
 
     const estoqueBase: Record<string, unknown> = {
@@ -126,9 +197,8 @@ export async function GET(req: NextRequest) {
           },
         },
       });
-      return NextResponse.json({
-        substitutos: rows.filter((r) => r.estoques.length > 0).map((r) => rowFromProduto(r as Parameters<typeof rowFromProduto>[0])),
-      });
+      const filtrados = rows.filter((r) => r.estoques.length > 0);
+      return responderComEnriquecimento(filtrados as Parameters<typeof rowFromProduto>[0][]);
     }
 
     const fromInsight = orig.chaveInsight
@@ -207,9 +277,8 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
 
-    return NextResponse.json({
-      substitutos: scored.map((s) => rowFromProduto(s.c as Parameters<typeof rowFromProduto>[0])),
-    });
+    const filtrados = scored.map((s) => s.c as Parameters<typeof rowFromProduto>[0]);
+    return responderComEnriquecimento(filtrados);
   } catch (e) {
     console.error('[GET /api/cliente/substitutos]', e);
     return NextResponse.json({ error: 'Erro ao buscar substitutos' }, { status: 500 });

@@ -98,7 +98,14 @@ function CardLinhaSubstituto({
   onSubstituir: (origem: Produto, sub: Produto, modo: 'categoria' | 'equivalente') => void;
 }) {
   const [modoSub, setModoSub] = useState<'categoria' | 'equivalente' | null>(null);
-  const [subs, setSubs] = useState<Produto[]>([]);
+  type SubComExplicacao = Produto & {
+    explicacao?: string;
+    motivos?: string[];
+    economiaVsOrigem?: number | null;
+    economiaPct?: number | null;
+    aceitesBairro?: number;
+  };
+  const [subs, setSubs] = useState<SubComExplicacao[]>([]);
   const [loadingSub, setLoadingSub] = useState(false);
   const [confiancaLocal, setConfiancaLocal] = useState<number | null>(null);
 
@@ -122,7 +129,7 @@ function CardLinhaSubstituto({
       const res = await fetch(`/api/cliente/substitutos?${q}`, { cache: 'no-store' });
       const data = await res.json();
       const raw = Array.isArray(data.substitutos) ? data.substitutos : [];
-      const mapped: Produto[] = raw.map((item: Record<string, unknown>) => ({
+      const mapped: SubComExplicacao[] = raw.map((item: Record<string, unknown>) => ({
         id: `${item.id}-${(item.unidade as { id?: string })?.id || ''}`,
         estoqueId: String(item.id),
         nome: String(item.nome ?? ''),
@@ -134,9 +141,15 @@ function CardLinhaSubstituto({
         categoria: String(item.categoria ?? ''),
         marca: String(item.marca ?? ''),
         imagem: (item.imagem as string) || undefined,
-        produtoCatalogoId: (item.produto as { id?: string })?.id,
+        produtoCatalogoId:
+          (item.produtoCatalogoId as string) || (item.produto as { id?: string })?.id,
         produto: item.produto as Produto['produto'],
         unidade: item.unidade as Produto['unidade'],
+        explicacao: item.explicacao as string | undefined,
+        motivos: item.motivos as string[] | undefined,
+        economiaVsOrigem: item.economiaVsOrigem as number | null | undefined,
+        economiaPct: item.economiaPct as number | null | undefined,
+        aceitesBairro: item.aceitesBairro as number | undefined,
       }));
       setSubs(mapped);
     } catch {
@@ -146,10 +159,93 @@ function CardLinhaSubstituto({
     }
   };
 
-  const usarSubstituto = (sub: Produto) => {
+  const usarSubstituto = (sub: SubComExplicacao) => {
     if (modoSub) onSubstituir(produto, sub, modoSub);
     onAdicionar(sub);
+    setModoSub(null);
+    setSubs([]);
   };
+
+  const blocoTroca = (
+    <div
+      className={`mt-4 space-y-2 rounded-lg border p-3 ${
+        produto.disponivel
+          ? 'border-teal-200 bg-teal-50/60'
+          : 'border-amber-200 bg-amber-50/80'
+      }`}
+    >
+      <p
+        className={`text-xs font-semibold ${
+          produto.disponivel ? 'text-teal-950' : 'text-amber-950'
+        }`}
+      >
+        {produto.disponivel ? 'Troca inteligente' : 'Indisponível — alternativas'}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => carregarSubs('categoria')}
+          className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-800 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
+        >
+          Mesma categoria
+        </button>
+        <button
+          type="button"
+          onClick={() => carregarSubs('equivalente')}
+          className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-800 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
+        >
+          Equivalente
+        </button>
+      </div>
+      {loadingSub && <p className="text-xs text-gray-600">Analisando substitutos…</p>}
+      {!loadingSub && subs.length > 0 && (
+        <ul className="mt-2 space-y-2">
+          {subs.slice(0, 4).map((s) => (
+            <li
+              key={s.id}
+              className="rounded-md bg-white/95 px-2.5 py-2 text-xs ring-1 ring-gray-100"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 line-clamp-2">{s.nome}</p>
+                  <p className="mt-0.5 font-medium text-emerald-700">
+                    R$ {(s.emPromocao && s.precoPromocional ? s.precoPromocional : s.preco)
+                      .toFixed(2)
+                      .replace('.', ',')}
+                    {s.economiaVsOrigem != null && s.economiaVsOrigem > 0 && (
+                      <span className="ml-1 text-emerald-600">
+                        (−R$ {s.economiaVsOrigem.toFixed(2).replace('.', ',')})
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => usarSubstituto(s)}
+                  className="shrink-0 rounded bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                >
+                  Usar
+                </button>
+              </div>
+              {s.explicacao && (
+                <p className="mt-1 text-[11px] leading-snug text-gray-600">{s.explicacao}</p>
+              )}
+              {s.motivos && s.motivos.length > 1 && (
+                <ul className="mt-1 list-inside list-disc text-[10px] text-gray-500">
+                  {s.motivos.slice(1, 3).map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!loadingSub && modoSub && subs.length === 0 && (
+        <p className="text-[11px] text-gray-500">Nenhum substituto encontrado neste modo.</p>
+      )}
+    </div>
+  );
 
   return (
         <Card
@@ -278,47 +374,7 @@ function CardLinhaSubstituto({
               {produto.disponivel ? 'Adicionar à lista' : 'Indisponível'}
             </Button>
 
-            {!produto.disponivel && pid && (
-              <div className="mt-4 space-y-2 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
-                <p className="text-xs font-semibold text-amber-950">Indisponível nesta unidade</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => carregarSubs('categoria')}
-                    className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm ring-1 ring-amber-200 hover:bg-amber-100"
-                  >
-                    Quero manter a mesma categoria
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => carregarSubs('equivalente')}
-                    className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-amber-900 shadow-sm ring-1 ring-amber-200 hover:bg-amber-100"
-                  >
-                    Sugira equivalente
-                  </button>
-                </div>
-                {loadingSub && <p className="text-xs text-amber-900/80">Carregando…</p>}
-                {!loadingSub && subs.length > 0 && (
-                  <ul className="mt-2 space-y-2">
-                    {subs.slice(0, 4).map((s) => (
-                      <li
-                        key={s.id}
-                        className="flex items-center justify-between gap-2 rounded-md bg-white/90 px-2 py-1.5 text-xs"
-                      >
-                        <span className="line-clamp-2 font-medium text-gray-900">{s.nome}</span>
-                        <button
-                          type="button"
-                          onClick={() => usarSubstituto(s)}
-                          className="shrink-0 rounded bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
-                        >
-                          Usar
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+            {pid && blocoTroca}
           </div>
         </Card>
   );
