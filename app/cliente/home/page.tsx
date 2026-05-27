@@ -20,6 +20,7 @@ import { EsperaQueValeCard } from '@/components/cliente/EsperaQueValeCard';
 import { AtacadoVarejoCard } from '@/components/cliente/AtacadoVarejoCard';
 import { TrocaHistoricoCard } from '@/components/cliente/TrocaHistoricoCard';
 import { ProvaSocialMercadoCard } from '@/components/cliente/ProvaSocialMercadoCard';
+import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
 import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
@@ -160,6 +161,7 @@ export default function DashboardCliente() {
             >
               Modo corredor
             </Button>
+            <ScanInteligenteEntry mercadoId={mercadoId} />
             <Button
               variant="outline"
               size="md"

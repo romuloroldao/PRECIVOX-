@@ -14,6 +14,7 @@ import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
 import { CompraConfirmacaoPrompt } from '@/components/cliente/CompraConfirmacaoPrompt';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
+import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry';
 import { Filter, ShoppingCart, X } from 'lucide-react';
 
 export default function BuscaPage() {
@@ -161,8 +162,9 @@ export default function BuscaPage() {
                 Buscar Produtos
               </h1>
 
-              <div className="mb-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <MercadoVivoBanner />
+                <ScanInteligenteEntry mercadoId={mercadoContexto} className="shrink-0" />
               </div>
 
               {/* Busca */}

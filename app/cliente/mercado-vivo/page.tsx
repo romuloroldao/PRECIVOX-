@@ -16,6 +16,7 @@ import {
   Circle,
   MapPin,
   RefreshCw,
+  ScanLine,
   ShoppingCart,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -253,6 +254,17 @@ export default function MercadoVivoPage() {
               <RefreshCw className="h-5 w-5" />
             </button>
           </div>
+          {sessao && (
+            <div className="mt-2 flex justify-center">
+              <Link
+                href={`/cliente/scan?mercadoId=${encodeURIComponent(sessao.mercadoId)}`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-800/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+              >
+                <ScanLine className="h-3.5 w-3.5" />
+                Scan etiqueta
+              </Link>
+            </div>
+          )}
           {sessao && (
             <p className="mt-1 flex items-center justify-center gap-1 text-[11px] text-emerald-200">
               <MapPin className="h-3 w-3" />
