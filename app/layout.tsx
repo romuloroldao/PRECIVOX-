@@ -23,31 +23,64 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // ✅ Handler para ChunkLoadError - força reload com bypass de cache (Protegido contra loop infinito)
+              // Handler ChunkLoadError — bypass de cache após deploy (evita HTML novo + chunks antigos)
               (function() {
                 const REFRESH_KEY = 'precivox_chunk_reload_count';
-                const MAX_RETRIES = 1;
+                const MAX_RETRIES = 2;
+                let recovering = false;
+
+                function hardReload() {
+                  try {
+                    var url = new URL(window.location.href);
+                    url.searchParams.set('__chunk_reload', String(Date.now()));
+                    window.location.replace(url.toString());
+                  } catch (e) {
+                    window.location.reload();
+                  }
+                }
+
+                function clearClientCaches(cb) {
+                  var done = function() { if (cb) cb(); };
+                  if (!('serviceWorker' in navigator) && !('caches' in window)) {
+                    done();
+                    return;
+                  }
+                  var p = Promise.resolve();
+                  if ('serviceWorker' in navigator) {
+                    p = p.then(function() {
+                      return navigator.serviceWorker.getRegistrations().then(function(regs) {
+                        return Promise.all(regs.map(function(r) { return r.unregister(); }));
+                      });
+                    });
+                  }
+                  if ('caches' in window) {
+                    p = p.then(function() {
+                      return caches.keys().then(function(keys) {
+                        return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+                      });
+                    });
+                  }
+                  p.then(done).catch(done);
+                }
 
                 function handleChunkError() {
+                  if (recovering) return;
                   console.warn('ChunkLoadError detectado. Verificando possibilidade de reload...');
-                  
+
                   try {
-                    const currentRetries = parseInt(sessionStorage.getItem(REFRESH_KEY) || '0', 10);
-                    
+                    var currentRetries = parseInt(sessionStorage.getItem(REFRESH_KEY) || '0', 10);
+
                     if (currentRetries < MAX_RETRIES) {
+                      recovering = true;
                       console.log('Tentativa de recuperação ' + (currentRetries + 1) + '/' + MAX_RETRIES);
-                      sessionStorage.setItem(REFRESH_KEY, (currentRetries + 1).toString());
-                      
-                      // Forçar reload com bypass de cache
-                      window.location.reload(true);
+                      sessionStorage.setItem(REFRESH_KEY, String(currentRetries + 1));
+                      clearClientCaches(hardReload);
                     } else {
-                      console.error('Limite de tentativas de reload excedido. Exibindo UI de erro.');
-                      // Opcional: Disparar evento customizado para o React ErrorBoundary pegar, se necessário
-                      // Mas, geralmente, se o chunk não carrega, o React já vai jogar o erro para o Boundary.
-                      // Aqui apenas EVITAMOS o reload infinito.
+                      console.error('Limite de tentativas de reload excedido. Limpe o cache do site (Ctrl+Shift+R).');
                     }
                   } catch (e) {
-                    console.error('Erro ao acessar sessionStorage:', e);
+                    console.error('Erro ao recuperar chunk:', e);
+                    hardReload();
                   }
                 }
                 
