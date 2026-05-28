@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
 import UploadDatabase from '@/components/UploadDatabase';
+import { SyncAgendadoCard } from '@/components/gestor/SyncAgendadoCard';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 
 interface Produto {
@@ -221,6 +222,8 @@ export default function GestorProdutosPage() {
         </div>
 
         {mercadoId && <CatalogoSaudeCard mercadoId={mercadoId} />}
+
+        {mercadoId && <SyncAgendadoCard mercadoId={mercadoId} />}
 
         {/* Upload em massa */}
         {mercadoId && (

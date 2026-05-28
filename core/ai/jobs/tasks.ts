@@ -62,4 +62,16 @@ export class AIJobs {
             logger.error('AIJobs', '❌ [JOB] Erro ao gerar relatório semanal:', error);
         }
     }
+
+    /** Sync agendado URL/SFTP → processarUpload (Épico 9.1) */
+    static async runCatalogSync() {
+        logger.info('AIJobs', '🔄 [JOB] Verificando syncs de catálogo agendados...');
+        try {
+            const { executarSyncsDevidos } = await import('../../../lib/sync-agendado');
+            const resumo = await executarSyncsDevidos();
+            logger.info('AIJobs', `✅ [JOB] Sync catálogo: ${resumo.executados} ok, ${resumo.falhas} falhas, ${resumo.ignorados} ignorados`);
+        } catch (error) {
+            logger.error('AIJobs', '❌ [JOB] Erro no sync agendado:', error);
+        }
+    }
 }

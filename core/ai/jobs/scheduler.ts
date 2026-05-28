@@ -26,6 +26,11 @@ export class AIScheduler {
             await AIJobs.generateWeeklyReport();
         }, 'Relatório Semanal');
 
+        // 4. Sync agendado de catálogo parceiro — a cada 30 min
+        this.scheduleJob('*/30 * * * *', async () => {
+            await AIJobs.runCatalogSync();
+        }, 'Sync Agendado Catálogo');
+
         logger.info('Scheduler', `✅ ${this.jobs.length} tarefas agendadas com sucesso`);
     }
 

@@ -193,6 +193,7 @@ model mercados {
   dataAtualizacao      DateTime
   planoId              String?
   gestorId             String?
+  syncAgendado         Json?                @map("sync_agendado")
   acoes_gestor         acoes_gestor[]
   alertas_ia           alertas_ia[]
   analises_ia          analises_ia[]

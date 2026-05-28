@@ -35,7 +35,16 @@ CSV · XLSX · JSON (até 50 MB)
 - Atualização **semanal** ou quando houver promoção relevante
 - Reimportar a **mesma unidade** selecionada no painel
 
+## Sync agendado (Épico 9.1)
+
+No painel **Gestor → Produtos**, configure:
+
+- **URL** do CSV/XLSX/JSON (até 50 MB) ou **SFTP** (host, usuário, caminho)
+- **Unidade** de destino e **intervalo** (6h, 12h, 24h, semanal)
+- O job roda a cada 30 min no `precivox-ai-scheduler` e chama `processarUpload`
+
+Disparo manual: botão **Executar agora**. Cron HTTP opcional: `POST /api/cron/sync-agendado` com `Authorization: Bearer $CRON_SECRET`.
+
 ## Tier 2+ (roadmap)
 
-- Sync agendado (URL/SFTP)
 - API `POST /api/partner/v1/estoques/batch` — mesmo schema JSON
