@@ -188,7 +188,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 |---|---------|-----|--------|-----------|
 | 10.1 | **Radar de demanda do bairro** | P0 | ✅ | `RadarDemandaCard` (7/14/30d, termos, link catálogo) |
 | 10.2 | Pricing assistido (aprovação 1 tap) | P0 | ✅ | `PricingAssistidoCard`, `lib/pricing-assistido.ts` |
-| 10.3 | Alerta ruptura preditiva | P1 | 🔲 | — |
+| 10.3 | Alerta ruptura preditiva | P1 | ✅ | `RupturaPreditivaCard`, `lib/ruptura-preditiva.ts` |
 | 10.4 | Benchmark preço regional | P1 | 🔲 | — |
 | 10.5 | Resumo semana + ações GROOC | P1 | 🟡 | `resumo-semana-gestor` |
 
@@ -307,7 +307,7 @@ flowchart TD
 |------------|------|-----|
 | P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| P0 | **10.3** Alerta ruptura preditiva | — |
+| P1 | **10.4** Benchmark preço regional | — |
 | P2 | **9.4** Webhook preço · **11.2** heatmap intenção | — |
 | Ops | Migration `parceiro_sla_tier` em produção | SQL em `prisma/migrations/` |
 | Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |

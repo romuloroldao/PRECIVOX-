@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 import { RadarDemandaCard } from '@/components/gestor/RadarDemandaCard';
 import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
+import { RupturaPreditivaCard } from '@/components/gestor/RupturaPreditivaCard';
 
 interface Mercado {
   id: string;
@@ -184,6 +185,7 @@ export default function GestorHomePage() {
           <>
             <CatalogoSaudeCard mercadoId={mercado.id} />
             <RadarDemandaCard mercadoId={mercado.id} />
+            <RupturaPreditivaCard mercadoId={mercado.id} compact />
             <PricingAssistidoCard mercadoId={mercado.id} compact />
           </>
         )}
