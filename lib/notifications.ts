@@ -8,7 +8,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
-import { sendNotification, sendNotificationToMultiple, isFCMAvailable } from './fcm';
+import { deliverPushToToken, isPushDeliveryAvailable } from './push-delivery';
 
 /**
  * Tipos de notificações
@@ -20,7 +20,9 @@ export type NotificationType =
   | 'SAVINGS_ALERT'
   | 'REFERRAL_COMPLETED'
   | 'LIST_SHARED'
-  | 'PRICE_DROP';
+  | 'PRICE_DROP'
+  | 'CESTA_PROVAVEL'
+  | 'DIA_MERCADO';
 
 /**
  * Enviar notificação para um usuário
@@ -32,13 +34,12 @@ export async function sendNotificationToUser(
   body: string,
   data?: Record<string, string>
 ): Promise<{ success: boolean; sent: number }> {
-  if (!isFCMAvailable()) {
-    console.warn('FCM não disponível, notificação não enviada');
+  if (!isPushDeliveryAvailable()) {
+    console.warn('Push não disponível, notificação não enviada');
     return { success: false, sent: 0 };
   }
 
   try {
-    // Buscar tokens do usuário (apenas habilitados)
     const subscriptions = await prisma.notificationSubscription.findMany({
       where: {
         userId,
@@ -50,46 +51,31 @@ export async function sendNotificationToUser(
     });
 
     if (subscriptions.length === 0) {
-      return { success: true, sent: 0 }; // Usuário não tem tokens registrados
+      return { success: true, sent: 0 };
     }
 
-    const tokens = subscriptions.map((s) => s.token);
+    let sent = 0;
+    const invalidTokens: string[] = [];
 
-    // Enviar para todos os tokens do usuário
-    const result = await sendNotificationToMultiple(tokens, title, body, {
-      ...data,
-      type,
-      userId,
-    });
-
-    // Remover tokens inválidos
-    if (result.errors.length > 0) {
-      const invalidTokens: string[] = [];
-      result.errors.forEach((error) => {
-        const match = error.match(/Token (\d+):/);
-        if (match) {
-          const index = parseInt(match[1]);
-          if (tokens[index]) {
-            invalidTokens.push(tokens[index]);
-          }
-        }
+    for (const { token } of subscriptions) {
+      const result = await deliverPushToToken(token, title, body, {
+        ...data,
+        type,
+        userId,
       });
+      if (result.success) sent++;
+      else if (result.error === 'INVALID_TOKEN') invalidTokens.push(token);
+    }
 
-      // Remover tokens inválidos do banco
-      if (invalidTokens.length > 0) {
-        await prisma.notificationSubscription.deleteMany({
-          where: {
-            token: {
-              in: invalidTokens,
-            },
-          },
-        });
-      }
+    if (invalidTokens.length > 0) {
+      await prisma.notificationSubscription.deleteMany({
+        where: { token: { in: invalidTokens } },
+      });
     }
 
     return {
-      success: result.successCount > 0,
-      sent: result.successCount,
+      success: sent > 0,
+      sent,
     };
   } catch (error) {
     console.error('Error sending notification to user:', error);

@@ -98,7 +98,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 |---|---------|-----|--------|-----------|
 | 2.1 | Novos eventos | P0 | ✅ | `preco_confirmado`, `compra_confirmada`, etc. |
 | 2.2 | **Intent Score** heurístico | P0 | ✅ | `GET /api/cliente/intent-score` |
-| 2.3 | Push “cesta provável” (48–72h) | P0 | 🟡 | `CestaProvavelCard`; FCM não validado E2E |
+| 2.3 | Push “cesta provável” (48–72h) | P0 | ✅ | `lib/push-retencao.ts`, cron + Web Push VAPID |
 | 2.4 | Ranking híbrido | P0 | 🟡 | Preço + EL + perfil; sem ML rank |
 | 2.5 | LLM só para explicação | P1 | 🟡 | GROOC B2B; B2C regras |
 
@@ -135,7 +135,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 |---|---------|-----|--------|-----------|
 | 6.1 | Streak economia | P1 | ✅ | `EconomiaStreakCard` |
 | 6.2 | Card share economia | P1 | ✅ | `ShareEconomiaCard` |
-| 6.3 | Notificação dia de mercado | P0 | 🟡 | Banner FCM; inferência parcial |
+| 6.3 | Notificação dia de mercado | P0 | ✅ | `inferirDiaMercado` + `executarPushRetencao` |
 | 6.4 | Inflação da **sua cesta** | P1 | ✅ | `InflacaoCestaCard` |
 
 ### Entregáveis Fase 1 (checklist release)
@@ -307,7 +307,8 @@ flowchart TD
 |------------|------|-----|
 | P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| P1 | **12.1** Basket completion (ML leve) | Fase 3 |
+| P1 | **1.4** Config valor do tempo (EL no perfil) | `EL_DEFAULTS` |
+| Ops | Configurar `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` em prod | push retenção |
 | Ops | Migration `parceiro_webhook` em produção | ✅ aplicada |
 | Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |
 

@@ -1,100 +1,87 @@
 /**
  * POST /api/notifications/subscribe
- * 
- * SQUAD B - Backend
- * 
- * Registra token FCM do usuário para receber notificações push
+ * Registra token FCM ou subscription Web Push (VAPID)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { TokenManager } from '@/lib/token-manager';
+import { encodeWebPushToken, type WebPushSubscriptionPayload } from '@/lib/push-web';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, token, platform = 'web' } = body;
+    const { userId, token, platform = 'web', subscription } = body as {
+      userId?: string;
+      token?: string;
+      platform?: string;
+      subscription?: WebPushSubscriptionPayload;
+    };
 
-    if (!userId || !token) {
+    const sessionUser = await TokenManager.validateSession({
+      headers: request.headers,
+      cookies: request.cookies,
+    });
+
+    const resolvedUserId = sessionUser?.id ?? userId;
+    if (!resolvedUserId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Bad Request',
-          message: 'userId e token são obrigatórios',
-        },
+        { success: false, error: 'userId obrigatório' },
         { status: 400 }
       );
     }
 
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    if (sessionUser?.id && userId && sessionUser.id !== userId) {
+      return NextResponse.json({ success: false, error: 'Não autorizado' }, { status: 403 });
+    }
 
-    if (!user) {
+    let storedToken = token?.trim();
+    if (subscription?.endpoint && subscription.keys?.p256dh && subscription.keys?.auth) {
+      storedToken = encodeWebPushToken(subscription);
+    }
+
+    if (!storedToken) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: 'Usuário não encontrado',
-        },
-        { status: 404 }
+        { success: false, error: 'Informe token FCM ou subscription Web Push' },
+        { status: 400 }
       );
     }
 
-    // Verificar se token já existe
+    const user = await prisma.user.findUnique({ where: { id: resolvedUserId } });
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Usuário não encontrado' }, { status: 404 });
+    }
+
     const existing = await prisma.notificationSubscription.findUnique({
-      where: { token },
+      where: { token: storedToken },
     });
 
     if (existing) {
-      // Atualizar se for de outro usuário ou atualizar plataforma
-      if (existing.userId !== userId) {
+      if (existing.userId !== resolvedUserId || !existing.enabled) {
         await prisma.notificationSubscription.update({
-          where: { token },
-          data: {
-            userId,
-            platform,
-            enabled: true,
-          },
+          where: { token: storedToken },
+          data: { userId: resolvedUserId, platform, enabled: true },
         });
-      } else {
-        // Apenas atualizar plataforma se necessário
-        if (existing.platform !== platform) {
-          await prisma.notificationSubscription.update({
-            where: { token },
-            data: { platform },
-          });
-        }
       }
     } else {
-      // Criar nova subscription
       await prisma.notificationSubscription.create({
         data: {
-          userId,
-          token,
+          userId: resolvedUserId,
+          token: storedToken,
           platform,
           enabled: true,
         },
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Token registrado com sucesso',
-    });
+    return NextResponse.json({ success: true, message: 'Token registrado com sucesso' });
   } catch (error) {
     console.error('Error subscribing to notifications:', error);
-
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Erro ao registrar token',
-      },
+      { success: false, error: 'Erro ao registrar token' },
       { status: 500 }
     );
   }
 }
-

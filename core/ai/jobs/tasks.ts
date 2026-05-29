@@ -74,4 +74,19 @@ export class AIJobs {
             logger.error('AIJobs', '❌ [JOB] Erro no sync agendado:', error);
         }
     }
+
+    /** Push retenção — cesta provável + dia de mercado (2.3 / 6.3) */
+    static async runRetentionPush() {
+        logger.info('AIJobs', '🔔 [JOB] Push de retenção (cesta / dia de mercado)...');
+        try {
+            const { executarPushRetencao } = await import('../../../lib/push-retencao');
+            const resumo = await executarPushRetencao();
+            logger.info(
+                'AIJobs',
+                `✅ [JOB] Push retenção: cesta=${resumo.cestaEnviados} dia=${resumo.diaMercadoEnviados} ignorados=${resumo.ignorados}`
+            );
+        } catch (error) {
+            logger.error('AIJobs', '❌ [JOB] Erro no push de retenção:', error);
+        }
+    }
 }

@@ -31,6 +31,11 @@ export class AIScheduler {
             await AIJobs.runCatalogSync();
         }, 'Sync Agendado Catálogo');
 
+        // 5. Push retenção — 8h e 18h (horário do servidor; ajuste TZ se necessário)
+        this.scheduleJob('0 8,18 * * *', async () => {
+            await AIJobs.runRetentionPush();
+        }, 'Push Retenção Cesta/Dia Mercado');
+
         logger.info('Scheduler', `✅ ${this.jobs.length} tarefas agendadas com sucesso`);
     }
 
