@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { RadarDemandaCard } from '@/components/gestor/RadarDemandaCard';
 import { HeatmapIntencaoCard } from '@/components/gestor/HeatmapIntencaoCard';
 import { RotaMultiMercadoCard } from '@/components/gestor/RotaMultiMercadoCard';
+import { PreciIndexCestaCard } from '@/components/gestor/PreciIndexCestaCard';
 
 export default function PainelIAGestor() {
   const [dashboard, setDashboard] = useState<any>(null);
@@ -107,6 +108,8 @@ export default function PainelIAGestor() {
         {mercadoId && <HeatmapIntencaoCard mercadoId={mercadoId} />}
 
         {mercadoId && <RotaMultiMercadoCard mercadoId={mercadoId} compact />}
+
+        {mercadoId && <PreciIndexCestaCard mercadoId={mercadoId} />}
 
         <Link
           href="/gestor/ia/resumo"

@@ -24,6 +24,7 @@ import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry'
 import { RaioFamiliarCard } from '@/components/cliente/RaioFamiliarCard';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
+import { PreciIndexBairroCard } from '@/components/cliente/PreciIndexBairroCard';
 import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
 import { ShareEconomiaCard } from '@/components/cliente/ShareEconomiaCard';
 import { NotificacaoPermissaoBanner } from '@/components/cliente/NotificacaoPermissaoBanner';
@@ -229,6 +230,7 @@ export default function DashboardCliente() {
             <CestaProvavelCard mercadoId={mercadoId} />
             <ModoEmergenciaCard mercadoId={mercadoId} />
             <InflacaoCestaCard mercadoId={mercadoId} />
+            <PreciIndexBairroCard mercadoId={mercadoId} />
             <EsperaQueValeCard mercadoId={mercadoId} />
             <AtacadoVarejoCard mercadoId={mercadoId} />
             <TrocaHistoricoCard mercadoId={mercadoId} />

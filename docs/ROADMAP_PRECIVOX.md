@@ -199,7 +199,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | 11.1 | Agregação CEP5/polígono | P0 | 🟡 | `regiao-preco-unidades.ts` |
 | 11.2 | Heatmap intenção (gestor) | P1 | ✅ | `HeatmapIntencaoCard`, `lib/heatmap-intencao.ts` |
 | 11.3 | Rota multi-mercado otimizada | P1 | ✅ | `lista-rota-ia.ts` (geo NN), `RotaMultiMercadoCard` |
-| 11.4 | PRECI Index (cesta bairro) | P2 | 🔲 | — |
+| 11.4 | PRECI Index (cesta bairro) | P2 | ✅ | `preci-index-cesta.ts`, `PreciIndexCestaCard`, `PreciIndexBairroCard` |
 
 **Métricas Fase 2:** retenção D30 · GMV intenção influenciada · conversão lista→visita · parceiros Tier 2+
 
@@ -307,8 +307,8 @@ flowchart TD
 |------------|------|-----|
 | P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| P1 | **11.4** PRECI Index (cesta bairro) | — |
-| Ops | Migration `parceiro_webhook` em produção | SQL em `prisma/migrations/` |
+| P1 | **11.1** Agregação CEP5/polígono (evoluir 🟡→✅) | `regiao-preco-unidades.ts` |
+| Ops | Migration `parceiro_webhook` em produção | ✅ aplicada |
 | Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |
 
 **Histórico sprints:** [`ISSUES_SPRINT0.md`](./ISSUES_SPRINT0.md) · [`FASE1_SPRINTS.md`](./FASE1_SPRINTS.md)
