@@ -11,6 +11,7 @@ import { RadarDemandaCard } from '@/components/gestor/RadarDemandaCard';
 import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
 import { RupturaPreditivaCard } from '@/components/gestor/RupturaPreditivaCard';
 import { BenchmarkPrecoRegionalCard } from '@/components/gestor/BenchmarkPrecoRegionalCard';
+import { ResumoSemanaGroocCard } from '@/components/gestor/ResumoSemanaGroocCard';
 
 interface Mercado {
   id: string;
@@ -184,6 +185,7 @@ export default function GestorHomePage() {
 
         {mercado && (
           <>
+            <ResumoSemanaGroocCard mercadoId={mercado.id} />
             <CatalogoSaudeCard mercadoId={mercado.id} />
             <RadarDemandaCard mercadoId={mercado.id} />
             <RupturaPreditivaCard mercadoId={mercado.id} compact />

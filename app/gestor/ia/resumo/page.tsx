@@ -11,8 +11,18 @@ type AcaoSemanal = {
   titulo: string;
   descricao: string;
   prioridade: 'alta' | 'media' | 'baixa';
-  categoria: 'demanda' | 'lista' | 'nps' | 'estoque' | 'geral';
+  categoria:
+    | 'demanda'
+    | 'lista'
+    | 'nps'
+    | 'estoque'
+    | 'geral'
+    | 'preco'
+    | 'promocao'
+    | 'ruptura'
+    | 'catalogo';
   linkHref?: string;
+  fontes?: string[];
 };
 
 type RegiaoPrecoApi = {
@@ -29,6 +39,7 @@ type ResumoPayload = {
   geradoEm: string;
   mercadoNome: string | null;
   regiaoPreco?: RegiaoPrecoApi;
+  fontesResumo?: string[];
 };
 
 const PRIORIDADE_STYLE = {
@@ -43,6 +54,10 @@ const CATEGORIA_LABEL: Record<AcaoSemanal['categoria'], string> = {
   nps: 'Satisfação (NPS)',
   estoque: 'Estoque',
   geral: 'Destaque',
+  preco: 'Preço regional',
+  promocao: 'Promoção assistida',
+  ruptura: 'Ruptura preditiva',
+  catalogo: 'Saúde catálogo',
 };
 
 export default function ResumoSemanaPage() {
@@ -111,6 +126,7 @@ export default function ResumoSemanaPage() {
         geradoEm: json.geradoEm,
         mercadoNome: json.mercadoNome ?? null,
         regiaoPreco: json.regiaoPreco,
+        fontesResumo: json.fontesResumo,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro');
@@ -262,6 +278,11 @@ export default function ResumoSemanaPage() {
                           </span>
                           <h3 className="mt-1 text-base font-bold">{acao.titulo}</h3>
                           <p className="mt-1 text-sm opacity-90">{acao.descricao}</p>
+                          {acao.fontes && acao.fontes.length > 0 && (
+                            <p className="mt-2 text-xs opacity-75">
+                              Fontes GROOC: {acao.fontes.join(' · ')}
+                            </p>
+                          )}
                         </div>
                         {acao.linkHref && (
                           <Link
@@ -279,7 +300,11 @@ export default function ResumoSemanaPage() {
             </section>
 
             <p className="text-center text-xs text-gray-500">
-              Gerado em {new Date(payload.geradoEm).toLocaleString('pt-BR')} ·{' '}
+              Gerado em {new Date(payload.geradoEm).toLocaleString('pt-BR')}
+              {payload.fontesResumo && payload.fontesResumo.length > 0 && (
+                <> · Fontes agregadas: {payload.fontesResumo.join(', ')}</>
+              )}
+              {' · '}
               <Link href="/gestor/ia/conversao" className="text-emerald-700 underline hover:no-underline">
                 Ver detalhes em Conversão
               </Link>
