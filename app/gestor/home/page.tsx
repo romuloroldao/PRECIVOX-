@@ -8,6 +8,7 @@ import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 import { RadarDemandaCard } from '@/components/gestor/RadarDemandaCard';
+import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
 
 interface Mercado {
   id: string;
@@ -183,6 +184,7 @@ export default function GestorHomePage() {
           <>
             <CatalogoSaudeCard mercadoId={mercado.id} />
             <RadarDemandaCard mercadoId={mercado.id} />
+            <PricingAssistidoCard mercadoId={mercado.id} compact />
           </>
         )}
 

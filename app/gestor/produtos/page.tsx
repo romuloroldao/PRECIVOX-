@@ -10,6 +10,7 @@ import UploadDatabase from '@/components/UploadDatabase';
 import { SyncAgendadoCard } from '@/components/gestor/SyncAgendadoCard';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 import { ParceiroSlaCard } from '@/components/gestor/ParceiroSlaCard';
+import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
 
 interface Produto {
   id: string;
@@ -225,6 +226,8 @@ export default function GestorProdutosPage() {
         {mercadoId && <CatalogoSaudeCard mercadoId={mercadoId} />}
 
         {mercadoId && <ParceiroSlaCard mercadoId={mercadoId} />}
+
+        {mercadoId && <PricingAssistidoCard mercadoId={mercadoId} compact />}
 
         {mercadoId && <SyncAgendadoCard mercadoId={mercadoId} />}
 
