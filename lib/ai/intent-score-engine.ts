@@ -18,6 +18,11 @@ const PESOS: Partial<Record<UserEvent['type'], number>> = {
   compra_nao_realizada: -5,
 };
 
+/** Pesos por tipo de evento — reutilizado no heatmap de intenção (gestor). */
+export const INTENT_EVENT_PESOS: Partial<Record<UserEvent['type'], number>> = PESOS;
+
+export const INTENT_EVENT_TYPES = Object.keys(PESOS) as UserEvent['type'][];
+
 const LAMBDA = 0.08; // decay por hora
 
 export interface IntentScoreResult {

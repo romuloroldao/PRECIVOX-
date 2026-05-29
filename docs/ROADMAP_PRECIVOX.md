@@ -197,7 +197,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | # | Feature | Pri | Status | Onde está |
 |---|---------|-----|--------|-----------|
 | 11.1 | Agregação CEP5/polígono | P0 | 🟡 | `regiao-preco-unidades.ts` |
-| 11.2 | Heatmap intenção (gestor) | P1 | 🔲 | — |
+| 11.2 | Heatmap intenção (gestor) | P1 | ✅ | `HeatmapIntencaoCard`, `lib/heatmap-intencao.ts` |
 | 11.3 | Rota multi-mercado otimizada | P1 | 🟡 | `lista-rota-proposta.ts` |
 | 11.4 | PRECI Index (cesta bairro) | P2 | 🔲 | — |
 
@@ -269,7 +269,7 @@ flowchart TD
 | 3 | Despensa digital | 2 | 7 | ✅ |
 | 4 | PRECI Graph hiperlocal | 2–3 | 11 | 🟡 |
 | 5 | Waze de preços | 1–3 | 4, 14 | ✅ v1 |
-| 6 | Heatmap intenção (gestor) | 2 | 10, 11 | 🔲 |
+| 6 | Heatmap intenção (gestor) | 2 | 10, 11 | ✅ |
 | 7 | Modo Mercado Ao Vivo | 2 | 8 | ✅ |
 | 8 | Perfil PRECI explicável | 1 | 5 | ✅ |
 | 9 | Confirmação compra (PDV virtual) | 1 | 5 | ✅ |
@@ -307,8 +307,8 @@ flowchart TD
 |------------|------|-----|
 | P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| P1 | **11.2** Heatmap intenção (gestor) | — |
-| P2 | **9.4** Webhook preço · **11.2** heatmap intenção | — |
+| P1 | **11.3** Rota multi-mercado (reforço) | — |
+| P2 | **9.4** Webhook preço · **11.4** PRECI Index | — |
 | Ops | Migration `parceiro_sla_tier` em produção | SQL em `prisma/migrations/` |
 | Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |
 

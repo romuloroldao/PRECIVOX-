@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
 import { RadarDemandaCard } from '@/components/gestor/RadarDemandaCard';
+import { HeatmapIntencaoCard } from '@/components/gestor/HeatmapIntencaoCard';
 
 export default function PainelIAGestor() {
   const [dashboard, setDashboard] = useState<any>(null);
@@ -101,6 +102,8 @@ export default function PainelIAGestor() {
         </div>
 
         {mercadoId && <RadarDemandaCard mercadoId={mercadoId} />}
+
+        {mercadoId && <HeatmapIntencaoCard mercadoId={mercadoId} />}
 
         <Link
           href="/gestor/ia/resumo"

@@ -12,6 +12,7 @@ import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
 import { RupturaPreditivaCard } from '@/components/gestor/RupturaPreditivaCard';
 import { BenchmarkPrecoRegionalCard } from '@/components/gestor/BenchmarkPrecoRegionalCard';
 import { ResumoSemanaGroocCard } from '@/components/gestor/ResumoSemanaGroocCard';
+import { HeatmapIntencaoCard } from '@/components/gestor/HeatmapIntencaoCard';
 
 interface Mercado {
   id: string;
@@ -188,6 +189,7 @@ export default function GestorHomePage() {
             <ResumoSemanaGroocCard mercadoId={mercado.id} />
             <CatalogoSaudeCard mercadoId={mercado.id} />
             <RadarDemandaCard mercadoId={mercado.id} />
+            <HeatmapIntencaoCard mercadoId={mercado.id} compact />
             <RupturaPreditivaCard mercadoId={mercado.id} compact />
             <BenchmarkPrecoRegionalCard mercadoId={mercado.id} compact />
             <PricingAssistidoCard mercadoId={mercado.id} compact />
