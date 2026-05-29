@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
+import { BenchmarkPrecoRegionalCard } from '@/components/gestor/BenchmarkPrecoRegionalCard';
 
 export default function ModuloPromocoesPage() {
   return (
@@ -19,6 +20,8 @@ export default function ModuloPromocoesPage() {
         </div>
 
         <PricingAssistidoCard />
+
+        <BenchmarkPrecoRegionalCard />
 
         <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
           <p className="font-medium text-gray-900">Como funciona</p>

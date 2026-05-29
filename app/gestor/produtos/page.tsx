@@ -12,6 +12,7 @@ import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 import { ParceiroSlaCard } from '@/components/gestor/ParceiroSlaCard';
 import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
 import { RupturaPreditivaCard } from '@/components/gestor/RupturaPreditivaCard';
+import { BenchmarkPrecoRegionalCard } from '@/components/gestor/BenchmarkPrecoRegionalCard';
 
 interface Produto {
   id: string;
@@ -229,6 +230,8 @@ export default function GestorProdutosPage() {
         {mercadoId && <ParceiroSlaCard mercadoId={mercadoId} />}
 
         {mercadoId && <RupturaPreditivaCard mercadoId={mercadoId} compact />}
+
+        {mercadoId && <BenchmarkPrecoRegionalCard mercadoId={mercadoId} compact />}
 
         {mercadoId && <PricingAssistidoCard mercadoId={mercadoId} compact />}
 
