@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
 import { RadarDemandaCard } from '@/components/gestor/RadarDemandaCard';
 import { HeatmapIntencaoCard } from '@/components/gestor/HeatmapIntencaoCard';
+import { RotaMultiMercadoCard } from '@/components/gestor/RotaMultiMercadoCard';
 
 export default function PainelIAGestor() {
   const [dashboard, setDashboard] = useState<any>(null);
@@ -104,6 +105,8 @@ export default function PainelIAGestor() {
         {mercadoId && <RadarDemandaCard mercadoId={mercadoId} />}
 
         {mercadoId && <HeatmapIntencaoCard mercadoId={mercadoId} />}
+
+        {mercadoId && <RotaMultiMercadoCard mercadoId={mercadoId} compact />}
 
         <Link
           href="/gestor/ia/resumo"

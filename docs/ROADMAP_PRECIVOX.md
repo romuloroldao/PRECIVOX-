@@ -42,7 +42,7 @@
 | Raio familiar | ✅ | `/cliente/familia`, `lib/raio-familiar.ts` |
 | IA gestor (GROOC, saúde catálogo) | ✅ | `lib/catalogo-saude.ts`, `CatalogoSaudeCard` |
 | Behavior engine + intenção | 🟡 | `lib/ai/behavior-engine.ts`, Intent Score |
-| Rota / consolidação lista | 🟡 | `lib/lista-rota-proposta.ts`, `lista-rota-ia.ts` |
+| Rota / consolidação lista | ✅ | `lista-rota-proposta.ts`, `lista-rota-ia.ts`, geo NN |
 | API batch parceiro (automática) | ✅ | `POST /api/partner/v1/estoques` |
 | Radar B2B / selo mercado consumidor | ✅ | `radar-demanda.ts`, `MercadoSeloBadge` |
 | PRECI Graph completo | 🟡 | `regiao-preco-unidades.ts` |
@@ -198,7 +198,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 |---|---------|-----|--------|-----------|
 | 11.1 | Agregação CEP5/polígono | P0 | 🟡 | `regiao-preco-unidades.ts` |
 | 11.2 | Heatmap intenção (gestor) | P1 | ✅ | `HeatmapIntencaoCard`, `lib/heatmap-intencao.ts` |
-| 11.3 | Rota multi-mercado otimizada | P1 | 🟡 | `lista-rota-proposta.ts` |
+| 11.3 | Rota multi-mercado otimizada | P1 | ✅ | `lista-rota-ia.ts` (geo NN), `RotaMultiMercadoCard` |
 | 11.4 | PRECI Index (cesta bairro) | P2 | 🔲 | — |
 
 **Métricas Fase 2:** retenção D30 · GMV intenção influenciada · conversão lista→visita · parceiros Tier 2+
@@ -307,7 +307,7 @@ flowchart TD
 |------------|------|-----|
 | P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| P1 | **11.3** Rota multi-mercado (reforço) | — |
+| P1 | **11.4** PRECI Index (cesta bairro) | — |
 | P2 | **9.4** Webhook preço · **11.4** PRECI Index | — |
 | Ops | Migration `parceiro_sla_tier` em produção | SQL em `prisma/migrations/` |
 | Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |

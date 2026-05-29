@@ -24,6 +24,7 @@ import { Button, Card } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ToastContainer';
 import { computeShoppingRoute, dicaDeslocamento } from '@/lib/lista-rota-ia';
+import type { RotaPasso } from '@/lib/lista-rota-ia';
 
 export type ListaInteligenteVariant = 'drawer' | 'inline';
 
@@ -111,6 +112,11 @@ export function ListaInteligentePanel({
   const [propostaRota, setPropostaRota] = useState<PropostaRotaOtimizacao | null>(null);
   const [dismissedRotaChave, setDismissedRotaChave] = useState<string | null>(null);
   const [snapshotUndoRota, setSnapshotUndoRota] = useState<ItemLista[] | null>(null);
+  const [rotaOtimizada, setRotaOtimizada] = useState<{
+    passos: RotaPasso[];
+    distanciaTotalKm: number | null;
+    metodo: 'valor' | 'geo';
+  } | null>(null);
 
   const listaAtiva = listasSalvas.find((l) => l.id === listaAtivaId);
 
@@ -144,7 +150,57 @@ export function ListaInteligentePanel({
     };
   }, [itens]);
 
-  const rota = useMemo(() => computeShoppingRoute(itens), [itens]);
+  const rotaFallback = useMemo(() => computeShoppingRoute(itens), [itens]);
+  const rota = rotaOtimizada?.passos ?? rotaFallback;
+  const kmRota = rotaOtimizada?.distanciaTotalKm ?? null;
+
+  useEffect(() => {
+    if (itens.length < 2 || (insights?.mercados ?? 0) < 2) {
+      setRotaOtimizada(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch('/api/cliente/rota-otimizada', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              itens: itens.map((i) => ({
+                lineId: i.id,
+                estoqueId: i.estoqueId,
+                mercadoId: i.unidade.mercado.id,
+                unidadeId: i.unidade.id,
+                quantidade: i.quantidade,
+                mercadoNome: i.unidade.mercado.nome,
+                produtoNome: i.nome,
+                preco: i.preco,
+                precoPromocional: i.precoPromocional,
+                emPromocao: i.emPromocao,
+              })),
+            }),
+          });
+          const data = await res.json();
+          if (data.rota?.passos?.length) {
+            setRotaOtimizada({
+              passos: data.rota.passos.map((p: RotaPasso) => ({
+                ...p,
+                itens: itens.filter((i) => i.unidade.mercado.id === p.mercadoId),
+              })),
+              distanciaTotalKm: data.rota.distanciaTotalKm ?? null,
+              metodo: data.rota.metodo ?? 'valor',
+            });
+          } else {
+            setRotaOtimizada(null);
+          }
+        } catch {
+          setRotaOtimizada(null);
+        }
+      })();
+    }, 500);
+    return () => clearTimeout(t);
+  }, [chaveListaRota, itens, insights?.mercados]);
 
   useEffect(() => {
     if (itens.length < 2 || (insights?.mercados ?? 0) < 2) {
@@ -568,15 +624,25 @@ export function ListaInteligentePanel({
 
           {secaoIaAberta && (
             <div className="mt-3 space-y-3 pb-1">
-              <p className="text-xs leading-relaxed text-emerald-900/85">{dicaDeslocamento(insights?.mercados ?? 1)}</p>
+              <p className="text-xs leading-relaxed text-emerald-900/85">
+                {dicaDeslocamento(insights?.mercados ?? 1, kmRota)}
+              </p>
 
               <div className="rounded-xl bg-white/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_2px_8px_rgba(0,0,0,0.06)]">
                 <div className="mb-2 flex items-center gap-2 text-emerald-900">
                   <MapPin className="h-4 w-4 text-emerald-600" />
                   <span className="text-xs font-bold uppercase tracking-wide">Rota sugerida</span>
+                  {rotaOtimizada?.metodo === 'geo' && (
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                      por proximidade
+                    </span>
+                  )}
                 </div>
                 <p className="mb-2 text-[11px] leading-snug text-gray-600">
-                  Ordem para ir às lojas (compra presencial). Distâncias exatas em breve com localização.
+                  Ordem para ir às lojas (compra presencial).
+                  {kmRota != null && kmRota > 0 && (
+                    <> Distância estimada entre paradas: ~{kmRota} km.</>
+                  )}
                 </p>
                 <ol className="space-y-2">
                   {rota.map((passo) => (
