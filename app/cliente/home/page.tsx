@@ -220,11 +220,12 @@ export default function DashboardCliente() {
           </section>
         )}
 
-        {!isLoading && mercadoId && (
+        {/* Cards da nova fase: visíveis com sessão; mercadoId é opcional por card */}
+        {!isLoading && userId && (
           <section style={{ marginBottom: TOKENS.spacing[6], display: 'flex', flexDirection: 'column' as const, gap: TOKENS.spacing[4] }}>
             <NotificacaoPermissaoBanner />
-            <MercadoVivoBanner />
             <RaioFamiliarCard />
+            <MercadoVivoBanner />
             <CestaProvavelCard mercadoId={mercadoId} />
             <ModoEmergenciaCard mercadoId={mercadoId} />
             <InflacaoCestaCard mercadoId={mercadoId} />

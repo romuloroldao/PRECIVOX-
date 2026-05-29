@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { useLista, type ItemLista } from '@/app/context/ListaContext';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';
 import type { ItemListaCompartilhada } from '@/lib/raio-familiar';
@@ -43,8 +44,9 @@ function fromSnapshotItem(item: ItemListaCompartilhada): ItemLista {
 
 /** Sincroniza lista local com o raio familiar (pull + push com debounce). */
 export function RaioFamiliarListaSync() {
+  const { status } = useSession();
   const { itens, restaurarItens } = useLista();
-  const { data, recarregar } = useRaioFamiliar(true);
+  const { data, recarregar } = useRaioFamiliar(status === 'authenticated');
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const aplicouRemoto = useRef(false);
 

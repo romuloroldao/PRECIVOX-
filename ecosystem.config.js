@@ -8,14 +8,16 @@
  * - Variáveis de ambiente: carregadas de .env.production (na pasta do ecosystem)
  *   para o frontend (NEXTAUTH_SECRET, JWT_SECRET, DATABASE_URL). Backend usa seu próprio .env.
  *
- * cwd produção: /home/deploy/apps/precivox
- * Em local: altere cwd para o path absoluto do projeto.
+ * cwd produção: DEPLOY_DEST (padrão /home/deploy/apps/precivox)
+ * Build/fonte:   DEPLOY_SRC  (padrão /root) — ver deploy-prod.sh
  */
 
 const path = require('path');
 const fs = require('fs');
 
-const CWD = process.env.PM2_CWD || '/home/deploy/apps/precivox';
+// Runtime PM2 sempre em DEPLOY_DEST (não usar __dirname — ecosystem pode estar em /root)
+const DEPLOY_DEST = process.env.DEPLOY_DEST || '/home/deploy/apps/precivox';
+const CWD = process.env.PM2_CWD || DEPLOY_DEST;
 
 // Carregar .env.production da pasta onde está este arquivo (projeto root)
 function loadEnvProduction() {

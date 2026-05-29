@@ -20,6 +20,15 @@ export interface TruthLayerPayload {
   verificadoEm: Date;
 }
 
+/** Dados via API batch parceiro (9.2) */
+export function truthFromPartnerApi(): TruthLayerPayload {
+  return {
+    fonte: 'API_PARCEIRO',
+    confianca: CONFIANCA.API_PARCEIRO,
+    verificadoEm: new Date(),
+  };
+}
+
 /** Dados ao importar catálogo do parceiro (upload-smart) */
 export function truthFromUpload(reimport = false): TruthLayerPayload {
   const now = new Date();
@@ -48,19 +57,4 @@ export function truthFromCrowdDivergencia(): TruthLayerPayload {
   };
 }
 
-/** Label para UI (Sprint 1) */
-export function labelFrescorPreco(verificadoEm: Date | null, atualizadoEm: Date): string {
-  const ref = verificadoEm ?? atualizadoEm;
-  const horas = (Date.now() - ref.getTime()) / (1000 * 60 * 60);
-  if (horas < 1) return 'Atualizado agora';
-  if (horas < 24) return `Atualizado há ${Math.floor(horas)}h`;
-  const dias = Math.floor(horas / 24);
-  if (dias === 1) return 'Atualizado ontem';
-  return `Atualizado há ${dias} dias`;
-}
-
-export function labelConfianca(confianca: number): 'alta' | 'media' | 'baixa' {
-  if (confianca >= 80) return 'alta';
-  if (confianca >= 55) return 'media';
-  return 'baixa';
-}
+export { labelConfianca, labelFrescorPreco } from '@/lib/estoque-truth-labels';

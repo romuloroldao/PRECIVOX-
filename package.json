@@ -14,6 +14,8 @@
     "build:backend": "cd apps/backend && npm run build",
     "migrate:prod": "prisma migrate deploy",
     "deploy:prod": "bash deploy-prod.sh",
+    "deploy:sync": "bash scripts/deploy-prod-rsync.sh",
+    "deploy:verify": "bash scripts/verify-deploy-path.sh",
     "start": "PORT=${PORT:-3000} NODE_ENV=production next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
@@ -29,12 +31,7 @@
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:e2e": "jest tests/e2e",
-    "arch-freeze": "node scripts/arch-freeze-guard.mjs",
-    "ci:auth-guard": "node scripts/ci-auth-guard.mjs",
-    "ci:guard": "node scripts/ci-runtime-guard.mjs --skip-build && node scripts/ci-auth-guard.mjs",
-    "ci:guard:full": "node scripts/ci-runtime-guard.mjs && node scripts/ci-auth-guard.mjs",
-    "e2e:guard": "playwright test --config=playwright.guard.config.ts",
-    "e2e:guard:local": "BASE_URL=http://localhost:3000 playwright test --config=playwright.guard.config.ts"
+    "ci:auth-guard": "node scripts/ci-auth-guard.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

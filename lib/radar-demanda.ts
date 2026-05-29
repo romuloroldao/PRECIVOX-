@@ -13,6 +13,11 @@ export type RadarDemandaItem = {
   pressao: 'ALTA' | 'MEDIA';
 };
 
+export type RadarTermoBusca = {
+  termo: string;
+  ocorrencias: number;
+};
+
 export async function getRadarDemandaMercado(
   mercadoId: string,
   dias = 7
@@ -22,6 +27,7 @@ export async function getRadarDemandaMercado(
   itens: RadarDemandaItem[];
   totalSinais: number;
   explicacao: string;
+  termosBusca: RadarTermoBusca[];
 }> {
   const desde = new Date();
   desde.setDate(desde.getDate() - dias);
@@ -60,26 +66,42 @@ export async function getRadarDemandaMercado(
     select: { id: true, nome: true, categoria: true },
   });
 
+  const termosBusca: RadarTermoBusca[] = [...buscas.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([termo, ocorrencias]) => ({ termo, ocorrencias }));
+
   const itens: RadarDemandaItem[] = produtos.map((p) => {
     const listas = adds.get(p.id)?.size ?? 0;
+    const nomeLower = (p.nome ?? '').toLowerCase();
+    let buscasRecentes = 0;
+    for (const [termo, count] of buscas) {
+      if (termo.length >= 3 && nomeLower.includes(termo)) {
+        buscasRecentes += count;
+      }
+    }
     return {
       produtoId: p.id,
       nome: p.nome ?? 'Produto',
       categoria: p.categoria,
       listasAtivas: listas,
-      buscasRecentes: 0,
-      pressao: listas >= 5 ? 'ALTA' : 'MEDIA',
+      buscasRecentes,
+      pressao: listas >= 5 || buscasRecentes >= 8 ? 'ALTA' : 'MEDIA',
     };
   });
 
-  itens.sort((a, b) => b.listasAtivas - a.listasAtivas);
+  itens.sort(
+    (a, b) =>
+      b.listasAtivas + b.buscasRecentes - (a.listasAtivas + a.buscasRecentes)
+  );
 
   return {
     mercadoId,
     periodoDias: dias,
     itens,
+    termosBusca,
     totalSinais: eventos.length,
     explicacao:
-      'Demanda latente: famílias com listas ativas no PRECIVOX (dados agregados, sem identificar consumidores).',
+      'Demanda latente: listas ativas e termos buscados no PRECIVOX (agregado, sem identificar consumidores).',
   };
 }

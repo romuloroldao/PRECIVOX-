@@ -45,6 +45,50 @@ No painel **Gestor → Produtos**, configure:
 
 Disparo manual: botão **Executar agora**. Cron HTTP opcional: `POST /api/cron/sync-agendado` com `Authorization: Bearer $CRON_SECRET`.
 
-## Tier 2+ (roadmap)
+## Tiers e SLA (9.3)
 
-- API `POST /api/partner/v1/estoques/batch` — mesmo schema JSON
+| Tier | Cadência | Sync | Doc |
+|------|----------|------|-----|
+| 1 Manual | Semanal | Upload + sync `semanal`/`24h` | Este arquivo |
+| 2 Diário | ≤ 24h | URL/SFTP | [`PARCEIRO_SLA_CONTRATO.md`](./PARCEIRO_SLA_CONTRATO.md) |
+| 3 API | ≤ 6h (futuro) | API batch + webhook | SLA + roadmap 9.2/9.4 |
+
+Gestor aceita contrato e escolhe tier em **Produtos → SLA e contrato de dados**.
+
+## API batch (Épico 9.2) — Tier 2+
+
+**Endpoint:** `POST /api/partner/v1/estoques`
+
+**Headers:**
+- `Authorization: Bearer <chave-do-mercado>`
+- `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "mercadoId": "uuid-do-mercado",
+  "unidadeId": "uuid-da-unidade",
+  "itens": [
+    {
+      "nome": "Arroz Branco 5kg",
+      "preco": 24.9,
+      "quantidade": 120,
+      "codigo_barras": "7891234567890",
+      "categoria": "Alimentos",
+      "marca": "Camil",
+      "preco_promocional": 21.9,
+      "em_promocao": true
+    }
+  ]
+}
+```
+
+Aliases aceitos: `produtos[]` ou `items[]` em vez de `itens[]`.
+
+**Requisitos:**
+- Mercado com **Tier ≥ 2** e contrato SLA aceito no painel gestor
+- Chave configurada no servidor: `PARTNER_API_KEYS='{"<mercadoId>":"<secret>"}'`
+
+**Resposta:** mesmo formato do upload-smart (`sucesso`, `erros`, `duplicados`, até 20 `detalhesErros`).
+
+**Truth layer:** `fonte=API_PARCEIRO`, `confianca=85`.

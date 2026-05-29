@@ -63,7 +63,8 @@ Ordem executada nas últimas conversas:
 | 8.4 | Raio familiar | ✅ | ✅ |
 | 9.1 | Sync agendado URL/SFTP | ✅ | ✅ |
 | — | Fix ChunkLoadError pós-deploy | ✅ | ✅ (`7dade68d`) |
-| **Próximo** | **9.3** SLA + contrato dados | 🔲 | — |
+| **9.3** | SLA + contrato dados | ✅ | `lib/parceiro-sla.ts`, `ParceiroSlaCard` |
+| **Próximo** | **9.2** API batch + PR/QA | 🔲 | — |
 
 **Observação:** O `ROADMAP_PRECIVOX.md` na seção “Estado atual (baseline)” ainda lista várias coisas como 🔲 que **já existem** no código — atualizar esse bloco é tarefa de housekeeping, não bloqueia desenvolvimento.
 
@@ -219,7 +220,7 @@ Legenda: **✅ entregue** · **🟡 parcial** · **🔲 não feito**
 |---|---------|--------|-----------|
 | 9.1 | **Sync agendado** | ✅ | `lib/sync-agendado.ts`, `GET/PUT /api/gestor/sync-agendado`, `POST .../executar`, `POST /api/cron/sync-agendado`, `SyncAgendadoCard`, job `AIJobs.runCatalogSync` cada 30 min |
 | 9.2 | API batch `POST /partner/v1/estoques` | 🔲 | — |
-| 9.3 | **SLA + contrato dados Tier 1–3** | 🔲 | **PRÓXIMO P0** |
+| 9.3 | **SLA + contrato dados Tier 1–3** | ✅ | `lib/parceiro-sla.ts`, `GET/PATCH /api/gestor/parceiro-sla`, `PARCEIRO_SLA_CONTRATO.md` |
 | 9.4 | Webhook preço alterado | 🔲 | — |
 
 **Detalhes 9.1:**
@@ -316,8 +317,8 @@ Todas exigem sessão válida → **401** sem cookie é esperado.
 
 | # | Tarefa | Notas |
 |---|--------|-------|
-| 1 | **9.3 SLA + contrato dados (Tier 1–3)** | Comercial + ops: doc + possivelmente UI gestor / flags em sync |
-| 2 | **PR da branch** | Muito conteúdo acumulado; checklist QA abaixo |
+| 1 | **PR da branch** | Muito conteúdo acumulado; checklist QA abaixo |
+| 2 | **9.2** API batch parceiro | Mesmo schema upload |
 | 3 | **QA manual** pós-merge candidato | Home, busca, mercado-vivo, scan, família, gestor sync |
 
 ### P1 — logo após 9.3

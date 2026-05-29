@@ -7,6 +7,12 @@ import path from 'path';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { processarUpload, type ResultadoUpload } from '@/lib/upload-handler';
+import {
+  contratoVigente,
+  intervaloPermitidoNoTier,
+  normalizarTier,
+  parseContrato,
+} from '@/lib/parceiro-sla';
 
 export type SyncFonteTipo = 'url' | 'sftp';
 export type SyncIntervalo = '6h' | '12h' | '24h' | 'semanal';
@@ -197,6 +203,22 @@ export async function salvarConfigSync(
     where: { id: merged.unidadeId, mercadoId, ativa: true },
   });
   if (!unidade) throw new Error('Unidade inválida para este mercado');
+
+  if (merged.ativo) {
+    const mercado = await prisma.mercados.findUnique({
+      where: { id: mercadoId },
+      select: { parceiroTier: true, parceiroSlaContrato: true },
+    });
+    const tier = normalizarTier(mercado?.parceiroTier);
+    if (!contratoVigente(parseContrato(mercado?.parceiroSlaContrato))) {
+      throw new Error('Aceite o contrato de dados (SLA) antes de ativar o sync agendado.');
+    }
+    if (!intervaloPermitidoNoTier(tier, merged.intervalo)) {
+      throw new Error(
+        `Intervalo "${merged.intervalo}" não é permitido no Tier ${tier}. Ajuste o tier ou o intervalo.`
+      );
+    }
+  }
 
   await salvarConfig(mercadoId, merged);
   return merged;

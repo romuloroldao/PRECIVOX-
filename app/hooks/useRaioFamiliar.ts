@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 export type RaioFamiliarState = {
   ativo: boolean;
@@ -23,17 +24,28 @@ export type RaioFamiliarState = {
 };
 
 export function useRaioFamiliar(enabled = true) {
+  const { status } = useSession();
   const [data, setData] = useState<RaioFamiliarState | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const canFetch = enabled && status === 'authenticated';
+
   const recarregar = useCallback(async () => {
-    if (!enabled) return;
+    if (!canFetch) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/cliente/raio-familiar', {
         credentials: 'include',
         cache: 'no-store',
       });
+      if (res.status === 401) {
+        setData(null);
+        return;
+      }
       const json = await res.json();
       if (json.success) {
         setData({
@@ -47,7 +59,7 @@ export function useRaioFamiliar(enabled = true) {
     } finally {
       setLoading(false);
     }
-  }, [enabled]);
+  }, [canFetch]);
 
   useEffect(() => {
     void recarregar();

@@ -3,12 +3,11 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import type { NivelContribuidor } from '@/lib/crowd-reputacao-labels';
+import { LABEL_NIVEL } from '@/lib/crowd-reputacao-labels';
 
-export type NivelContribuidor =
-  | 'observador'
-  | 'contribuidor'
-  | 'guardiao'
-  | 'embaixador';
+export type { NivelContribuidor } from '@/lib/crowd-reputacao-labels';
+export { LABEL_NIVEL } from '@/lib/crowd-reputacao-labels';
 
 const LIMITES: Record<NivelContribuidor, number> = {
   observador: 0,
@@ -23,13 +22,6 @@ export function nivelPorTotalConfirmacoes(total: number): NivelContribuidor {
   if (total >= LIMITES.contribuidor) return 'contribuidor';
   return 'observador';
 }
-
-export const LABEL_NIVEL: Record<NivelContribuidor, string> = {
-  observador: 'Observador',
-  contribuidor: 'Contribuidor',
-  guardiao: 'Guardião do bairro',
-  embaixador: 'Embaixador PRECI',
-};
 
 export async function getReputacaoCrowd(userId: string): Promise<{
   nivel: NivelContribuidor;

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Package, ShoppingBag } from 'lucide-react';
 import type { RecomendacaoFormato } from '@/lib/atacado-varejo';
+import { useLazyVisible } from '@/app/hooks/useLazyVisible';
+import { enqueueClientFetch } from '@/lib/client-api-queue';
 
 interface Props {
   produtoId: string | undefined;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function AtacadoVarejoChip({ produtoId, mercadoId }: Props) {
+  const { ref, visible } = useLazyVisible();
   const [hint, setHint] = useState<{
     recomendacao: RecomendacaoFormato;
     mensagem: string;
@@ -17,28 +20,35 @@ export function AtacadoVarejoChip({ produtoId, mercadoId }: Props) {
   } | null>(null);
 
   useEffect(() => {
-    if (!produtoId || !mercadoId) return;
-    void (async () => {
-      try {
-        const res = await fetch(
-          `/api/cliente/atacado-varejo?mercadoId=${mercadoId}&produtoId=${produtoId}`,
-          { credentials: 'include', cache: 'no-store' }
-        );
-        const json = await res.json();
-        if (json.success && json.data.recomendacao !== 'indiferente') {
-          setHint({
-            recomendacao: json.data.recomendacao,
-            mensagem: json.data.mensagem,
-            economiaPct: json.data.economiaPct,
-          });
-        }
-      } catch {
+    if (!visible || !produtoId || !mercadoId) return;
+    let cancelled = false;
+    void enqueueClientFetch(async () => {
+      const res = await fetch(
+        `/api/cliente/atacado-varejo?mercadoId=${mercadoId}&produtoId=${produtoId}`,
+        { credentials: 'include', cache: 'no-store' }
+      );
+      if (!res.ok) return null;
+      return res.json();
+    })
+      .then((json) => {
+        if (cancelled || !json?.success || json.data.recomendacao === 'indiferente') return;
+        setHint({
+          recomendacao: json.data.recomendacao,
+          mensagem: json.data.mensagem,
+          economiaPct: json.data.economiaPct,
+        });
+      })
+      .catch(() => {
         /* ignore */
-      }
-    })();
-  }, [produtoId, mercadoId]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, produtoId, mercadoId]);
 
-  if (!hint) return null;
+  if (!hint) {
+    return <span ref={ref} className="sr-only" aria-hidden />;
+  }
 
   const atacado = hint.recomendacao === 'atacado';
   const Icon = atacado ? Package : ShoppingBag;

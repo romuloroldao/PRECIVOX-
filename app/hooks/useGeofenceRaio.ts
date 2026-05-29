@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { GEOFENCE_RAIO_METROS, GEOFENCE_RAIO_OPCOES } from '@/lib/modo-mercado-vivo';
+import { GEOFENCE_RAIO_METROS, GEOFENCE_RAIO_OPCOES } from '@/lib/geofence-constants';
 
 const STORAGE_KEY = 'precivox_geofence_raio_metros';
 
-export function useGeofenceRaio() {
+export function useGeofenceRaio(enabled = true) {
   const [raioMetros, setRaioMetrosState] = useState(GEOFENCE_RAIO_METROS);
   const [opcoes, setOpcoes] = useState<number[]>([...GEOFENCE_RAIO_OPCOES]);
   const [carregando, setCarregando] = useState(true);
@@ -15,6 +15,11 @@ export function useGeofenceRaio() {
     if (local) {
       const n = parseInt(local, 10);
       if (Number.isFinite(n)) setRaioMetrosState(n);
+    }
+
+    if (!enabled) {
+      setCarregando(false);
+      return;
     }
 
     void (async () => {
@@ -35,7 +40,7 @@ export function useGeofenceRaio() {
         setCarregando(false);
       }
     })();
-  }, []);
+  }, [enabled]);
 
   const setRaioMetros = useCallback(async (metros: number) => {
     setRaioMetrosState(metros);

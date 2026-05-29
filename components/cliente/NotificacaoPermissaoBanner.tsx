@@ -1,12 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 
 export function NotificacaoPermissaoBanner() {
   const [hidden, setHidden] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (hidden || typeof window === 'undefined') return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || hidden) return null;
   if (!('Notification' in window)) return null;
   if (Notification.permission === 'granted' || Notification.permission === 'denied') {
     return null;

@@ -4,8 +4,10 @@
 > **Categoria:** Infraestrutura de decisão de consumo — não comparador de preços.  
 > **Princípios:** MVP first · baixo custo · IA híbrida · dados proprietários · IA explicável.
 
-**Última atualização:** maio/2026  
-**Horizonte:** 0–36 meses (MVP → escala → plataforma)
+**Última atualização:** 28/05/2026  
+**Horizonte:** 0–36 meses (MVP → escala → plataforma)  
+**Fase operacional atual:** **Fase 2 — PMF regional** (10.1 e 4.4 entregues; próximo: 10.2, 9.4, 11.x)  
+**Handoff detalhado:** [`CHECKPOINT_ROADMAP_MAIO2026.md`](./CHECKPOINT_ROADMAP_MAIO2026.md)
 
 ---
 
@@ -23,33 +25,38 @@
 
 ---
 
-## Estado atual (baseline técnico)
+## Estado atual (baseline técnico) — maio/2026
 
 | Área | Status | Referência no produto |
 |------|--------|------------------------|
 | Upload / integração catálogo parceiro | ✅ | `upload-smart`, `lib/upload-handler.ts`, `logs_importacao` |
-| Busca + lista inteligente | ✅ | `/cliente/busca`, `ListaInteligentePanel` |
-| Eventos comportamentais | ✅ | `lib/ai/event-collector.ts`, `UserEventType` |
-| IA gestor (GROOC, health, promo, gôndola) | ✅ | `lib/ai/grooc-engine.ts`, engines B2B |
-| Behavior engine + intenção | 🟡 | `lib/ai/behavior-engine.ts` |
-| Rota / consolidação lista | 🟡 | `lib/lista-rota-ia.ts`, eventos de rota |
-| Conversão lista (métricas gestor) | ✅ | `lib/ai/conversao-metrics.ts` |
-| NPS + temas IA | ✅ | `NpsSurveyWidget`, `nps-themes` |
-| Economia Líquida contextual | 🔲 | Visão estratégica |
-| Crowd / Waze de preços | 🔲 | Visão estratégica |
-| Perfil PRECI / despensa digital | 🔲 | Visão estratégica |
-| API batch parceiro (automática) | 🔲 | Evolução do upload-smart |
+| Sync agendado URL/SFTP | ✅ | `lib/sync-agendado.ts`, `SyncAgendadoCard`, cron/scheduler |
+| SLA + contrato dados Tier 1–3 | ✅ | `lib/parceiro-sla.ts`, `ParceiroSlaCard`, `docs/PARCEIRO_SLA_CONTRATO.md` |
+| Busca + lista inteligente + EL | ✅ | `/cliente/busca`, `ListaInteligentePanel`, `lib/economia-liquida.ts` |
+| Truth layer (metadados + UI) | ✅ | `lib/estoque-truth.ts`, `PrecoTruthBadge` |
+| Eventos comportamentais v2 | ✅ | `lib/ai/event-collector.ts`, `POST /api/events/track` |
+| Crowd / Waze de preços v1 | ✅ | `PrecoCrowdActions`, `lib/preco-crowd-feedback.ts` |
+| Perfil PRECI + confirmação compra | ✅ | `lib/perfil-preci.ts`, `CompraConfirmacaoPrompt` |
+| Despensa + cesta semana + emergência | ✅ | `lib/despensa-digital.ts`, `lib/cesta-semana.ts`, cards home |
+| Modo mercado ao vivo + scan v2 | ✅ | `/cliente/mercado-vivo`, `/cliente/scan` |
+| Raio familiar | ✅ | `/cliente/familia`, `lib/raio-familiar.ts` |
+| IA gestor (GROOC, saúde catálogo) | ✅ | `lib/catalogo-saude.ts`, `CatalogoSaudeCard` |
+| Behavior engine + intenção | 🟡 | `lib/ai/behavior-engine.ts`, Intent Score |
+| Rota / consolidação lista | 🟡 | `lib/lista-rota-proposta.ts`, `lista-rota-ia.ts` |
+| API batch parceiro (automática) | ✅ | `POST /api/partner/v1/estoques` |
+| Radar B2B / selo mercado consumidor | ✅ | `radar-demanda.ts`, `MercadoSeloBadge` |
+| PRECI Graph completo | 🟡 | `regiao-preco-unidades.ts` |
 
 ---
 
 ## Visão por fases
 
 ```
-FASE 0 — Fundação (agora)     │ Catálogo, busca, lista, IA gestor, upload parceiro
-FASE 1 — MVP da visão (0–3m)  │ EL, truth layer, confirmação compra, crowd v1, Perfil PRECI
-FASE 2 — PMF regional (3–9m)  │ Despensa, cesta semanal, modo mercado, sync parceiro, radar B2B
-FASE 3 — Escala (9–18m)       │ Hiperlocal graph, oferta agregada, API parceiro, ML leve
-FASE 4 — Plataforma (18–36m)  │ PRECI Network, intenção para indústria, expansão LATAM
+FASE 0 — Fundação          │ Catálogo, busca, lista, eventos, IA gestor          ✅ estável
+FASE 1 — MVP visão (0–3m)  │ EL, truth layer, crowd, Perfil PRECI, retenção      ✅ entregue
+FASE 2 — PMF (3–9m)        │ Despensa, mercado ao vivo, sync, SLA parceiro       ← AQUI
+FASE 3 — Escala (9–18m)    │ ML leve, oferta agregada, API parceiro, monetização
+FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 ```
 
 ---
@@ -61,150 +68,138 @@ FASE 4 — Plataforma (18–36m)  │ PRECI Network, intenção para indústria,
 | # | Entrega | Pri | Status | Notas |
 |---|---------|-----|--------|-------|
 | 0.1 | Upload-smart confiável em produção | P0 | ✅ | CSV/XLSX/JSON → `produtos` + `estoques` |
-| 0.2 | Documentação de export para parceiros | P0 | 🔲 | Campos alinhados ao `upload-handler` |
-| 0.3 | Dashboard saúde do catálogo (gestor) | P0 | 🔲 | Último import, SKUs stale, erros |
-| 0.4 | Expandir `UserEventType` (schema + API) | P0 | 🔲 | Ver épico 2.1 |
-| 0.5 | Busca: exibir `atualizadoEm` no preço | P1 | 🔲 | Base da truth layer |
+| 0.2 | Documentação de export para parceiros | P0 | ✅ | `PARCEIRO_EXPORT_CATALOGO.md` |
+| 0.3 | Dashboard saúde do catálogo (gestor) | P0 | ✅ | `CatalogoSaudeCard`, `lib/catalogo-saude.ts` |
+| 0.4 | Expandir `UserEventType` (schema + API) | P0 | ✅ | Sprint 0 — `ISSUES_SPRINT0.md` |
+| 0.5 | Busca: exibir `atualizadoEm` no preço | P1 | ✅ | Truth layer + `PrecoTruthBadge` |
 | 0.6 | GROOC: respostas sempre com fontes | P1 | 🟡 | Reforçar padrão explicável |
 
-**Métricas:** taxa de sucesso de import · % produtos com preço &lt; 7 dias · tempo lista→busca
+**Métricas:** taxa de sucesso de import · % produtos com preço &lt; SLA do tier · tempo lista→busca
 
 ---
 
-# FASE 1 — MVP da visão (meses 0–3)
+# FASE 1 — MVP da visão (meses 0–3) — ✅ release
 
-**Objetivo:** Usuário sente “como vivi sem isso” em **economia real**, **confiança no preço** e **hábito pré-mercado**.
+**Objetivo:** Usuário sente economia real, confiança no preço e hábito pré-mercado.
 
 ## Épico 1 — Economia baseada em contexto
 
-| # | Feature | Pri | Depende de | Descrição |
-|---|---------|-----|------------|-----------|
-| 1.1 | **Economia Líquida™ (EL)** | P0 | Geolocalização unidade | `Δpreço − deslocamento − tempo×valor_hora` |
-| 1.2 | EL na lista inteligente | P0 | 1.1 | “Vale ir ao mercado B: +R$ X líquidos” |
-| 1.3 | EL no scan/foto (v1) | P1 | 1.1 | Foto → match catálogo → EL |
-| 1.4 | Config valor do tempo | P1 | 1.1 | Default regional + ajuste usuário |
-| 1.5 | Regra “Fique aqui” / “Vale X min” | P0 | 1.1 | Copy explicável, nunca caixa-preta |
-
-**Métricas:** % recomendações EL aceitas · economia líquida confirmada/sessão
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 1.1 | **Economia Líquida™ (EL)** | P0 | ✅ | `lib/economia-liquida.ts`, `SPEC_ECONOMIA_LIQUIDA.md` |
+| 1.2 | EL na lista inteligente | P0 | ✅ | `ListaInteligentePanel`, chips busca |
+| 1.3 | EL no scan/foto (v1) | P1 | 🟡 | `lib/scan-inteligente.ts` após match |
+| 1.4 | Config valor do tempo | P1 | 🟡 | Defaults `EL_DEFAULTS` |
+| 1.5 | Regra “Fique aqui” / “Vale X min” | P0 | ✅ | `explicacao` em `calcularEconomiaLiquida` |
 
 ## Épico 2 — IA proprietária (camada PRECI)
 
-| # | Feature | Pri | Depende de | Descrição |
-|---|---------|-----|------------|-----------|
-| 2.1 | Novos eventos | P0 | 0.4 | `preco_confirmado`, `preco_reportado`, `checkin_mercado`, `compra_confirmada`, `compra_parcial` |
-| 2.2 | **Intent Score** heurístico | P0 | 2.1 | Decay temporal sobre eventos |
-| 2.3 | Push “cesta provável” (48–72h) | P0 | 2.2 | Oferta de demanda v1 |
-| 2.4 | Ranking híbrido (regras + histórico) | P0 | Behavior engine | Preço + distância + EL + preferências |
-| 2.5 | LLM só para explicação (GROOC/B2C) | P1 | Dados estruturados | JSON in → texto out |
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 2.1 | Novos eventos | P0 | ✅ | `preco_confirmado`, `compra_confirmada`, etc. |
+| 2.2 | **Intent Score** heurístico | P0 | ✅ | `GET /api/cliente/intent-score` |
+| 2.3 | Push “cesta provável” (48–72h) | P0 | 🟡 | `CestaProvavelCard`; FCM não validado E2E |
+| 2.4 | Ranking híbrido | P0 | 🟡 | Preço + EL + perfil; sem ML rank |
+| 2.5 | LLM só para explicação | P1 | 🟡 | GROOC B2B; B2C regras |
 
-**Métricas:** D7 abertura pré-mercado · precisão intenção (proxy: confirmação compra)
+## Épico 3 — Truth layer
 
-## Épico 3 — Truth layer (consistência de preço)
-
-| # | Feature | Pri | Depende de | Descrição |
-|---|---------|-----|------------|-----------|
-| 3.1 | Metadados em `estoques` | P0 | Migration | `fonte`, `confianca`, `verificadoEm` |
-| 3.2 | UI: “Atualizado há X” + selo | P0 | 3.1, 0.5 | Transparência ao consumidor |
-| 3.3 | Tiers parceiro (1/2/3) | P1 | Docs parceiro | Manual / diário / API |
-| 3.4 | Alerta gestor: catálogo stale | P0 | 0.3 | Email/painel |
-
-**Métricas:** % preços com confiança alta · NPS relacionado a preço errado
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 3.1 | Metadados em `estoques` | P0 | ✅ | `fonte`, `confianca`, `verificadoEm` |
+| 3.2 | UI: “Atualizado há X” + selo | P0 | ✅ | `PrecoTruthBadge` |
+| 3.3 | Tiers parceiro (1/2/3) | P1 | ✅ | `lib/parceiro-sla.ts` + gestor SLA card |
+| 3.4 | Alerta gestor: catálogo stale | P0 | ✅ | Saúde catálogo por tier |
 
 ## Épico 4 — Waze dos preços (crowd v1)
 
-| # | Feature | Pri | Depende de | Descrição |
-|---|---------|-----|------------|-----------|
-| 4.1 | Confirmar preço (3 taps) | P0 | 2.1 | Certo / mais caro / mais barato |
-| 4.2 | Peso por reputação usuário | P1 | 4.1 | Score simples |
-| 4.3 | Gamificação: níveis contribuidor | P1 | 4.1 | Observador → Guardião |
-| 4.4 | Badge mercado “Preço verificado” | P1 | 3.1, 4.1 | Confiança bilateral |
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 4.1 | Confirmar preço (3 taps) | P0 | ✅ | `PrecoCrowdActions` |
+| 4.2 | Peso por reputação usuário | P1 | 🟡 | `lib/crowd-reputacao.ts` |
+| 4.3 | Gamificação: níveis contribuidor | P1 | ✅ | `ContribuidorBadge` |
+| 4.4 | Badge mercado “Preço verificado” | P1 | ✅ | `MercadoSeloBadge`, `/api/public/mercado-selo` |
 
-**Métricas:** confirmações/DAU · divergências resolvidas &lt; 24h
+## Épico 5 — Perfil PRECI
 
-## Épico 5 — Comportamento humano (Perfil PRECI)
-
-| # | Feature | Pri | Depende de | Descrição |
-|---|---------|-----|------------|-----------|
-| 5.1 | **Perfil PRECI** (5 eixos) | P0 | Behavior engine | Planejador, marca, conveniência, explorador, urgente |
-| 5.2 | UI espelho + edição pelo usuário | P0 | 5.1 | “Me trate como estratega” |
-| 5.3 | Confirmação pós-compra (1 tap) | P0 | 2.1 | Substitui PDV: Sim / Parcial / Não fui |
-| 5.4 | Relatório semanal gentil | P1 | 5.3 | Oportunidades, não culpa |
-
-**Métricas:** % usuários com perfil calibrado · taxa confirmação compra
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 5.1 | Perfil 5 eixos | P0 | ✅ | `lib/perfil-preci.ts` |
+| 5.2 | UI espelho + edição | P0 | ✅ | `/cliente/perfil` |
+| 5.3 | Confirmação pós-compra | P0 | ✅ | `CompraConfirmacaoPrompt` |
+| 5.4 | Relatório semanal | P1 | ✅ | `RelatorioSemanaCard` |
 
 ## Épico 6 — Loops de retenção (v1)
 
-| # | Feature | Pri | Depende de | Descrição |
-|---|---------|-----|------------|-----------|
-| 6.1 | Streak economia confirmada | P1 | 5.3, 1.1 | Duolingo de economia real |
-| 6.2 | Card share “economizei R$ X” | P1 | 1.1 | Loop social / viral |
-| 6.3 | Notificação dia de mercado inferido | P0 | 2.2, 5.1 | Hábito pré-mercado |
-| 6.4 | Inflação da **sua cesta** | P1 | Histórico listas | vs IPCA |
-
-**Métricas:** D7/D30 · % compras com sessão PRECIVOX em 24h
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 6.1 | Streak economia | P1 | ✅ | `EconomiaStreakCard` |
+| 6.2 | Card share economia | P1 | ✅ | `ShareEconomiaCard` |
+| 6.3 | Notificação dia de mercado | P0 | 🟡 | Banner FCM; inferência parcial |
+| 6.4 | Inflação da **sua cesta** | P1 | ✅ | `InflacaoCestaCard` |
 
 ### Entregáveis Fase 1 (checklist release)
 
-- [ ] Economia Líquida em busca + lista
-- [ ] Truth layer visível ao consumidor
-- [ ] Crowd confirmar preço
-- [ ] Confirmação pós-compra
-- [ ] Perfil PRECI + Intent Score + 1 push semanal
-- [ ] Dashboard saúde catálogo (gestor)
+- [x] Economia Líquida em busca + lista
+- [x] Truth layer visível ao consumidor
+- [x] Crowd confirmar preço
+- [x] Confirmação pós-compra
+- [x] Perfil PRECI + Intent + card cesta (push 🟡)
+- [x] Dashboard saúde catálogo (gestor)
 
 ---
 
-# FASE 2 — PMF regional (meses 3–9)
+# FASE 2 — PMF regional (meses 3–9) — EM CURSO
 
-**Objetivo:** Tornar-se hábito semanal no(s) bairro(s) piloto e provar valor B2B mensurável.
+**Objetivo:** Hábito semanal no bairro piloto e valor B2B mensurável.
 
-## Épico 7 — Despensa e oferta ativa
+## Épico 7 — Despensa e oferta ativa ✅
 
-| # | Feature | Pri | Descrição |
-|---|---------|-----|-----------|
-| 7.1 | **Despensa digital** | P0 | Ciclo de reposição por SKU (inferido) |
-| 7.2 | **Cesta da semana** | P0 | IA monta, usuário aprova em 1 tap |
-| 7.3 | Modo Emergência (“jantar hoje”) | P1 | 5 itens, 1 mercado, mínimo tempo |
-| 7.4 | Espera que vale (promo timing) | P1 | Volatilidade regional por SKU |
-| 7.5 | Atacado vs varejo | P2 | Volume familiar + EL |
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 7.1 | **Despensa digital** | P0 | ✅ | `lib/despensa-digital.ts` (inferida + cesta) |
+| 7.2 | **Cesta da semana** | P0 | ✅ | `lib/cesta-semana.ts`, 1-tap |
+| 7.3 | Modo Emergência | P1 | ✅ | `ModoEmergenciaCard` |
+| 7.4 | Espera que vale | P1 | ✅ | `EsperaQueValeCard` / chip |
+| 7.5 | Atacado vs varejo | P2 | ✅ | `AtacadoVarejoCard` |
 
-## Épico 8 — Experiência em contexto
+## Épico 8 — Experiência em contexto ✅
 
-| # | Feature | Pri | Descrição |
-|---|---------|-----|-----------|
-| 8.1 | **Modo Mercado Ao Vivo** | P0 | Geofence + lista → UI corredor |
-| 8.2 | Scan inteligente v2 | P1 | On-device OCR + embedding |
-| 8.3 | Prova social hiperlocal anônima | P1 | “47 famílias do bairro…” |
-| 8.4 | Raio familiar (conta compartilhada) | P2 | Listas + preferências casa |
-| 8.5 | Troca inteligente explicável | P0 | Substitutos + histórico aceites |
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 8.1 | **Modo Mercado Ao Vivo** | P0 | ✅ | `/cliente/mercado-vivo`, geofence |
+| 8.2 | Scan inteligente v2 | P1 | ✅ | OCR + embedding, `/cliente/scan` |
+| 8.3 | Prova social hiperlocal | P1 | ✅ | `ProvaSocialChip`, batch busca |
+| 8.4 | Raio familiar | P2 | ✅ | `/cliente/familia` |
+| 8.5 | Troca inteligente explicável | P0 | ✅ | `lib/troca-inteligente.ts` |
 
 ## Épico 9 — Parceiro e sincronização
 
-| # | Feature | Pri | Descrição |
-|---|---------|-----|-----------|
-| 9.1 | **Sync agendado** (reuso upload) | P0 | URL/SFTP/cron → `processarUpload` |
-| 9.2 | API batch parceiro `POST /partner/v1/estoques` | P1 | Mesmo schema CSV |
-| 9.3 | SLA + contrato dados (Tier 1–3) | P0 | Comercial + ops |
-| 9.4 | Webhook preço alterado | P2 | Parceiros Tier 3 |
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 9.1 | **Sync agendado** | P0 | ✅ | `lib/sync-agendado.ts`, scheduler 30 min |
+| 9.2 | API batch `POST /api/partner/v1/estoques` | P1 | ✅ | `PARTNER_API_KEYS` + Tier 2+ |
+| 9.3 | **SLA + contrato dados Tier 1–3** | P0 | ✅ | `ParceiroSlaCard`, `PARCEIRO_SLA_CONTRATO.md` |
+| 9.4 | Webhook preço alterado | P2 | 🔲 | Tier 3 |
 
 ## Épico 10 — B2B: gestor como operador IA
 
-| # | Feature | Pri | Descrição |
-|---|---------|-----|-----------|
-| 10.1 | **Radar de demanda do bairro** | P0 | Listas ativas agregadas (anonimizado) |
-| 10.2 | Pricing assistido (aprovação 1 tap) | P0 | Promo engine + impacto estimado |
-| 10.3 | Alerta ruptura preditiva | P1 | Busca alta + crowd sem confirmação |
-| 10.4 | Benchmark preço regional | P1 | Percentil sem expor concorrente |
-| 10.5 | Resumo semana + ações GROOC | 🟡 | Evoluir `resumo-semana-gestor` |
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 10.1 | **Radar de demanda do bairro** | P0 | ✅ | `RadarDemandaCard` (7/14/30d, termos, link catálogo) |
+| 10.2 | Pricing assistido (aprovação 1 tap) | P0 | 🔲 | — |
+| 10.3 | Alerta ruptura preditiva | P1 | 🔲 | — |
+| 10.4 | Benchmark preço regional | P1 | 🔲 | — |
+| 10.5 | Resumo semana + ações GROOC | P1 | 🟡 | `resumo-semana-gestor` |
 
 ## Épico 11 — PRECI Graph (hiperlocal v1)
 
-| # | Feature | Pri | Descrição |
-|---|---------|-----|-----------|
-| 11.1 | Agregação preço por CEP5/polígono | P0 | `nome_chave` + geo |
-| 11.2 | Heatmap intenção (gestor) | P1 | Demanda latente |
-| 11.3 | Rota multi-mercado otimizada | P1 | 2 paradas se EL total &gt; limiar |
-| 11.4 | PRECI Index (cesta bairro) | P2 | Narrativa mídia/investidor |
+| # | Feature | Pri | Status | Onde está |
+|---|---------|-----|--------|-----------|
+| 11.1 | Agregação CEP5/polígono | P0 | 🟡 | `regiao-preco-unidades.ts` |
+| 11.2 | Heatmap intenção (gestor) | P1 | 🔲 | — |
+| 11.3 | Rota multi-mercado otimizada | P1 | 🟡 | `lista-rota-proposta.ts` |
+| 11.4 | PRECI Index (cesta bairro) | P2 | 🔲 | — |
 
 **Métricas Fase 2:** retenção D30 · GMV intenção influenciada · conversão lista→visita · parceiros Tier 2+
 
@@ -246,6 +241,8 @@ FASE 4 — Plataforma (18–36m)  │ PRECI Network, intenção para indústria,
 ```mermaid
 flowchart TD
   Upload[Upload-smart parceiro] --> Truth[Truth layer]
+  SLA[SLA Tier 1-3] --> Upload
+  SLA --> Sync[Sync agendado]
   Truth --> Crowd[Waze preços]
   Crowd --> Truth
   Events[Eventos expandidos] --> Intent[Intent Score]
@@ -265,30 +262,30 @@ flowchart TD
 
 # As 10 ideias mais poderosas — encaixe no roadmap
 
-| # | Ideia | Fase | Épico |
-|---|-------|------|-------|
-| 1 | Economia Líquida™ | 1 | 1 |
-| 2 | Oferta de demanda (cesta provável) | 1–2 | 2, 7 |
-| 3 | Despensa digital | 2 | 7 |
-| 4 | PRECI Graph hiperlocal | 2–3 | 11 |
-| 5 | Waze de preços | 1–3 | 4, 14 |
-| 6 | Heatmap intenção (gestor) | 2 | 10, 11 |
-| 7 | Modo Mercado Ao Vivo | 2 | 8 |
-| 8 | Perfil PRECI explicável | 1 | 5 |
-| 9 | Confirmação compra (PDV virtual) | 1 | 5 |
-| 10 | Inflação da sua cesta | 1–2 | 6 |
+| # | Ideia | Fase | Épico | Status |
+|---|-------|------|-------|--------|
+| 1 | Economia Líquida™ | 1 | 1 | ✅ |
+| 2 | Oferta de demanda (cesta provável) | 1–2 | 2, 7 | ✅ / 🟡 push |
+| 3 | Despensa digital | 2 | 7 | ✅ |
+| 4 | PRECI Graph hiperlocal | 2–3 | 11 | 🟡 |
+| 5 | Waze de preços | 1–3 | 4, 14 | ✅ v1 |
+| 6 | Heatmap intenção (gestor) | 2 | 10, 11 | 🔲 |
+| 7 | Modo Mercado Ao Vivo | 2 | 8 | ✅ |
+| 8 | Perfil PRECI explicável | 1 | 5 | ✅ |
+| 9 | Confirmação compra (PDV virtual) | 1 | 5 | ✅ |
+| 10 | Inflação da sua cesta | 1–2 | 6 | ✅ |
 
 ---
 
 # Squad e capacidade sugerida (MVP)
 
-| Stream | Foco Fase 1 | ~capacidade |
-|--------|-------------|-------------|
-| **Core dados** | Truth layer, sync doc, saúde catálogo | 1 dev |
-| **B2C experiência** | EL, crowd, Perfil PRECI, confirmação compra | 1–2 dev |
-| **IA/Backend** | Eventos, Intent Score, ranking, pushes | 1 dev |
-| **B2B** | Alertas gestor, radar v0, GROOC | 0.5 dev |
-| **Produto/Ops** | SLA parceiro, onboarding mercado | 1 PM + ops |
+| Stream | Foco atual | ~capacidade |
+|--------|------------|-------------|
+| **Core dados** | API parceiro 9.2, webhook 9.4 | 1 dev |
+| **B2C experiência** | Badge mercado 4.4, push cesta | 1 dev |
+| **IA/Backend** | Radar 10.1, ranking 2.4 | 1 dev |
+| **B2B** | Pricing assistido 10.2 | 0.5 dev |
+| **Produto/Ops** | PR branch acumulada + QA | 1 PM + ops |
 
 ---
 
@@ -296,29 +293,39 @@ flowchart TD
 
 | Risco | Mitigação |
 |-------|-----------|
-| Preço desatualizado gera desconfiança | Truth layer + crowd + SLA parceiro |
+| Preço desatualizado gera desconfiança | Truth layer + crowd + **SLA por tier** + saúde catálogo |
 | Custo de inferência LLM | LLM só explica; decisão = regras |
-| Parceiro não reimporta | Dashboard stale + perda de selo |
-| Escopo grande demais | Fase 1 = 6 épicos, release trimestral claro |
-| Privacidade (LGPD) | Agregados B2B, opt-in, política já existente |
+| Parceiro não reimporta | Dashboard stale + perda de selo / tier |
+| Escopo grande demais | Fase 2 por épico; PR incremental |
+| Privacidade (LGPD) | Contrato 9.3 + agregados B2B + opt-in |
 
 ---
 
-# Próximos passos imediatos (sprint 0 — 2 semanas)
+# Próximos passos imediatos
 
-- **Sprint 0:** ✅ código — [`ISSUES_SPRINT0.md`](./ISSUES_SPRINT0.md) · [`SPEC_ECONOMIA_LIQUIDA.md`](./SPEC_ECONOMIA_LIQUIDA.md)  
-- **Sprints 1–3:** [`FASE1_SPRINTS.md`](./FASE1_SPRINTS.md) (`PREC-101` … `PREC-307`)  
-- **Sprint 1:** UI truth layer + EL busca/lista + dashboard catálogo gestor  
+| Prioridade | Item | Doc |
+|------------|------|-----|
+| P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
+| P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
+| P1 | **10.2** Pricing assistido 1-tap | — |
+| P2 | **9.4** Webhook preço · **11.2** heatmap intenção | — |
+| Ops | Migration `parceiro_sla_tier` em produção | SQL em `prisma/migrations/` |
+| Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |
+
+**Histórico sprints:** [`ISSUES_SPRINT0.md`](./ISSUES_SPRINT0.md) · [`FASE1_SPRINTS.md`](./FASE1_SPRINTS.md)
 
 ---
 
 ## Referências internas
 
-- Integração catálogo: `INTEGRACAO_UPLOAD_PRODUTOS_COMPLETA.md`, `components/UploadDatabase.tsx`  
-- IA: `lib/ai/types.ts`, `behavior-engine.ts`, `grooc-engine.ts`  
-- Sincronização busca: `IMPLEMENTACAO_SINCRONIZACAO.md`  
-- Estratégia produto: conversas de visão (economia contextual, Waze, moats)
+| Documento | Uso |
+|-----------|-----|
+| [`CHECKPOINT_ROADMAP_MAIO2026.md`](./CHECKPOINT_ROADMAP_MAIO2026.md) | Handoff operacional |
+| [`PARCEIRO_SLA_CONTRATO.md`](./PARCEIRO_SLA_CONTRATO.md) | SLA Tier 1–3 (9.3) |
+| [`PARCEIRO_EXPORT_CATALOGO.md`](./PARCEIRO_EXPORT_CATALOGO.md) | Schema CSV + sync |
+| [`SPEC_ECONOMIA_LIQUIDA.md`](./SPEC_ECONOMIA_LIQUIDA.md) | Fórmula EL |
+| IA | `lib/ai/types.ts`, `behavior-engine.ts`, `grooc-engine.ts` |
 
 ---
 
-*Este roadmap é vivo: revisar ao fim de cada fase com métricas reais e ajustar prioridades P0/P1.*
+*Roadmap revisado em 28/05/2026 após entrega do 9.3 e alinhamento ao checkpoint. Revisar ao fim de cada release com métricas reais.*

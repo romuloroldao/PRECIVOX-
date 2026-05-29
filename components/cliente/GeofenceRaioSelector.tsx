@@ -6,12 +6,19 @@ import { Radio } from 'lucide-react';
 interface Props {
   compact?: boolean;
   dark?: boolean;
+  enabled?: boolean;
   onChange?: (metros: number) => void;
   className?: string;
 }
 
-export function GeofenceRaioSelector({ compact, dark, onChange, className = '' }: Props) {
-  const { raioMetros, opcoes, carregando, setRaioMetros } = useGeofenceRaio();
+export function GeofenceRaioSelector({
+  compact,
+  dark,
+  enabled = true,
+  onChange,
+  className = '',
+}: Props) {
+  const { raioMetros, opcoes, carregando, setRaioMetros } = useGeofenceRaio(enabled);
 
   const escolher = (m: number) => {
     void setRaioMetros(m);

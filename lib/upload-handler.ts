@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
-import { truthFromUpload } from '@/lib/estoque-truth';
+import { truthFromPartnerApi, truthFromUpload } from '@/lib/estoque-truth';
+
+export type UploadOrigem = 'upload' | 'partner_api';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -168,7 +170,9 @@ export async function processarUpload(
   fileSize: number,
   mercadoId: string,
   unidadeId: string,
+  options?: { origem?: UploadOrigem }
 ): Promise<ResultadoUpload> {
+  const origem = options?.origem ?? 'upload';
   const logImportacao = await prisma.logs_importacao.create({
     data: {
       id: `imp-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
@@ -275,7 +279,10 @@ export async function processarUpload(
           where: { unidadeId_produtoId: { unidadeId, produtoId: produto.id } },
         });
 
-        const truth = truthFromUpload(!!estoqueExistente);
+        const truth =
+          origem === 'partner_api'
+            ? truthFromPartnerApi()
+            : truthFromUpload(!!estoqueExistente);
 
         if (estoqueExistente) {
           await prisma.estoques.update({

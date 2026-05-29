@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { Users, ChevronRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';
 
 export function RaioFamiliarCard() {
-  const { data, loading } = useRaioFamiliar();
+  const { status } = useSession();
+  const { data, loading } = useRaioFamiliar(status === 'authenticated');
 
   if (loading && !data) return null;
 

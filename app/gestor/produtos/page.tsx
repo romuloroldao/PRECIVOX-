@@ -9,6 +9,7 @@ import Link from 'next/link';
 import UploadDatabase from '@/components/UploadDatabase';
 import { SyncAgendadoCard } from '@/components/gestor/SyncAgendadoCard';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
+import { ParceiroSlaCard } from '@/components/gestor/ParceiroSlaCard';
 
 interface Produto {
   id: string;
@@ -222,6 +223,8 @@ export default function GestorProdutosPage() {
         </div>
 
         {mercadoId && <CatalogoSaudeCard mercadoId={mercadoId} />}
+
+        {mercadoId && <ParceiroSlaCard mercadoId={mercadoId} />}
 
         {mercadoId && <SyncAgendadoCard mercadoId={mercadoId} />}
 

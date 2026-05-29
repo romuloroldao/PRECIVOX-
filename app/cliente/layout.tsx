@@ -1,5 +1,6 @@
 import RouteGuard from '@/components/RouteGuard';
 import { NpsSurveyWidget } from '@/components/cliente/NpsSurveyWidget';
+import { MercadoVivoGeofenceWatcher } from '@/components/cliente/MercadoVivoGeofenceWatcher';
 
 export default function ClienteLayout({
   children,
@@ -8,8 +9,10 @@ export default function ClienteLayout({
 }) {
   return (
     <RouteGuard allowedRoles={['CLIENTE', 'GESTOR', 'ADMIN']}>
-      {children}
-      <NpsSurveyWidget />
+      <MercadoVivoGeofenceWatcher>
+        {children}
+        <NpsSurveyWidget />
+      </MercadoVivoGeofenceWatcher>
     </RouteGuard>
   );
 }

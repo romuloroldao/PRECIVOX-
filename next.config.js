@@ -94,11 +94,6 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
-  // Experimental
-  experimental: {
-    optimizeCss: true,
-  },
-
   eslint: {
     // Desabilita falha de build por erros de lint em produção.
     // Lint continua disponível via `next lint` em pipelines dedicados.

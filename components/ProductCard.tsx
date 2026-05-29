@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useMercadoSelos } from '@/app/hooks/useMercadoSelos';
+import { MercadoSeloBadge } from '@/components/cliente/MercadoSeloBadge';
 import { useLista } from '@/app/context/ListaContext';
 import { Produto } from '@/app/hooks/useProdutos';
 import { useToast } from '@/components/ToastContainer';
@@ -21,6 +23,11 @@ interface ProductCardProps {
 export function ProductCard({ produtos, onAdicionar }: ProductCardProps) {
   const { adicionarItem, listaAtivaId } = useLista();
   const { success } = useToast();
+  const mercadoIds = useMemo(
+    () => [...new Set(produtos.map((p) => p.unidade.mercado.id))],
+    [produtos]
+  );
+  const selosMercado = useMercadoSelos(mercadoIds);
 
   const handleAdicionar = (produto: Produto) => {
     adicionarItem({
@@ -80,6 +87,8 @@ export function ProductCard({ produtos, onAdicionar }: ProductCardProps) {
         <CardLinhaSubstituto
           key={produto.id}
           produto={produto}
+          seloMercado={selosMercado[produto.unidade.mercado.id]?.selo ?? null}
+          seloCurto={selosMercado[produto.unidade.mercado.id]?.seloCurto ?? null}
           onAdicionar={handleAdicionar}
           onSubstituir={registrarSubstituicao}
         />
@@ -90,10 +99,14 @@ export function ProductCard({ produtos, onAdicionar }: ProductCardProps) {
 
 function CardLinhaSubstituto({
   produto,
+  seloMercado,
+  seloCurto,
   onAdicionar,
   onSubstituir,
 }: {
   produto: Produto;
+  seloMercado: string | null;
+  seloCurto: string | null;
   onAdicionar: (p: Produto) => void;
   onSubstituir: (origem: Produto, sub: Produto, modo: 'categoria' | 'equivalente') => void;
 }) {
@@ -363,6 +376,14 @@ function CardLinhaSubstituto({
             <div className="mb-4">
               <p className="text-sm text-text-secondary">
                 <span className="font-medium">Loja:</span> {produto.unidade.mercado.nome}
+                {seloMercado && (
+                  <MercadoSeloBadge
+                    selo={seloMercado}
+                    seloCurto={seloCurto}
+                    compact
+                    className="ml-1 align-middle"
+                  />
+                )}
               </p>
               <p className="text-xs text-text-tertiary">
                 {produto.unidade.nome} - {produto.unidade.cidade}

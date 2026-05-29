@@ -3,8 +3,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
-
-const DIAS_STALE = 7;
+import { diasStaleParaTier, normalizarTier } from '@/lib/parceiro-sla';
 
 export type CatalogoSaude = {
   mercadoId: string;
@@ -24,8 +23,14 @@ export type CatalogoSaude = {
 };
 
 export async function getCatalogoSaude(mercadoId: string): Promise<CatalogoSaude> {
+  const mercadoMeta = await prisma.mercados.findUnique({
+    where: { id: mercadoId },
+    select: { parceiroTier: true },
+  });
+  const diasStale = diasStaleParaTier(normalizarTier(mercadoMeta?.parceiroTier));
+
   const limite = new Date();
-  limite.setDate(limite.getDate() - DIAS_STALE);
+  limite.setDate(limite.getDate() - diasStale);
 
   const unidades = await prisma.unidades.findMany({
     where: { mercadoId, ativa: true },
@@ -61,11 +66,11 @@ export async function getCatalogoSaude(mercadoId: string): Promise<CatalogoSaude
   const confiancaMedia =
     aggConf._avg.confianca != null ? Math.round(aggConf._avg.confianca) : null;
 
-  let recomendacao = 'Catálogo em dia. Mantenha importações semanais.';
+  let recomendacao = `Catálogo em dia (SLA Tier: até ${diasStale} dias).`;
   if (totalSkus === 0) {
     recomendacao = 'Nenhum produto no catálogo. Faça o primeiro upload na área de produtos.';
   } else if (pctStale >= 40) {
-    recomendacao = `Mais de ${pctStale}% dos preços não são atualizados há ${DIAS_STALE}+ dias. Reimporte o catálogo.`;
+    recomendacao = `Mais de ${pctStale}% dos preços não são atualizados há ${diasStale}+ dias. Reimporte o catálogo.`;
   } else if (pctStale >= 15) {
     recomendacao = 'Parte do catálogo está desatualizada. Agende uma reimportação esta semana.';
   } else if (!ultimoImport) {

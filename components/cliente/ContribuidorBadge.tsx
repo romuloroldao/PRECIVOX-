@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Award } from 'lucide-react';
-import type { NivelContribuidor } from '@/lib/crowd-reputacao';
-import { LABEL_NIVEL } from '@/lib/crowd-reputacao';
+import type { NivelContribuidor } from '@/lib/crowd-reputacao-labels';
+import { LABEL_NIVEL } from '@/lib/crowd-reputacao-labels';
 
 interface ContribuidorBadgeProps {
   className?: string;

@@ -55,27 +55,35 @@ export async function processarFeedbackPreco(input: {
   const desde = new Date();
   desde.setHours(desde.getHours() - JANELA_CONFIRMACOES_H);
 
-  const confirmacoesRecentes = await prisma.userEvent.count({
-    where: {
-      type: 'preco_confirmado',
-      timestamp: { gte: desde },
-      metadata: {
-        path: ['estoqueId'],
-        equals: input.estoqueId,
-      },
-    },
-  });
-
-  const divergenciasRecentes = await prisma.userEvent.count({
-    where: {
-      type: 'preco_reportado',
-      timestamp: { gte: desde },
-      metadata: {
-        path: ['estoqueId'],
-        equals: input.estoqueId,
-      },
-    },
-  });
+  let confirmacoesRecentes = 0;
+  let divergenciasRecentes = 0;
+  try {
+    [confirmacoesRecentes, divergenciasRecentes] = await Promise.all([
+      prisma.userEvent.count({
+        where: {
+          type: 'preco_confirmado',
+          timestamp: { gte: desde },
+          metadata: {
+            path: ['estoqueId'],
+            equals: input.estoqueId,
+          },
+        },
+      }),
+      prisma.userEvent.count({
+        where: {
+          type: 'preco_reportado',
+          timestamp: { gte: desde },
+          metadata: {
+            path: ['estoqueId'],
+            equals: input.estoqueId,
+          },
+        },
+      }),
+    ]);
+  } catch (e) {
+    console.error('[preco-crowd-feedback] user_events indisponível:', e);
+    if (input.tipo === 'confirmado') confirmacoesRecentes = 1;
+  }
 
   let truth;
   if (input.tipo === 'confirmado' && divergenciasRecentes <= confirmacoesRecentes) {

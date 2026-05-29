@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';
-import { RAIO_FAMILIAR_MAX_MEMBROS } from '@/lib/raio-familiar';
+import { RAIO_FAMILIAR_MAX_MEMBROS } from '@/lib/raio-familiar-constants';
 import {
   ArrowLeft,
   Copy,
@@ -15,7 +16,8 @@ import {
 } from 'lucide-react';
 
 export default function FamiliaPage() {
-  const { data, loading, recarregar } = useRaioFamiliar();
+  const { status } = useSession();
+  const { data, loading, recarregar } = useRaioFamiliar(status === 'authenticated');
   const [nomeCasa, setNomeCasa] = useState('');
   const [codigo, setCodigo] = useState('');
   const [volume, setVolume] = useState(3);
@@ -59,6 +61,12 @@ export default function FamiliaPage() {
     setMsg('Código copiado!');
   };
 
+  useEffect(() => {
+    if (!circle) return;
+    setVolume(circle.preferencias.volumeFamiliar);
+    setCompartilhar(circle.preferencias.compartilharListas);
+  }, [circle?.preferencias.volumeFamiliar, circle?.preferencias.compartilharListas]);
+
   if (loading && !data) {
     return (
       <DashboardLayout role="CLIENTE">
@@ -68,12 +76,6 @@ export default function FamiliaPage() {
       </DashboardLayout>
     );
   }
-
-  useEffect(() => {
-    if (!circle) return;
-    setVolume(circle.preferencias.volumeFamiliar);
-    setCompartilhar(circle.preferencias.compartilharListas);
-  }, [circle?.preferencias.volumeFamiliar, circle?.preferencias.compartilharListas]);
 
   return (
     <DashboardLayout role="CLIENTE">

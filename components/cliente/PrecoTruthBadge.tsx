@@ -1,6 +1,6 @@
 'use client';
 
-import { labelConfianca, labelFrescorPreco } from '@/lib/estoque-truth';
+import { labelConfianca, labelFrescorPreco } from '@/lib/estoque-truth-labels';
 import { cn } from '@/lib/utils';
 import { ShieldCheck, Clock } from 'lucide-react';
 

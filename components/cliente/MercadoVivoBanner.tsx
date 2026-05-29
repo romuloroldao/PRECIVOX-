@@ -2,36 +2,48 @@
 
 import Link from 'next/link';
 import { MapPin, Navigation, Loader2 } from 'lucide-react';
-import { useMercadoVivoGeofence } from '@/app/hooks/useMercadoVivoGeofence';
-import { useGeofenceRaio } from '@/app/hooks/useGeofenceRaio';
+import { useSession } from 'next-auth/react';
+import { useMercadoVivoGeofenceContext } from '@/components/cliente/MercadoVivoGeofenceProvider';
+import { useMercadoSelos } from '@/app/hooks/useMercadoSelos';
 import { GeofenceRaioSelector } from '@/components/cliente/GeofenceRaioSelector';
+import { MercadoSeloBadge } from '@/components/cliente/MercadoSeloBadge';
 
 interface Props {
   enabled?: boolean;
 }
 
 export function MercadoVivoBanner({ enabled = true }: Props) {
-  const { raioMetros } = useGeofenceRaio();
-  const { deteccao, erro, carregando, verificar } = useMercadoVivoGeofence({
-    enabled,
-    raioMetros,
-  });
+  const { status } = useSession();
+  const sessionOk = status === 'authenticated';
+  const { deteccao, erro, carregando, gpsAtivo, raioMetros, verificar, reiniciarGps } =
+    useMercadoVivoGeofenceContext();
+  const selos = useMercadoSelos(deteccao?.mercadoId ? [deteccao.mercadoId] : []);
+  const selo = deteccao?.mercadoId ? selos[deteccao.mercadoId] : undefined;
 
   if (!enabled) return null;
 
   if (!deteccao?.dentro || !deteccao.mercadoId) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <GeofenceRaioSelector compact onChange={() => void verificar()} />
+        <GeofenceRaioSelector
+          compact
+          enabled={sessionOk && enabled}
+          onChange={() => void verificar()}
+        />
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-600">
           {erro ? (
             <span>{erro}</span>
+          ) : carregando || gpsAtivo ? (
+            <span>Detectando mercado pela sua localização…</span>
           ) : (
-            <span>Aguardando localização para detectar o mercado…</span>
+            <span>Aguardando sinal GPS…</span>
           )}
           <button
             type="button"
-            onClick={() => void verificar()}
+            onClick={() => {
+              reiniciarGps();
+              void verificar();
+            }}
             className="font-semibold text-precivox-blue hover:underline"
           >
             Detectar agora
@@ -50,8 +62,16 @@ export function MercadoVivoBanner({ enabled = true }: Props) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-100">
               Modo mercado ao vivo · raio {raioMetros} m
             </p>
-            <p className="font-semibold">
-              Você está em {deteccao.unidadeNome ?? deteccao.mercadoNome}
+            <p className="flex flex-wrap items-center gap-2 font-semibold">
+              <span>Você está em {deteccao.unidadeNome ?? deteccao.mercadoNome}</span>
+              {selo?.selo && (
+                <MercadoSeloBadge
+                  selo={selo.selo}
+                  seloCurto={selo.seloCurto}
+                  compact
+                  className="!bg-white/20 !text-white !ring-white/40"
+                />
+              )}
             </p>
             {deteccao.distanciaMetros != null && deteccao.distanciaMetros >= 0 && (
               <p className="text-xs text-emerald-50">~{deteccao.distanciaMetros} m da entrada</p>

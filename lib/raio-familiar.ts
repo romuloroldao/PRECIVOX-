@@ -6,8 +6,12 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 
-export const RAIO_FAMILIAR_MAX_MEMBROS = 6;
-export const RAIO_FAMILIAR_CODIGO_LEN = 6;
+import {
+  RAIO_FAMILIAR_MAX_MEMBROS,
+  RAIO_FAMILIAR_CODIGO_LEN,
+} from '@/lib/raio-familiar-constants';
+
+export { RAIO_FAMILIAR_MAX_MEMBROS, RAIO_FAMILIAR_CODIGO_LEN } from '@/lib/raio-familiar-constants';
 
 export type RaioFamiliarRole = 'admin' | 'membro';
 
