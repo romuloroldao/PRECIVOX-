@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import type { RegiaoPrecoRef } from '@/lib/ai/conversao-metrics';
+import { REGIAO_PRECO_UI, detalheRegiaoPreco, type RegiaoPrecoApi } from '@/lib/regiao-preco-ui';
 
 type Tendencia = { termo: string; buscas: number; demanda: 'ALTA' | 'MEDIA' };
 
@@ -56,13 +58,6 @@ type Resumo = {
   ticketMedioImportado: number | null;
 };
 
-type RegiaoPrecoApi = {
-  pedido: 'cidade' | 'ampla' | 'proximidade';
-  efetivo: 'cidade' | 'ampla' | 'proximidade';
-  fallbackDeCidadeParaAmpla: boolean;
-  raioKm?: number;
-};
-
 type ApiPayload = {
   tendenciasBusca: Tendencia[];
   insightTendencias: string;
@@ -74,22 +69,6 @@ type ApiPayload = {
   regiaoPreco?: RegiaoPrecoApi;
 };
 
-/** Texto curto sobre qual “sua região” está sendo usada na referência de preço. */
-function detalheRegiaoPreco(r?: RegiaoPrecoApi): string {
-  if (!r) return 'média agregada na sua região (por categoria)';
-  if (r.fallbackDeCidadeParaAmpla) {
-    return 'média com visão ampliada (cadastre a cidade da unidade para aproximar do entorno físico)';
-  }
-  if (r.efetivo === 'proximidade') {
-    const km = r.raioKm ?? 25;
-    return `média em raio de ~${km} km a partir do endereço geocodificado da unidade (produto lógico quando houver chave)`;
-  }
-  if (r.efetivo === 'cidade') {
-    return 'média no entorno imediato — mesma cidade do cadastro da unidade (produto lógico quando houver chave)';
-  }
-  return 'média com visão ampliada na sua região — mais pontos agregados (produto lógico quando houver chave)';
-}
-
 export default function ModuloConversaoPage() {
   const { data: session, status } = useSession();
   const [mercadoId, setMercadoId] = useState('');
@@ -99,7 +78,7 @@ export default function ModuloConversaoPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ApiPayload | null>(null);
   /** Granularidade da referência de preço (comportamento de quem pode ir à loja física). */
-  const [regiaoPreco, setRegiaoPreco] = useState<'cidade' | 'ampla' | 'proximidade'>('cidade');
+  const [regiaoPreco, setRegiaoPreco] = useState<RegiaoPrecoRef>('cep5');
   const [raioKm, setRaioKm] = useState(25);
 
   useEffect(() => {
@@ -205,20 +184,22 @@ export default function ModuloConversaoPage() {
             </label>
             <p className="text-xs text-gray-600 mb-2">
               Coordenadas da unidade são obtidas automaticamente a partir do endereço (geocodificação ao
-              cadastrar). O modo &quot;proximidade&quot; usa raio em km; os demais usam cidade ou visão
-              ampliada.
+              cadastrar). CEP5 e polígono do bairro são os modos mais hiperlocais; proximidade usa raio em km.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <select
                 value={regiaoPreco}
-                onChange={(e) =>
-                  setRegiaoPreco(e.target.value as 'cidade' | 'ampla' | 'proximidade')
-                }
+                onChange={(e) => setRegiaoPreco(e.target.value as RegiaoPrecoRef)}
                 className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
               >
-                <option value="cidade">Entorno imediato (mesma cidade do cadastro da unidade)</option>
-                <option value="ampla">Região ampliada (mais pontos na média)</option>
-                <option value="proximidade">Proximidade (raio em km a partir do endereço)</option>
+                {REGIAO_PRECO_UI.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                    {r.id === 'cidade' ? ' (mesma cidade do cadastro)' : ''}
+                    {r.id === 'ampla' ? ' (UF ampliada)' : ''}
+                    {r.id === 'proximidade' ? ' (raio km)' : ''}
+                  </option>
+                ))}
               </select>
               {regiaoPreco === 'proximidade' && (
                 <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -234,6 +215,16 @@ export default function ModuloConversaoPage() {
                 </label>
               )}
             </div>
+            {data?.regiaoPreco?.fallbackDePoligonoParaCep5 && (
+              <p className="mt-2 text-xs text-amber-800">
+                Polígono do bairro indisponível — usando agregação por CEP5.
+              </p>
+            )}
+            {data?.regiaoPreco?.fallbackDeCep5ParaCidade && (
+              <p className="mt-2 text-xs text-amber-800">
+                CEP não cadastrado ou sem lojas no CEP5 — usando cidade/UF.
+              </p>
+            )}
             {data?.regiaoPreco?.fallbackDeCidadeParaAmpla && (
               <p className="mt-2 text-xs text-amber-800">
                 Sem cidade no cadastro da unidade: usamos a referência ampliada neste cálculo.

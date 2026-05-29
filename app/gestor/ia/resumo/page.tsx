@@ -5,6 +5,8 @@ import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft, Calendar, Sparkles } from 'lucide-react';
+import type { RegiaoPrecoRef } from '@/lib/ai/conversao-metrics';
+import { REGIAO_PRECO_UI, type RegiaoPrecoApi } from '@/lib/regiao-preco-ui';
 
 type AcaoSemanal = {
   id: string;
@@ -25,12 +27,7 @@ type AcaoSemanal = {
   fontes?: string[];
 };
 
-type RegiaoPrecoApi = {
-  pedido: 'cidade' | 'ampla' | 'proximidade';
-  efetivo: 'cidade' | 'ampla' | 'proximidade';
-  fallbackDeCidadeParaAmpla: boolean;
-  raioKm?: number;
-};
+type RegiaoPrecoApiLocal = RegiaoPrecoApi;
 
 type ResumoPayload = {
   acoes: AcaoSemanal[];
@@ -38,7 +35,7 @@ type ResumoPayload = {
   periodoDias: number;
   geradoEm: string;
   mercadoNome: string | null;
-  regiaoPreco?: RegiaoPrecoApi;
+  regiaoPreco?: RegiaoPrecoApiLocal;
   fontesResumo?: string[];
 };
 
@@ -65,7 +62,7 @@ export default function ResumoSemanaPage() {
   const [mercadoId, setMercadoId] = useState('');
   const [mercadoResolvido, setMercadoResolvido] = useState(false);
   const [dias, setDias] = useState(30);
-  const [regiaoPreco, setRegiaoPreco] = useState<'cidade' | 'ampla' | 'proximidade'>('cidade');
+  const [regiaoPreco, setRegiaoPreco] = useState<RegiaoPrecoRef>('cep5');
   const [raioKm, setRaioKm] = useState(25);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -195,21 +192,15 @@ export default function ResumoSemanaPage() {
                 <span className="sr-only">Referência de preço</span>
                 <select
                   value={regiaoPreco}
-                  onChange={(e) =>
-                    setRegiaoPreco(e.target.value as 'cidade' | 'ampla' | 'proximidade')
-                  }
+                  onChange={(e) => setRegiaoPreco(e.target.value as RegiaoPrecoRef)}
                   className="max-w-[min(100vw-2rem,280px)] rounded border-0 bg-white/20 text-white outline-none ring-0"
                   title="Referência de preço na sua região"
                 >
-                  <option value="cidade" className="text-gray-900">
-                    Preço: entorno (cidade)
-                  </option>
-                  <option value="ampla" className="text-gray-900">
-                    Preço: região ampliada
-                  </option>
-                  <option value="proximidade" className="text-gray-900">
-                    Preço: proximidade (km)
-                  </option>
+                  {REGIAO_PRECO_UI.map((r) => (
+                    <option key={r.id} value={r.id} className="text-gray-900">
+                      Preço: {r.label}
+                    </option>
+                  ))}
                 </select>
                 {regiaoPreco === 'proximidade' && (
                   <input
@@ -227,6 +218,16 @@ export default function ResumoSemanaPage() {
           </div>
           {payload?.mercadoNome && (
             <p className="mt-4 text-sm opacity-90">Mercado: {payload.mercadoNome}</p>
+          )}
+          {payload?.regiaoPreco?.fallbackDePoligonoParaCep5 && (
+            <p className="mt-2 text-xs opacity-90">
+              Polígono do bairro indisponível — referência por CEP5.
+            </p>
+          )}
+          {payload?.regiaoPreco?.fallbackDeCep5ParaCidade && (
+            <p className="mt-2 text-xs opacity-90">
+              CEP5 indisponível — referência por cidade/UF.
+            </p>
           )}
           {payload?.regiaoPreco?.fallbackDeCidadeParaAmpla && (
             <p className="mt-2 text-xs opacity-90">

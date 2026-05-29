@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, Loader2, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import { REGIAO_PRECO_UI } from '@/lib/regiao-preco-ui';
 
 interface Props {
   mercadoId?: string;
@@ -28,15 +29,11 @@ type Data = {
   regiao: { label: string };
 };
 
-const REGIOES = [
-  { id: 'cidade', label: 'Cidade' },
-  { id: 'ampla', label: 'UF' },
-  { id: 'proximidade', label: 'Raio' },
-] as const;
+const REGIOES = REGIAO_PRECO_UI;
 
 export function PreciIndexCestaCard({ mercadoId, compact = false }: Props) {
   const [data, setData] = useState<Data | null>(null);
-  const [regiaoPreco, setRegiaoPreco] = useState<(typeof REGIOES)[number]['id']>('cidade');
+  const [regiaoPreco, setRegiaoPreco] = useState<(typeof REGIOES)[number]['id']>('cep5');
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 

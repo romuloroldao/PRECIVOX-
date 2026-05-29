@@ -11,7 +11,7 @@ import {
   type RegiaoPrecoRef,
   type RegiaoPrecoResolvido,
 } from '@/lib/ai/conversao-metrics';
-import { resolverUnidadesReferenciaPreco } from '@/lib/regiao-preco-unidades';
+import { resolverUnidadesReferenciaPreco, toCtxRegiaoPreco } from '@/lib/regiao-preco-unidades';
 
 export type ItemCestaPreci = {
   slug: string;
@@ -81,16 +81,16 @@ async function unidadesWhereRegiao(
   raioKm: number,
   incluirProprioMercado: boolean
 ): Promise<Prisma.estoquesWhereInput['unidades'] | null> {
-  const ctxGeo = { efetivo: ctx.efetivo, estado: ctx.estado, cidade: ctx.cidade };
+  const ctxGeo = toCtxRegiaoPreco(ctx);
   let ref = mercadoId
     ? await resolverUnidadesReferenciaPreco(mercadoId, ctxGeo, raioKm)
     : null;
 
-  if (!ref && ctx.efetivo === 'proximidade' && mercadoId) {
-    const sub = ctx.estado && ctx.cidade ? 'cidade' : 'ampla';
+  if (!ref && mercadoId && (ctx.efetivo === 'proximidade' || ctx.efetivo === 'poligono' || ctx.efetivo === 'cep5')) {
+    const sub = ctx.estado && ctx.cidade ? ('cidade' as const) : ('ampla' as const);
     ref = await resolverUnidadesReferenciaPreco(
       mercadoId,
-      { efetivo: sub, estado: ctx.estado, cidade: ctx.cidade },
+      { efetivo: sub, estado: ctx.estado, cidade: ctx.cidade, cep5: ctx.cep5, bairro: ctx.bairro },
       raioKm
     );
   }
@@ -255,6 +255,12 @@ async function variacaoHistoricaRegional(
 }
 
 function labelRegiao(ctx: RegiaoPrecoResolvido, raioKm: number): string {
+  if (ctx.efetivo === 'cep5' && ctx.cep5) {
+    return ctx.bairro ? `CEP ${ctx.cep5} · ${ctx.bairro}` : `CEP ${ctx.cep5}`;
+  }
+  if (ctx.efetivo === 'poligono') {
+    return ctx.bairro ? `Polígono ${ctx.bairro}` : 'Polígono do bairro';
+  }
   if (ctx.efetivo === 'proximidade') return `raio ${raioKm} km`;
   if (ctx.efetivo === 'cidade' && ctx.cidade) return ctx.cidade;
   if (ctx.estado) return `UF ${ctx.estado}`;
@@ -265,17 +271,24 @@ export { parseRegiaoPrecoParam };
 
 export async function calcularPreciIndexCesta(
   mercadoId: string | null,
-  regiaoPreco: RegiaoPrecoRef = 'cidade',
+  regiaoPreco: RegiaoPrecoRef = 'cep5',
   raioKm = 25
 ): Promise<PreciIndexResult> {
-  const ctx = mercadoId
+  const ctx: RegiaoPrecoResolvido = mercadoId
     ? await resolveRegiaoPrecoParaMercado(mercadoId, regiaoPreco)
     : {
         pedido: regiaoPreco,
-        efetivo: regiaoPreco === 'proximidade' ? ('proximidade' as const) : ('ampla' as const),
+        efetivo:
+          regiaoPreco === 'proximidade' ||
+          regiaoPreco === 'cep5' ||
+          regiaoPreco === 'poligono'
+            ? regiaoPreco
+            : 'ampla',
         fallbackDeCidadeParaAmpla: false,
         estado: null,
         cidade: null,
+        cep5: null,
+        bairro: null,
       };
 
   const unidadesRegiao = await unidadesWhereRegiao(mercadoId, ctx, raioKm, true);

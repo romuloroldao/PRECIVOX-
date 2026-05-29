@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { agregarTemas, type ContagemTema } from '@/lib/ai/nps-themes';
 import { buildChaveProdutoParaInsights, normalizeTermoBuscaChave } from '@/lib/produtos-nome-normalize';
-import { resolverUnidadesReferenciaPreco } from '@/lib/regiao-preco-unidades';
+import { resolverUnidadesReferenciaPreco, toCtxRegiaoPreco } from '@/lib/regiao-preco-unidades';
 import type { Prisma } from '@prisma/client';
 
 export type TendenciaBuscaRow = {
@@ -26,21 +26,29 @@ export type ItemAbandonadoRow = {
   chaveInsight?: string;
 };
 
-/** Referência de preço: entorno, UF ampliada ou raio em km (coordenadas da unidade). */
-export type RegiaoPrecoRef = 'cidade' | 'ampla' | 'proximidade';
+/** Referência de preço: CEP5, polígono de bairro, cidade, UF ou raio km. */
+export type RegiaoPrecoRef = 'cidade' | 'ampla' | 'proximidade' | 'cep5' | 'poligono';
 
 export type RegiaoPrecoResolvido = {
   pedido: RegiaoPrecoRef;
   efetivo: RegiaoPrecoRef;
   /** Pediu cidade mas faltou cidade no cadastro — caiu para ampliada. */
   fallbackDeCidadeParaAmpla: boolean;
+  /** Polígono indisponível — usa CEP5. */
+  fallbackDePoligonoParaCep5?: boolean;
+  /** CEP5 sem unidades — caiu para cidade/ampliada. */
+  fallbackDeCep5ParaCidade?: boolean;
   estado: string | null;
   cidade: string | null;
+  cep5: string | null;
+  bairro: string | null;
 };
 
 export function parseRegiaoPrecoParam(raw: string | null | undefined): RegiaoPrecoRef {
   if (raw === 'ampla') return 'ampla';
   if (raw === 'proximidade') return 'proximidade';
+  if (raw === 'cep5') return 'cep5';
+  if (raw === 'poligono') return 'poligono';
   return 'cidade';
 }
 
@@ -48,12 +56,41 @@ export async function resolveRegiaoPrecoParaMercado(
   mercadoId: string,
   pedido: RegiaoPrecoRef
 ): Promise<RegiaoPrecoResolvido> {
+  const {
+    extrairCep5,
+    listarUnidadeIdsNoCep5,
+    construirPoligonoBairroCep5,
+    construirPoligonoMercado,
+    listarUnidadeIdsNoPoligono,
+  } = await import('@/lib/regiao-preco-unidades');
+
   const u = await prisma.unidades.findFirst({
     where: { mercadoId },
-    select: { estado: true, cidade: true },
+    select: { estado: true, cidade: true, cep: true, bairro: true },
   });
   const estado = u?.estado?.trim() || null;
   const cidade = u?.cidade?.trim() || null;
+  const bairro = u?.bairro?.trim() || null;
+  const cep5 = extrairCep5(u?.cep);
+
+  const baseCidade = (): RegiaoPrecoResolvido => {
+    let efetivo: RegiaoPrecoRef = 'ampla';
+    let fallbackDeCidadeParaAmpla = false;
+    if (estado && cidade) {
+      efetivo = 'cidade';
+    } else if (pedido === 'cidade' && (!cidade || !estado)) {
+      fallbackDeCidadeParaAmpla = true;
+    }
+    return {
+      pedido,
+      efetivo,
+      fallbackDeCidadeParaAmpla,
+      estado,
+      cidade,
+      cep5,
+      bairro,
+    };
+  };
 
   if (pedido === 'proximidade') {
     return {
@@ -62,22 +99,78 @@ export async function resolveRegiaoPrecoParaMercado(
       fallbackDeCidadeParaAmpla: false,
       estado,
       cidade,
+      cep5,
+      bairro,
     };
   }
 
-  let efetivo: RegiaoPrecoRef = 'ampla';
-  let fallbackDeCidadeParaAmpla = false;
-
-  if (pedido === 'cidade' && estado && cidade) {
-    efetivo = 'cidade';
-  } else {
-    efetivo = 'ampla';
-    if (pedido === 'cidade' && (!cidade || !estado)) {
-      fallbackDeCidadeParaAmpla = true;
+  if (pedido === 'poligono') {
+    const poligono = cep5
+      ? await construirPoligonoBairroCep5(cep5)
+      : await construirPoligonoMercado(mercadoId);
+    if (poligono) {
+      const ids = await listarUnidadeIdsNoPoligono(poligono);
+      if (ids.length > 0) {
+        return {
+          pedido,
+          efetivo: 'poligono',
+          fallbackDeCidadeParaAmpla: false,
+          estado,
+          cidade,
+          cep5,
+          bairro,
+        };
+      }
     }
+    if (cep5) {
+      const idsCep5 = await listarUnidadeIdsNoCep5(cep5);
+      if (idsCep5.length > 0) {
+        return {
+          pedido,
+          efetivo: 'cep5',
+          fallbackDeCidadeParaAmpla: false,
+          fallbackDePoligonoParaCep5: true,
+          estado,
+          cidade,
+          cep5,
+          bairro,
+        };
+      }
+    }
+    return { ...baseCidade(), fallbackDePoligonoParaCep5: true };
   }
 
-  return { pedido, efetivo, fallbackDeCidadeParaAmpla, estado, cidade };
+  if (pedido === 'cep5') {
+    if (cep5) {
+      const ids = await listarUnidadeIdsNoCep5(cep5);
+      if (ids.length > 0) {
+        return {
+          pedido,
+          efetivo: 'cep5',
+          fallbackDeCidadeParaAmpla: false,
+          estado,
+          cidade,
+          cep5,
+          bairro,
+        };
+      }
+    }
+    return { ...baseCidade(), fallbackDeCep5ParaCidade: true };
+  }
+
+  if (pedido === 'ampla') {
+    return {
+      pedido,
+      efetivo: 'ampla',
+      fallbackDeCidadeParaAmpla: false,
+      estado,
+      cidade,
+      cep5,
+      bairro,
+    };
+  }
+
+  return baseCidade();
 }
 
 function unidadesWherePrecoReferencia(ctx: RegiaoPrecoResolvido): { estado: string; cidade?: string } | null {
@@ -96,13 +189,20 @@ async function resolverUnidadesParaPrecoMedio(
   ctx: RegiaoPrecoResolvido,
   raioKm: number
 ): Promise<Prisma.estoquesWhereInput['unidades'] | null> {
-  const ctxGeo = { efetivo: ctx.efetivo, estado: ctx.estado, cidade: ctx.cidade };
+  const ctxGeo = toCtxRegiaoPreco(ctx);
   let ref = await resolverUnidadesReferenciaPreco(mercadoId, ctxGeo, raioKm);
-  if (!ref && ctx.efetivo === 'proximidade') {
-    const sub = ctx.estado && ctx.cidade ? 'cidade' : 'ampla';
+  if (!ref && (ctx.efetivo === 'proximidade' || ctx.efetivo === 'poligono' || ctx.efetivo === 'cep5')) {
+    const sub =
+      ctx.efetivo === 'cep5' || ctx.efetivo === 'poligono'
+        ? ctx.estado && ctx.cidade
+          ? 'cidade'
+          : 'ampla'
+        : ctx.estado && ctx.cidade
+          ? 'cidade'
+          : 'ampla';
     ref = await resolverUnidadesReferenciaPreco(
       mercadoId,
-      { efetivo: sub, estado: ctx.estado, cidade: ctx.cidade },
+      { efetivo: sub, estado: ctx.estado, cidade: ctx.cidade, cep5: ctx.cep5, bairro: ctx.bairro },
       raioKm
     );
   }

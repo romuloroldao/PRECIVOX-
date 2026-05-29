@@ -10,6 +10,7 @@ import {
   resolveRegiaoPrecoParaMercado,
 } from '@/lib/ai/conversao-metrics';
 import { getEstoqueCritico, montarResumoSemanalFromDados } from '@/lib/ai/resumo-semana-gestor';
+import { regiaoPrecoFromCtx } from '@/lib/regiao-preco-ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,12 +82,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       periodo: { dias, inicio: inicio.toISOString(), fim: fim.toISOString() },
-      regiaoPreco: {
-        pedido: ctxRegiao.pedido,
-        efetivo: ctxRegiao.efetivo,
-        fallbackDeCidadeParaAmpla: ctxRegiao.fallbackDeCidadeParaAmpla,
-        raioKm,
-      },
+      regiaoPreco: regiaoPrecoFromCtx(ctxRegiao, raioKm),
       tendenciasBusca: tendenciasBlock.tendencias,
       insightTendencias: tendenciasBlock.insight,
       itensAbandonados: abandonados,

@@ -10,7 +10,7 @@ import {
   type RegiaoPrecoRef,
   type RegiaoPrecoResolvido,
 } from '@/lib/ai/conversao-metrics';
-import { resolverUnidadesReferenciaPreco } from '@/lib/regiao-preco-unidades';
+import { resolverUnidadesReferenciaPreco, toCtxRegiaoPreco } from '@/lib/regiao-preco-unidades';
 
 export type BenchmarkPosicao = 'ACIMA' | 'ABAIXO' | 'ALINHADO';
 
@@ -74,14 +74,15 @@ async function unidadesRefExcluindoMercado(
   ctx: RegiaoPrecoResolvido,
   raioKm: number
 ): Promise<Prisma.estoquesWhereInput['unidades'] | null> {
-  const ctxGeo = { efetivo: ctx.efetivo, estado: ctx.estado, cidade: ctx.cidade };
+  const ctxGeo = toCtxRegiaoPreco(ctx);
   let ref = await resolverUnidadesReferenciaPreco(mercadoId, ctxGeo, raioKm);
 
-  if (!ref && ctx.efetivo === 'proximidade') {
-    const sub = ctx.estado && ctx.cidade ? 'cidade' : 'ampla';
+  if (!ref && (ctx.efetivo === 'proximidade' || ctx.efetivo === 'poligono' || ctx.efetivo === 'cep5')) {
+    const sub =
+      ctx.estado && ctx.cidade ? ('cidade' as const) : ('ampla' as const);
     ref = await resolverUnidadesReferenciaPreco(
       mercadoId,
-      { efetivo: sub, estado: ctx.estado, cidade: ctx.cidade },
+      { efetivo: sub, estado: ctx.estado, cidade: ctx.cidade, cep5: ctx.cep5, bairro: ctx.bairro },
       raioKm
     );
   }
@@ -245,6 +246,14 @@ export async function getBenchmarkPrecoRegional(
   if (ctx.fallbackDeCidadeParaAmpla) {
     explicacao +=
       ' Cadastre a cidade da unidade para aproximar o benchmark do entorno físico.';
+  } else if (ctx.fallbackDePoligonoParaCep5) {
+    explicacao += ' Polígono do bairro indisponível — usando agregação por CEP5.';
+  } else if (ctx.fallbackDeCep5ParaCidade) {
+    explicacao += ' CEP5 sem unidades — usando agregação por cidade/UF.';
+  } else if (ctx.efetivo === 'cep5' && ctx.cep5) {
+    explicacao += ` Escopo: CEP ${ctx.cep5}${ctx.bairro ? ` (${ctx.bairro})` : ''}.`;
+  } else if (ctx.efetivo === 'poligono') {
+    explicacao += ` Escopo: polígono do bairro${ctx.bairro ? ` (${ctx.bairro})` : ''}.`;
   } else if (ctx.efetivo === 'proximidade') {
     explicacao += ` Raio de ~${raioKm} km a partir da unidade geocodificada.`;
   } else if (ctx.efetivo === 'cidade') {

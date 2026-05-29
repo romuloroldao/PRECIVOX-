@@ -3,6 +3,7 @@ import { TokenManager } from '@/lib/token-manager';
 import { prisma } from '@/lib/prisma';
 import { buildResumoSemanalGestor } from '@/lib/ai/resumo-semana-gestor';
 import { parseRegiaoPrecoParam, resolveRegiaoPrecoParaMercado } from '@/lib/ai/conversao-metrics';
+import { regiaoPrecoFromCtx } from '@/lib/regiao-preco-ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,12 +57,7 @@ export async function GET(
       success: true,
       mercadoId,
       mercadoNome: mercado?.nome ?? null,
-      regiaoPreco: {
-        pedido: ctxRegiao.pedido,
-        efetivo: ctxRegiao.efetivo,
-        fallbackDeCidadeParaAmpla: ctxRegiao.fallbackDeCidadeParaAmpla,
-        raioKm,
-      },
+      regiaoPreco: regiaoPrecoFromCtx(ctxRegiao, raioKm),
       ...data,
     });
   } catch (e) {

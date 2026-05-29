@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, Loader2, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import { REGIAO_PRECO_UI } from '@/lib/regiao-preco-ui';
 
 interface Props {
   mercadoId?: string;
@@ -29,11 +30,7 @@ type Resumo = {
   gapMedioPct: number;
 };
 
-const REGIOES = [
-  { id: 'cidade', label: 'Cidade' },
-  { id: 'ampla', label: 'UF' },
-  { id: 'proximidade', label: 'Raio' },
-] as const;
+const REGIOES = REGIAO_PRECO_UI;
 
 const POSICAO_STYLE = {
   ACIMA: 'text-red-700 bg-red-50 border-red-200',
