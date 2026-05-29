@@ -21,6 +21,14 @@ type SlaData = {
   tiers: TierInfo[];
   contratoVersaoAtual: string;
   contratoResumoHtml: string;
+  webhook?: {
+    configurado: boolean;
+    url: string | null;
+    ativo: boolean;
+    ultimoDisparoEm?: string;
+    ultimoDisparoStatus?: number;
+    ultimoErro?: string;
+  };
 };
 
 interface Props {
@@ -34,6 +42,8 @@ export function ParceiroSlaCard({ mercadoId }: Props) {
   const [msg, setMsg] = useState<string | null>(null);
   const [tierDraft, setTierDraft] = useState<1 | 2 | 3>(1);
   const [aceite, setAceite] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -100,6 +110,64 @@ export function ParceiroSlaCard({ mercadoId }: Props) {
         await carregar();
       } else {
         setMsg(json.error ?? 'Erro ao salvar tier');
+      }
+    } catch {
+      setMsg('Erro de rede');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const salvarWebhook = async () => {
+    if (!webhookUrl.trim()) {
+      setMsg('Informe a URL HTTPS do webhook.');
+      return;
+    }
+    setSalvando(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/gestor/parceiro-sla', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mercadoId,
+          webhook: {
+            url: webhookUrl.trim(),
+            ...(webhookSecret.trim() ? { secret: webhookSecret.trim() } : {}),
+          },
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMsg('Webhook salvo.');
+        await carregar();
+      } else {
+        setMsg(json.error ?? 'Erro ao salvar webhook');
+      }
+    } catch {
+      setMsg('Erro de rede');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const testarWebhook = async () => {
+    setSalvando(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/gestor/parceiro-sla', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mercadoId, testarWebhook: true }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMsg(`Teste enviado — HTTP ${json.data?.status ?? 200}`);
+        await carregar();
+      } else {
+        setMsg(json.error ?? 'Falha no teste');
       }
     } catch {
       setMsg('Erro de rede');
@@ -214,6 +282,62 @@ export function ParceiroSlaCard({ mercadoId }: Props) {
           )}
         </div>
       </div>
+
+      {data.tier >= 3 && data.contratoVigente && (
+        <div className="mt-6 rounded-lg border border-sky-100 bg-sky-50/50 p-4">
+          <h3 className="text-sm font-semibold text-gray-900">Webhook preço alterado (Tier 3)</h3>
+          <p className="mt-1 text-xs text-gray-600">
+            PRECIVOX notifica sua URL quando preços mudam no app. Parceiros enviam deltas via{' '}
+            <code className="text-xs">POST /api/partner/v1/preco-alterado</code>.
+          </p>
+          {data.webhook?.configurado && data.webhook.url && (
+            <p className="mt-2 text-xs text-gray-500">
+              Configurado: {data.webhook.url}
+              {data.webhook.ultimoDisparoEm &&
+                ` · último disparo ${new Date(data.webhook.ultimoDisparoEm).toLocaleString('pt-BR')} (${data.webhook.ultimoDisparoStatus ?? '?'})`}
+              {data.webhook.ultimoErro && (
+                <span className="text-red-600"> · {data.webhook.ultimoErro}</span>
+              )}
+            </p>
+          )}
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <input
+              type="url"
+              placeholder="https://seu-erp.com/webhooks/precivox"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-span-2"
+            />
+            <input
+              type="password"
+              placeholder="Secret HMAC (deixe vazio para manter)"
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void salvarWebhook()}
+                disabled={salvando}
+                className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+              >
+                Salvar webhook
+              </button>
+              {data.webhook?.configurado && (
+                <button
+                  type="button"
+                  onClick={() => void testarWebhook()}
+                  disabled={salvando}
+                  className="rounded-lg border border-sky-600 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                >
+                  Testar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {msg && <p className="mt-3 text-sm text-gray-700">{msg}</p>}
     </div>

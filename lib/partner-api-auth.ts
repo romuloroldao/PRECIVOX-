@@ -67,3 +67,23 @@ export async function validarElegibilidadeParceiro(mercadoId: string): Promise<P
 
   return { ok: true, mercadoId: mercado.id };
 }
+
+/** Tier 3 + contrato vigente — webhook incremental (9.4). */
+export async function validarElegibilidadeWebhook(mercadoId: string): Promise<PartnerAuthResult> {
+  const base = await validarElegibilidadeParceiro(mercadoId);
+  if (!base.ok) return base;
+
+  const mercado = await prisma.mercados.findUnique({
+    where: { id: mercadoId },
+    select: { parceiroTier: true },
+  });
+  const tier = normalizarTier(mercado?.parceiroTier);
+  if (tier < 3) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'Webhook de preço disponível apenas no Tier 3 (API).',
+    };
+  }
+  return base;
+}

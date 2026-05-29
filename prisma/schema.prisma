@@ -196,6 +196,7 @@ model mercados {
   syncAgendado         Json?                @map("sync_agendado")
   parceiroTier         Int                  @default(1) @map("parceiro_tier")
   parceiroSlaContrato  Json?                @map("parceiro_sla_contrato")
+  parceiroWebhook      Json?                @map("parceiro_webhook")
   acoes_gestor         acoes_gestor[]
   alertas_ia           alertas_ia[]
   analises_ia          analises_ia[]

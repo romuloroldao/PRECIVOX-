@@ -180,7 +180,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | 9.1 | **Sync agendado** | P0 | ✅ | `lib/sync-agendado.ts`, scheduler 30 min |
 | 9.2 | API batch `POST /api/partner/v1/estoques` | P1 | ✅ | `PARTNER_API_KEYS` + Tier 2+ |
 | 9.3 | **SLA + contrato dados Tier 1–3** | P0 | ✅ | `ParceiroSlaCard`, `PARCEIRO_SLA_CONTRATO.md` |
-| 9.4 | Webhook preço alterado | P2 | 🔲 | Tier 3 |
+| 9.4 | Webhook preço alterado | P2 | ✅ | `parceiro-webhook-preco.ts`, `POST /api/partner/v1/preco-alterado` |
 
 ## Épico 10 — B2B: gestor como operador IA
 
@@ -308,8 +308,7 @@ flowchart TD
 | P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **11.4** PRECI Index (cesta bairro) | — |
-| P2 | **9.4** Webhook preço · **11.4** PRECI Index | — |
-| Ops | Migration `parceiro_sla_tier` em produção | SQL em `prisma/migrations/` |
+| Ops | Migration `parceiro_webhook` em produção | SQL em `prisma/migrations/` |
 | Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |
 
 **Histórico sprints:** [`ISSUES_SPRINT0.md`](./ISSUES_SPRINT0.md) · [`FASE1_SPRINTS.md`](./FASE1_SPRINTS.md)

@@ -8,7 +8,7 @@ Versão do contrato em produto: **`2026-05-1`** (`lib/parceiro-sla.ts` → `CONT
 |------|------|----------|-------------------------------|----------------|
 | 1 | Manual | Até 7 dias | 7 | `semanal`, `24h` |
 | 2 | Diário | ≤ 24h | 2 | `24h`, `12h`, `6h` |
-| 3 | API | ≤ 24h (webhook futuro) | 1 | `6h`, `12h`, `24h` |
+| 3 | API | ≤ 24h (webhook 9.4) | 1 | `6h`, `12h`, `24h` |
 
 ## Fluxo gestor
 
@@ -42,4 +42,4 @@ Migration: `prisma/migrations/20260528120000_parceiro_sla_tier/migration.sql`
 
 - Tier 1: onboarding piloto, upload manual semanal
 - Tier 2: contrato + sync URL/SFTP assinado
-- Tier 3: negociação API (`9.2`) + webhook (`9.4`)
+- Tier 3: negociação API (`9.2`) + webhook (`9.4`) — ver [`PARCEIRO_EXPORT_CATALOGO.md`](./PARCEIRO_EXPORT_CATALOGO.md) § Webhook

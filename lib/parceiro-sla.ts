@@ -61,14 +61,14 @@ export const TIER_DEFINICOES: Record<ParceiroTier, TierDefinicao> = {
   3: {
     tier: 3,
     nome: 'API',
-    descricao: 'Integração programática + webhook (roadmap)',
-    cadencia: 'Preços refletidos em até 24h; webhook quando disponível',
+    descricao: 'Integração programática + webhook de preço',
+    cadencia: 'Preços em tempo quase real via webhook ou batch',
     diasStaleMax: 1,
     intervalosSyncPermitidos: ['6h', '12h', '24h'],
     confiancaUpload: 90,
     seloMercado: 'Preço verificado PRECIVOX',
     requisitos: [
-      'API batch ou sync ≤ 6h (quando 9.2 estiver ativo)',
+      'API batch (9.2) ou webhook incremental (9.4)',
       'SLA de resposta a divergências crowd < 24h',
       'Contrato LGPD assinado com PRECIVOX',
     ],

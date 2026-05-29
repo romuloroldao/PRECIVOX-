@@ -92,3 +92,35 @@ Aliases aceitos: `produtos[]` ou `items[]` em vez de `itens[]`.
 **Resposta:** mesmo formato do upload-smart (`sucesso`, `erros`, `duplicados`, até 20 `detalhesErros`).
 
 **Truth layer:** `fonte=API_PARCEIRO`, `confianca=85`.
+
+## Webhook incremental (Épico 9.4) — Tier 3
+
+**Parceiro → PRECIVOX (inbound):** `POST /api/partner/v1/preco-alterado`
+
+**Headers:** `Authorization: Bearer <chave>` · `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "mercadoId": "uuid",
+  "unidadeId": "uuid",
+  "eventId": "idempotencia-opcional",
+  "alteracoes": [
+    {
+      "codigoBarras": "7891234567890",
+      "preco": 22.5,
+      "precoPromocional": 19.9,
+      "emPromocao": true,
+      "quantidade": 80
+    }
+  ]
+}
+```
+
+Use `estoqueId` em vez de `codigoBarras` quando souber o ID PRECIVOX. Máximo 500 alterações por request.
+
+**Truth layer:** `confianca=90`.
+
+**PRECIVOX → parceiro (outbound):** configure URL HTTPS + secret em **Gestor → Produtos → SLA (Tier 3)**. Eventos `preco.alterado` com header `X-Precivox-Signature: sha256=<hmac>`.
+
+**Requisitos:** Tier 3 + contrato vigente + `PARTNER_API_KEYS` no servidor.

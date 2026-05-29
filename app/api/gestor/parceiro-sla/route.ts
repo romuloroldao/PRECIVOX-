@@ -10,6 +10,12 @@ import {
   TIER_DEFINICOES,
   type ParceiroTier,
 } from '@/lib/parceiro-sla';
+import {
+  enviarWebhookTeste,
+  mascararWebhookConfig,
+  parseWebhookConfig,
+  salvarWebhookParceiro,
+} from '@/lib/parceiro-webhook-preco';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,10 +51,17 @@ export async function GET(req: NextRequest) {
     }
 
     const resumo = await obterParceiroSla(mercadoId);
+    const webhookRaw = await prisma.mercados.findUnique({
+      where: { id: mercadoId },
+      select: { parceiroWebhook: true },
+    });
+    const webhook = mascararWebhookConfig(parseWebhookConfig(webhookRaw?.parceiroWebhook));
+
     return NextResponse.json({
       success: true,
       data: {
         ...resumo,
+        webhook,
         tiers: Object.values(TIER_DEFINICOES),
         contratoVersaoAtual: CONTRATO_VERSAO_ATUAL,
         contratoResumoHtml: CONTRATO_RESUMO_HTML,
@@ -106,7 +119,65 @@ export async function PATCH(req: NextRequest) {
         }
       }
       const resumo = await salvarTierParceiro(mercadoId, tier);
-      return NextResponse.json({ success: true, data: resumo });
+      const webhook = mascararWebhookConfig(
+        parseWebhookConfig(
+          (
+            await prisma.mercados.findUnique({
+              where: { id: mercadoId },
+              select: { parceiroWebhook: true },
+            })
+          )?.parceiroWebhook
+        )
+      );
+      return NextResponse.json({ success: true, data: { ...resumo, webhook } });
+    }
+
+    if (body.webhook && typeof body.webhook === 'object') {
+      const atual = await obterParceiroSla(mercadoId);
+      if (atual.tier < 3) {
+        return NextResponse.json(
+          { success: false, error: 'Webhook disponível apenas no Tier 3.' },
+          { status: 400 }
+        );
+      }
+      if (!atual.contratoVigente) {
+        return NextResponse.json(
+          { success: false, error: 'Aceite o contrato antes de configurar webhook.' },
+          { status: 400 }
+        );
+      }
+      const w = body.webhook as { url?: string; secret?: string; ativo?: boolean };
+      if (!w.url?.trim()) {
+        return NextResponse.json({ success: false, error: 'URL do webhook obrigatória' }, { status: 400 });
+      }
+      await salvarWebhookParceiro(mercadoId, {
+        url: w.url,
+        secret: String(w.secret ?? ''),
+        ativo: w.ativo !== false,
+      });
+      const resumo = await obterParceiroSla(mercadoId);
+      const webhook = mascararWebhookConfig(
+        parseWebhookConfig(
+          (
+            await prisma.mercados.findUnique({
+              where: { id: mercadoId },
+              select: { parceiroWebhook: true },
+            })
+          )?.parceiroWebhook
+        )
+      );
+      return NextResponse.json({ success: true, data: { ...resumo, webhook } });
+    }
+
+    if (body.testarWebhook === true) {
+      const result = await enviarWebhookTeste(mercadoId);
+      if (!result.ok) {
+        return NextResponse.json(
+          { success: false, error: result.error ?? 'Falha no teste' },
+          { status: 502 }
+        );
+      }
+      return NextResponse.json({ success: true, data: { status: result.status } });
     }
 
     return NextResponse.json({ success: false, error: 'Ação inválida' }, { status: 400 });

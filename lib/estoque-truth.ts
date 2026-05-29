@@ -20,6 +20,15 @@ export interface TruthLayerPayload {
   verificadoEm: Date;
 }
 
+/** Dados via webhook incremental parceiro (9.4) */
+export function truthFromWebhookPreco(): TruthLayerPayload {
+  return {
+    fonte: 'API_PARCEIRO',
+    confianca: 90,
+    verificadoEm: new Date(),
+  };
+}
+
 /** Dados via API batch parceiro (9.2) */
 export function truthFromPartnerApi(): TruthLayerPayload {
   return {

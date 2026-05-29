@@ -240,10 +240,47 @@ export async function PUT(
       if (Object.keys(estoqueData).length > 0) {
         estoqueData.atualizadoEm = new Date();
 
+        const estoqueAntes = await prisma.estoques.findUnique({
+          where: { id: validatedData.estoqueId },
+          include: {
+            produtos: { select: { nome: true, codigoBarras: true } },
+            unidades: { select: { mercadoId: true } },
+          },
+        });
+
         await prisma.estoques.update({
           where: { id: validatedData.estoqueId },
           data: estoqueData,
         });
+
+        if (
+          estoqueAntes?.unidades?.mercadoId &&
+          (validatedData.preco !== undefined ||
+            validatedData.precoPromocional !== undefined ||
+            validatedData.emPromocao !== undefined)
+        ) {
+          const { notificarWebhookPrecoAlterado } = await import('@/lib/parceiro-webhook-preco');
+          notificarWebhookPrecoAlterado(
+            estoqueAntes.unidades.mercadoId,
+            [
+              {
+                estoqueId: estoqueAntes.id,
+                produtoId: estoqueAntes.produtoId,
+                unidadeId: estoqueAntes.unidadeId,
+                codigoBarras: estoqueAntes.produtos.codigoBarras,
+                produtoNome: estoqueAntes.produtos.nome,
+                preco: validatedData.preco ?? Number(estoqueAntes.preco),
+                precoPromocional:
+                  validatedData.precoPromocional ??
+                  (estoqueAntes.precoPromocional ? Number(estoqueAntes.precoPromocional) : null),
+                emPromocao: validatedData.emPromocao ?? estoqueAntes.emPromocao,
+                quantidade: validatedData.quantidade ?? estoqueAntes.quantidade,
+                precoAnterior: Number(estoqueAntes.preco),
+              },
+            ],
+            'gestor_produto'
+          );
+        }
       }
     }
 

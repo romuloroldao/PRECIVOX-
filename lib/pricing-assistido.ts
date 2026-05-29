@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { PromotionEngine } from '@/lib/ai/promotion-engine';
 import { getRadarDemandaMercado } from '@/lib/radar-demanda';
 import { CONFIANCA } from '@/lib/estoque-truth';
+import { notificarWebhookPrecoAlterado } from '@/lib/parceiro-webhook-preco';
 
 export type SugestaoPricingAssistido = {
   id: string;
@@ -281,6 +282,23 @@ export async function aprovarPromocaoAssistida(input: {
       },
     },
   });
+
+  notificarWebhookPrecoAlterado(
+    input.mercadoId,
+    [
+      {
+        estoqueId: estoque.id,
+        produtoId: estoque.produtoId,
+        unidadeId: estoque.unidadeId,
+        produtoNome: estoque.produtos.nome,
+        preco: precoAnterior,
+        precoPromocional,
+        emPromocao: true,
+        precoAnterior,
+      },
+    ],
+    'pricing_assistido'
+  );
 
   return {
     ok: true,
