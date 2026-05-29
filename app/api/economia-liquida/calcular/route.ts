@@ -4,6 +4,8 @@ import {
   calcularEconomiaLiquidaCesta,
   distanciaKmEntreCoords,
 } from '@/lib/economia-liquida';
+import { TokenManager } from '@/lib/token-manager';
+import { getElCalcularOpts } from '@/lib/el-config-usuario';
 
 /**
  * POST /api/economia-liquida/calcular
@@ -52,14 +54,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const opts = {
+    const user = await TokenManager.validateSession({
+      headers: req.headers,
+      cookies: req.cookies,
+    });
+    const elUsuario =
+      user?.id && user.id !== 'anonymous' ? await getElCalcularOpts(user.id) : {};
+    const optsFinal = {
       distanciaKm: distancia,
-      valorHoraReais,
-      custoKmReais,
+      valorHoraReais: valorHoraReais ?? elUsuario.valorHoraReais,
+      custoKmReais: custoKmReais ?? elUsuario.custoKmReais,
     };
 
     if (Array.isArray(itens) && itens.length > 0) {
-      const resultado = calcularEconomiaLiquidaCesta(itens, opts);
+      const resultado = calcularEconomiaLiquidaCesta(itens, optsFinal);
       return NextResponse.json({ success: true, data: resultado });
     }
 
@@ -73,7 +81,7 @@ export async function POST(req: NextRequest) {
     const resultado = calcularEconomiaLiquida({
       precoOrigem,
       precoDestino,
-      ...opts,
+      ...optsFinal,
     });
 
     return NextResponse.json({ success: true, data: resultado });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TokenManager } from '@/lib/token-manager';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { EventCollector } from '@/lib/ai/event-collector';
 import {
   calcularPerfilPreciDeEventos,
@@ -9,6 +10,13 @@ import {
   EIXO_LABELS,
 } from '@/lib/perfil-preci';
 import { getReputacaoCrowd } from '@/lib/crowd-reputacao';
+import {
+  elConfigEfetivo,
+  parseElConfigFromPerfil,
+  validarElConfigInput,
+  type ElConfigUsuario,
+} from '@/lib/el-config-usuario';
+import { EL_DEFAULTS } from '@/lib/economia-liquida';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +46,8 @@ export async function GET(req: NextRequest) {
 
     const calculado = calcularPerfilPreciDeEventos(eventos);
     const ajustes = (dbUser?.perfilPreci as { ajustes?: PerfilPreciAjustes } | null)?.ajustes ?? null;
+    const elConfigSalvo = parseElConfigFromPerfil(dbUser?.perfilPreci);
+    const elConfig = elConfigEfetivo(elConfigSalvo);
     const scoresEfetivos = mesclarComAjustes(calculado.scores, ajustes);
 
     return NextResponse.json({
@@ -49,6 +59,11 @@ export async function GET(req: NextRequest) {
         eixoLabels: EIXO_LABELS,
         reputacaoCrowd: reputacao,
         periodoDias: dias,
+        elConfig,
+        elDefaults: {
+          valorHoraReais: EL_DEFAULTS.valorHoraReais,
+          custoKmReais: EL_DEFAULTS.custoKmReais,
+        },
       },
     });
   } catch (e) {
@@ -69,8 +84,13 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
     const ajustes = body.ajustes as PerfilPreciAjustes | undefined;
-    if (!ajustes || typeof ajustes !== 'object') {
-      return NextResponse.json({ success: false, error: 'ajustes obrigatório' }, { status: 400 });
+    const elConfigRaw = body.elConfig as Partial<ElConfigUsuario> | undefined;
+
+    if (!ajustes && !elConfigRaw) {
+      return NextResponse.json(
+        { success: false, error: 'Informe ajustes e/ou elConfig' },
+        { status: 400 }
+      );
     }
 
     const dbUser = await prisma.user.findUnique({
@@ -82,10 +102,23 @@ export async function PATCH(req: NextRequest) {
         ? (dbUser.perfilPreci as Record<string, unknown>)
         : {};
 
+    const elValidado = elConfigRaw ? validarElConfigInput(elConfigRaw) : null;
+    if (elConfigRaw && !elValidado) {
+      return NextResponse.json({ success: false, error: 'elConfig inválido' }, { status: 400 });
+    }
+
+    if (elValidado) {
+      base.elConfig = { ...elValidado, atualizadoEm: new Date().toISOString() };
+    }
+    if (ajustes && typeof ajustes === 'object') {
+      base.ajustes = ajustes;
+    }
+    base.atualizadoEm = new Date().toISOString();
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        perfilPreci: { ...base, ajustes, atualizadoEm: new Date().toISOString() },
+        perfilPreci: base as Prisma.InputJsonValue,
         dataAtualizacao: new Date(),
       },
     });

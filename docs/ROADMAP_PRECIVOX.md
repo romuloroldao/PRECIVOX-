@@ -89,7 +89,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | 1.1 | **Economia Líquida™ (EL)** | P0 | ✅ | `lib/economia-liquida.ts`, `SPEC_ECONOMIA_LIQUIDA.md` |
 | 1.2 | EL na lista inteligente | P0 | ✅ | `ListaInteligentePanel`, chips busca |
 | 1.3 | EL no scan/foto (v1) | P1 | 🟡 | `lib/scan-inteligente.ts` após match |
-| 1.4 | Config valor do tempo | P1 | 🟡 | Defaults `EL_DEFAULTS` |
+| 1.4 | Config valor do tempo | P1 | ✅ | `el-config-usuario.ts`, perfil cliente |
 | 1.5 | Regra “Fique aqui” / “Vale X min” | P0 | ✅ | `explicacao` em `calcularEconomiaLiquida` |
 
 ## Épico 2 — IA proprietária (camada PRECI)
@@ -307,7 +307,6 @@ flowchart TD
 |------------|------|-----|
 | P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
 | P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| P1 | **1.4** Config valor do tempo (EL no perfil) | `EL_DEFAULTS` |
 | Ops | Configurar `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` em prod | push retenção |
 | Ops | Migration `parceiro_webhook` em produção | ✅ aplicada |
 | Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |

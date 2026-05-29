@@ -9,6 +9,7 @@ import {
   distanciaKmEntreCoords,
   type ResultadoEconomiaLiquida,
 } from '@/lib/economia-liquida';
+import { getElCalcularOpts } from '@/lib/el-config-usuario';
 
 export type RecomendacaoFormato = 'atacado' | 'varejo' | 'indiferente';
 
@@ -181,7 +182,8 @@ export async function compararParAtacadoVarejo(
   produtoAtacadoId: string,
   mercadoId: string,
   pessoas: number,
-  consumoSemanal: number | null
+  consumoSemanal: number | null,
+  userId?: string
 ): Promise<ComparativoAtacadoVarejo | null> {
   const [estV, estA, prodV, prodA] = await Promise.all([
     melhorEstoque(produtoVarejoId, mercadoId),
@@ -218,6 +220,7 @@ export async function compararParAtacadoVarejo(
   const economiaPct = puV > 0 ? round2(((puV - puA) / puV) * 100) : 0;
 
   let economiaLiquida: ResultadoEconomiaLiquida | null = null;
+  const elOpts = await getElCalcularOpts(userId);
   const uV = estV.unidades;
   const uA = estA.unidades;
   if (uV && uA && estV.unidadeId !== estA.unidadeId) {
@@ -239,6 +242,7 @@ export async function compararParAtacadoVarejo(
       precoOrigem: precoV,
       precoDestino: precoA,
       distanciaKm,
+      ...elOpts,
     });
   }
 
@@ -395,7 +399,8 @@ export async function listarAtacadoVarejoUsuario(
         atacadoId,
         mercadoId,
         pessoas,
-        consumoSemanal
+        consumoSemanal,
+        userId
       );
       if (cmp && cmp.recomendacao !== 'indiferente') {
         itens.push(cmp);
@@ -465,7 +470,7 @@ export async function analisarProdutoAtacadoVarejo(
           : [null, null];
     if (!varejoId || !atacadoId) continue;
 
-    const cmp = await compararParAtacadoVarejo(varejoId, atacadoId, mercadoId, pessoas, null);
+    const cmp = await compararParAtacadoVarejo(varejoId, atacadoId, mercadoId, pessoas, null, userId);
     if (cmp && (!melhor || cmp.economiaPct > melhor.economiaPct)) melhor = cmp;
   }
   return melhor;

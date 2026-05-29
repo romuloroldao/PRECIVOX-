@@ -4,8 +4,9 @@
 
 import { prisma } from '@/lib/prisma';
 import { EventCollector } from '@/lib/ai/event-collector';
-import { calcularEconomiaLiquida, type ResultadoEconomiaLiquida } from '@/lib/economia-liquida';
+import { calcularEconomiaLiquida, type CalcularELInput, type ResultadoEconomiaLiquida } from '@/lib/economia-liquida';
 import { buscarMelhorAlternativa } from '@/lib/melhor-alternativa-preco';
+import { getElCalcularOpts } from '@/lib/el-config-usuario';
 import {
   jaccardTokensDeNomes,
   normalizeNomeProdutoChaveComSinonimos,
@@ -112,7 +113,8 @@ function tokensBusca(texto: string): string[] {
 async function matchPorEan(
   eans: string[],
   mercadoId: string,
-  precoEtiqueta: number | null
+  precoEtiqueta: number | null,
+  ctx?: { userId?: string; elOpts?: Pick<CalcularELInput, 'valorHoraReais' | 'custoKmReais'> }
 ): Promise<ScanMatchItem[]> {
   const out: ScanMatchItem[] = [];
   for (const codigo of eans) {
@@ -135,13 +137,19 @@ async function matchPorEan(
     const preco = Number(est.preco);
     const promo = est.precoPromocional != null ? Number(est.precoPromocional) : null;
     const efetivo = precoEfetivo(preco, promo, est.emPromocao);
-    const melhorAlternativa = await buscarMelhorAlternativa(produto.id, est.unidadeId, efetivo);
+    const melhorAlternativa = await buscarMelhorAlternativa(
+      produto.id,
+      est.unidadeId,
+      efetivo,
+      ctx?.userId
+    );
 
     let economiaLiquidaEtiqueta: ResultadoEconomiaLiquida | null = null;
     if (precoEtiqueta != null && precoEtiqueta > 0) {
       economiaLiquidaEtiqueta = calcularEconomiaLiquida({
         precoOrigem: precoEtiqueta,
         precoDestino: efetivo,
+        ...ctx?.elOpts,
       });
     }
 
@@ -230,7 +238,8 @@ async function candidatosPorTexto(mercadoId: string, texto: string) {
 async function matchPorEmbedding(
   texto: string,
   mercadoId: string,
-  precoEtiqueta: number | null
+  precoEtiqueta: number | null,
+  ctx?: { userId?: string; elOpts?: Pick<CalcularELInput, 'valorHoraReais' | 'custoKmReais'> }
 ): Promise<ScanMatchItem[]> {
   const query = limparTextoOcr(texto);
   if (query.length < 3) return [];
@@ -247,13 +256,14 @@ async function matchPorEmbedding(
     const preco = Number(est.preco);
     const promo = est.precoPromocional != null ? Number(est.precoPromocional) : null;
     const efetivo = precoEfetivo(preco, promo, est.emPromocao);
-    const melhorAlternativa = await buscarMelhorAlternativa(p.id, est.unidadeId, efetivo);
+    const melhorAlternativa = await buscarMelhorAlternativa(p.id, est.unidadeId, efetivo, ctx?.userId);
 
     let economiaLiquidaEtiqueta: ResultadoEconomiaLiquida | null = null;
     if (precoEtiqueta != null && precoEtiqueta > 0) {
       economiaLiquidaEtiqueta = calcularEconomiaLiquida({
         precoOrigem: precoEtiqueta,
         precoDestino: efetivo,
+        ...ctx?.elOpts,
       });
     }
 
@@ -301,12 +311,16 @@ export async function buscarMatchesScan(input: {
       : extrairPrecoEtiqueta(input.textoOcr);
   const eansDetectados = extrairCodigosBarras(textoLimpo);
 
+  const elOpts =
+    input.userId != null ? await getElCalcularOpts(input.userId) : undefined;
+  const matchCtx = input.userId || elOpts ? { userId: input.userId, elOpts } : undefined;
+
   let matches: ScanMatchItem[] = [];
   if (eansDetectados.length > 0) {
-    matches = await matchPorEan(eansDetectados, input.mercadoId, precoDetectado);
+    matches = await matchPorEan(eansDetectados, input.mercadoId, precoDetectado, matchCtx);
   }
   if (matches.length === 0) {
-    matches = await matchPorEmbedding(textoLimpo, input.mercadoId, precoDetectado);
+    matches = await matchPorEmbedding(textoLimpo, input.mercadoId, precoDetectado, matchCtx);
   } else {
     matches = matches.slice(0, SCAN_MAX_CANDIDATOS);
   }

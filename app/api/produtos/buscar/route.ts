@@ -183,6 +183,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (includeEconomia) {
+      const sessionUser = await TokenManager.validateSession({
+        headers: request.headers,
+        cookies: request.cookies,
+      });
+      const userId =
+        sessionUser?.id && sessionUser.id !== 'anonymous' ? sessionUser.id : undefined;
+
       const head = dataOut.slice(0, cap);
       const tail = dataOut.slice(cap);
       const enriched = await Promise.all(
@@ -194,7 +201,7 @@ export async function GET(request: NextRequest) {
             return { ...row, melhorAlternativa: null };
           }
           try {
-            const alt = await buscarMelhorAlternativa(pid, uid, preco);
+            const alt = await buscarMelhorAlternativa(pid, uid, preco, userId);
             if (!alt) return { ...row, melhorAlternativa: null };
             return {
               ...row,

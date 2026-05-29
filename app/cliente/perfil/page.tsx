@@ -7,7 +7,8 @@ import { RelatorioSemanaCard } from '@/components/cliente/RelatorioSemanaCard';
 import type { EixoPreci, PerfilPreciScores } from '@/lib/perfil-preci';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowLeft, Clock } from 'lucide-react';
+import { EL_CONFIG_LIMITS, labelFaixaValorHora, type ElConfigUsuario } from '@/lib/el-config-usuario';
 
 type PerfilData = {
   scores: PerfilPreciScores;
@@ -22,6 +23,8 @@ type PerfilData = {
     confirmacoes: number;
     proximoNivelEm: number | null;
   };
+  elConfig: ElConfigUsuario;
+  elDefaults: ElConfigUsuario;
 };
 
 type IntentData = {
@@ -38,6 +41,7 @@ export default function PerfilPreciPage() {
   const [perfil, setPerfil] = useState<PerfilData | null>(null);
   const [intent, setIntent] = useState<IntentData | null>(null);
   const [ajustes, setAjustes] = useState<Partial<PerfilPreciScores>>({});
+  const [elConfig, setElConfig] = useState<ElConfigUsuario>({ valorHoraReais: 20, custoKmReais: 0.8 });
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -55,6 +59,7 @@ export default function PerfilPreciPage() {
       if (pJson.success) {
         setPerfil(pJson.data);
         setAjustes(pJson.data.ajustesUsuario ?? {});
+        if (pJson.data.elConfig) setElConfig(pJson.data.elConfig);
       }
       if (iJson.success) setIntent(iJson.data);
       try {
@@ -81,7 +86,7 @@ export default function PerfilPreciPage() {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ajustes }),
+        body: JSON.stringify({ ajustes, elConfig }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error);
@@ -186,6 +191,71 @@ export default function PerfilPreciPage() {
               {salvando ? 'Salvando…' : 'Salvar como quero ser tratado'}
             </button>
             {msg && <p className="text-center text-sm text-emerald-700">{msg}</p>}
+          </div>
+        )}
+
+        {perfil && (
+          <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-emerald-900">
+              <Clock className="h-5 w-5" />
+              <h2 className="font-semibold">Economia Líquida — valor do seu tempo</h2>
+            </div>
+            <p className="text-xs text-emerald-800/80">
+              Usamos isso para calcular se vale a pena ir a outra loja. Padrão do app: R${' '}
+              {perfil.elDefaults.valorHoraReais}/h e R$ {perfil.elDefaults.custoKmReais}/km.
+            </p>
+
+            <div>
+              <div className="flex justify-between text-sm">
+                <span className="font-medium text-gray-800">Quanto vale sua hora?</span>
+                <span className="tabular-nums text-gray-600">R$ {elConfig.valorHoraReais}/h</span>
+              </div>
+              <input
+                type="range"
+                min={EL_CONFIG_LIMITS.valorHoraMin}
+                max={EL_CONFIG_LIMITS.valorHoraMax}
+                step={1}
+                value={elConfig.valorHoraReais}
+                onChange={(ev) =>
+                  setElConfig((prev) => ({
+                    ...prev,
+                    valorHoraReais: parseInt(ev.target.value, 10),
+                  }))
+                }
+                className="mt-1 h-2 w-full cursor-pointer accent-emerald-600"
+              />
+              <p className="mt-1 text-xs text-emerald-700">{labelFaixaValorHora(elConfig.valorHoraReais)}</p>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-sm">
+                <span className="font-medium text-gray-800">Custo por km (combustível + desgaste)</span>
+                <span className="tabular-nums text-gray-600">R$ {elConfig.custoKmReais.toFixed(2)}/km</span>
+              </div>
+              <input
+                type="range"
+                min={EL_CONFIG_LIMITS.custoKmMin * 10}
+                max={EL_CONFIG_LIMITS.custoKmMax * 10}
+                step={1}
+                value={Math.round(elConfig.custoKmReais * 10)}
+                onChange={(ev) =>
+                  setElConfig((prev) => ({
+                    ...prev,
+                    custoKmReais: parseInt(ev.target.value, 10) / 10,
+                  }))
+                }
+                className="mt-1 h-2 w-full cursor-pointer accent-emerald-600"
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => void salvarAjustes()}
+              className="w-full rounded-xl bg-emerald-700 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+            >
+              {salvando ? 'Salvando…' : 'Salvar preferências de EL'}
+            </button>
           </div>
         )}
       </div>

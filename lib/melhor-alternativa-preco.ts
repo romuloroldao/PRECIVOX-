@@ -33,9 +33,13 @@ function precoEfetivo(preco: number, promo: number | null, emPromo: boolean): nu
 export async function buscarMelhorAlternativa(
   produtoCatalogoId: string,
   unidadeOrigemId: string,
-  precoOrigemEfetivo: number
+  precoOrigemEfetivo: number,
+  userId?: string
 ): Promise<MelhorAlternativa | null> {
   if (precoOrigemEfetivo <= 0) return null;
+
+  const { getElCalcularOpts } = await import('@/lib/el-config-usuario');
+  const elOpts = await getElCalcularOpts(userId);
 
   const origem = await prisma.unidades.findUnique({
     where: { id: unidadeOrigemId },
@@ -106,6 +110,7 @@ export async function buscarMelhorAlternativa(
       precoOrigem: precoOrigemEfetivo,
       precoDestino: precoDest,
       distanciaKm,
+      ...elOpts,
     });
 
     if (!melhor || economiaLiquida.economiaLiquida > melhor.economiaLiquida.economiaLiquida) {
