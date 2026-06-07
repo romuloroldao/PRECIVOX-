@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, MapPin, Clock, ShoppingCart, Plus, Minus, Share2, Eye, TrendingDown, Package, Heart } from 'lucide-react';
 import { recordProductViewed } from '@/lib/events/frontend-events';
@@ -33,11 +33,11 @@ interface ProductDetailsProps {
   }>;
 }
 
-const ProductDetails: React.FC<ProductDetailsProps> = async ({ params }) => {
+const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
   const router = useRouter();
+  const { id } = use(params);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const { id } = await params;
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -605,11 +605,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = async ({ params }) => {
               <div className="space-y-2 text-sm">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <div className="flex mb-1">{renderStars(5)}</div>
-                  "Ótimo produto!"
+                  &ldquo;Ótimo produto!&rdquo;
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <div className="flex mb-1">{renderStars(4)}</div>
-                  "Boa qualidade"
+                  &ldquo;Boa qualidade&rdquo;
                 </div>
               </div>
             </div>

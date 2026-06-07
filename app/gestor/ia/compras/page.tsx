@@ -149,8 +149,9 @@ export default function ModuloComprasPage() {
                           💡 Recomendação da IA:
                         </p>
                         <p className="text-sm text-gray-600">
-                          Repor <span className="font-bold text-blue-600">{produto.quantidadeRepor} unidades</span> de 
-                          "{produto.nome}" {produto.diasRestantes < 1 ? 'IMEDIATAMENTE' : 'nas próximas 48 horas'}.
+                          Repor <span className="font-bold text-blue-600">{produto.quantidadeRepor} unidades</span> de{' '}
+                          <span className="font-medium">{produto.nome}</span>{' '}
+                          {produto.diasRestantes < 1 ? 'IMEDIATAMENTE' : 'nas próximas 48 horas'}.
                         </p>
                       </div>
                     </div>

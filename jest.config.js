@@ -23,6 +23,7 @@ module.exports = {
     },
     setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
     testTimeout: 30000,
-    verbose: true
+    verbose: true,
+    forceExit: true,
 };
 

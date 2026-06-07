@@ -543,7 +543,7 @@ export default function MercadoDetailsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       </svg>
                       <p className="text-gray-500 mb-2">Nenhuma unidade cadastrada</p>
-                      <p className="text-sm text-gray-400 mb-4">Clique em "Nova Unidade" para começar</p>
+                      <p className="text-sm text-gray-400 mb-4">Clique em Nova Unidade para começar</p>
                       <button
                         onClick={() => setShowUnidadeForm(true)}
                         className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

@@ -461,7 +461,7 @@ export default function GestorMercadoPage() {
                   {unidades.length === 0 ? (
                     <div className="bg-white rounded-lg shadow p-12 text-center">
                       <p className="text-gray-500">Nenhuma unidade cadastrada</p>
-                      <p className="text-sm text-gray-400 mt-2">Clique em "Nova Unidade" para começar</p>
+                      <p className="text-sm text-gray-400 mt-2">Clique em Nova Unidade para começar</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

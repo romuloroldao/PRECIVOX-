@@ -468,7 +468,7 @@ function Testimonial({ name, location, text, savings }: {
   return (
     <div style={styles.testimonialCard}>
       <div style={styles.testimonialSavings}>{savings} economizados</div>
-      <p style={styles.testimonialText}>"{text}"</p>
+      <p style={styles.testimonialText}>&ldquo;{text}&rdquo;</p>
       <div style={styles.testimonialAuthor}>
         <strong>{name}</strong>
         <span style={styles.testimonialLocation}>{location}</span>
