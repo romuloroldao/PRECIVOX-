@@ -6,7 +6,7 @@ import type { UserEventType } from '@/lib/ai/types';
 
 async function postEvent(
   type: UserEventType,
-  userId: string,
+  _userId: string,
   mercadoId: string,
   metadata: Record<string, unknown> = {}
 ): Promise<void> {
@@ -18,7 +18,7 @@ async function postEvent(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ type, userId, mercadoId, metadata }),
+      body: JSON.stringify({ type, mercadoId, metadata }),
     });
   } catch (error) {
     console.error('[FrontendEvents] Falha ao enviar evento:', error);

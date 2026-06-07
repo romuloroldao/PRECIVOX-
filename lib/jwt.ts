@@ -1,12 +1,13 @@
 // Utilitários JWT - Compatível com Edge Runtime
 import { SignJWT, jwtVerify } from 'jose';
+import { getJwtSecret } from '@/lib/jwt-secret';
 
-type Role = "ADMIN" | "GESTOR" | "CLIENTE";
-const JWT_SECRET: string = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret-change-in-production';
-const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '15m'; // Access token: 15 minutos
+type Role = 'ADMIN' | 'GESTOR' | 'CLIENTE';
+const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '15m';
 
-// Converter string para Uint8Array para jose
-const secret = new TextEncoder().encode(JWT_SECRET);
+function getSecretKey(): Uint8Array {
+  return new TextEncoder().encode(getJwtSecret());
+}
 
 export interface JWTPayload {
   id: string;
@@ -14,23 +15,21 @@ export interface JWTPayload {
   role: Role;
   nome: string;
   tokenVersion?: number;
-  [key: string]: any; // Para compatibilidade com jose
+  [key: string]: unknown;
 }
 
 /**
  * Gera um token JWT com os dados do usuário
- * @param payload - Dados do usuário
- * @param expiresIn - Tempo de expiração (ex: '15m', '1h', '7d'). Se não fornecido, usa JWT_EXPIRES_IN
  */
 export async function generateToken(payload: JWTPayload, expiresIn?: string): Promise<string> {
   const expiration = expiresIn || (JWT_EXPIRES_IN as string);
-  
-  const token = await new SignJWT(payload as any)
+
+  const token = await new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(expiration)
-    .sign(secret);
-  
+    .sign(getSecretKey());
+
   return token;
 }
 
@@ -39,9 +38,9 @@ export async function generateToken(payload: JWTPayload, expiresIn?: string): Pr
  */
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecretKey());
     return payload as JWTPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -62,15 +61,14 @@ export function extractTokenFromHeader(authHeader?: string): string | null {
 export function getTokenExpiration(): Date {
   const expiresIn = String(JWT_EXPIRES_IN);
   const match = expiresIn.match(/^(\d+)([dhms])$/);
-  
+
   if (!match) {
-    // Padrão: 7 dias
     return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   }
-  
-  const value = parseInt(match[1]);
+
+  const value = parseInt(match[1], 10);
   const unit = match[2];
-  
+
   let milliseconds = 0;
   switch (unit) {
     case 'd':
@@ -86,7 +84,6 @@ export function getTokenExpiration(): Date {
       milliseconds = value * 1000;
       break;
   }
-  
+
   return new Date(Date.now() + milliseconds);
 }
-

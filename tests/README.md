@@ -86,8 +86,10 @@ Testam o fluxo completo do usuário no navegador:
 - Responsividade
 
 **Requisitos**: 
-- Aplicação rodando em `http://localhost:3000`
-- Playwright instalado: `npx playwright install`
+- Aplicação rodando em `http://localhost:3000` com `.env.local` (veja `.env.example`)
+- Playwright: `npm run playwright:install`
+- Login E2E: `E2E_LOGIN=true npm run test:e2e`
+- CI: workflow `.github/workflows/e2e.yml` (`npm run test:e2e:ci`)
 
 **Localização**: `tests/e2e/`
 

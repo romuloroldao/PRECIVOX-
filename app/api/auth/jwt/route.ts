@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { generateToken } from '@/lib/jwt';
+import { getJwtSecret } from '@/lib/jwt-secret';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -9,28 +10,34 @@ export const fetchCache = 'force-no-store';
 export async function GET(_req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !(session.user as any).id) {
+    if (!session?.user?.email || !(session.user as { id?: string }).id) {
       return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
     }
 
-    const JWT_SECRET = process.env.JWT_SECRET || 'seu-secret-super-seguro';
+    try {
+      getJwtSecret();
+    } catch (configError) {
+      console.error('[api/auth/jwt] Segredo JWT ausente:', configError);
+      return NextResponse.json(
+        { success: false, error: 'JWT não configurado no servidor' },
+        { status: 503 },
+      );
+    }
 
-    const token = jwt.sign(
+    const user = session.user as { id: string; email: string; role?: string; name?: string | null };
+    const token = await generateToken(
       {
-        id: (session.user as any).id,
-        email: session.user.email,
-        role: (session.user as any).role || 'CLIENTE',
-        nome: session.user.name || '',
+        id: user.id,
+        email: user.email,
+        role: (user.role as 'ADMIN' | 'GESTOR' | 'CLIENTE') || 'CLIENTE',
+        nome: user.name || '',
       },
-      JWT_SECRET,
-      { expiresIn: '1h' }
+      '1h',
     );
 
     return NextResponse.json({ success: true, token });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao gerar JWT backend:', error);
     return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
   }
 }
-
-

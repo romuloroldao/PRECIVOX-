@@ -1,0 +1,90 @@
+# E2E com Playwright (Chromium) contra Next.js em CI
+name: E2E
+
+on:
+  push:
+    branches: [main, 'fix/**']
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '18.20.8'
+  DATABASE_URL: postgresql://postgres:ci@localhost:5432/precivox_ci
+  NEXTAUTH_URL: http://localhost:3000
+  NEXT_PUBLIC_URL: http://localhost:3000
+  NEXTAUTH_SECRET: ci-e2e-nextauth-secret-32chars-minimum
+  JWT_SECRET: ci-e2e-jwt-secret-32chars-minimum
+  E2E_LOGIN: 'true'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: precivox_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Prisma generate & migrate
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      - name: Seed usuários de teste
+        run: npm run db:seed
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Start server
+        run: |
+          npm run start &
+          echo $! > /tmp/next.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/login > /dev/null; then
+              echo "Server ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Server failed to start"
+          exit 1
+
+      - name: Run E2E tests
+        run: npm run test:e2e:ci
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f /tmp/next.pid ]; then
+            kill "$(cat /tmp/next.pid)" 2>/dev/null || true
+          fi
