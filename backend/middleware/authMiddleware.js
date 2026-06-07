@@ -10,8 +10,7 @@
  */
 
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+import { getJwtSecret } from '../lib/jwt-secret-loader.js';
 
 /**
  * @param {import('express').Request} req - req.db deve existir (dbMiddleware)
@@ -29,6 +28,14 @@ async function authenticate(req, res, next) {
     const token = authHeader.split(' ')[1];
     if (!token) {
       return res.status(401).json({ error: 'Missing token' });
+    }
+
+    let JWT_SECRET;
+    try {
+      JWT_SECRET = getJwtSecret();
+    } catch (err) {
+      console.error('Auth middleware: JWT_SECRET inválido ou ausente', err);
+      return res.status(500).json({ error: 'Internal authentication error' });
     }
 
     if (!JWT_SECRET) {
@@ -101,7 +108,13 @@ async function optionalAuthenticate(req, res, next) {
     return next();
   }
   const token = authHeader.split(' ')[1];
-  if (!token || !JWT_SECRET) {
+  if (!token) {
+    return next();
+  }
+  let JWT_SECRET;
+  try {
+    JWT_SECRET = getJwtSecret();
+  } catch {
     return next();
   }
   try {

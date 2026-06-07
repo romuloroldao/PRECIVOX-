@@ -6,6 +6,7 @@ import multer from 'multer';
 import path from 'path';
 import { processarArquivoUpload, obterHistoricoImportacoes } from '../lib/uploadHandler';
 import { prisma } from '../lib/prisma';
+import { getJwtSecret } from '../../lib/jwt-secret';
 
 const router = Router();
 
@@ -97,8 +98,8 @@ router.get('/', async (req: any, res) => {
     if (authHeader) {
       try {
         const token = authHeader.replace('Bearer ', '');
-        const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'precivox-secret-2024');
+        const jwtLib = require('jsonwebtoken');
+        const decoded = jwtLib.verify(token, getJwtSecret());
         user = decoded;
       } catch (error) {
         // Token inválido, continuar sem autenticação

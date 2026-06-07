@@ -5,13 +5,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GROOCRecommendationEngine } from '@/core/ai';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
+    const auth = await requireApiSession(request, { roles: ['ADMIN', 'GESTOR', 'CLIENTE'] });
+    if (isAuthResponse(auth)) return auth;
+
     try {
         const body = await request.json();
         const { produtos, localizacaoUsuario, preferencias } = body;
 
-        // Validar parâmetros
         if (!produtos || !Array.isArray(produtos) || produtos.length === 0) {
             return NextResponse.json({
                 success: false,
@@ -19,7 +22,6 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Criar engine e executar recomendação
         const engine = new GROOCRecommendationEngine();
         const result = await engine.recommend({
             produtos,
@@ -28,12 +30,13 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Erro interno do servidor';
         console.error('Erro na API de recomendações:', error);
 
         return NextResponse.json({
             success: false,
-            error: error.message || 'Erro interno do servidor'
+            error: message
         }, { status: 500 });
     }
 }

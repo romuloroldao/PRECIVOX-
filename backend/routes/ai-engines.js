@@ -1,6 +1,7 @@
 import express from 'express';
 import { createRequire } from 'module';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../lib/jwt-secret-loader.js';
 import { rateLimitAI } from '../middleware/rate-limit.js';
 import { paginationMiddleware } from '../middleware/pagination.js';
 
@@ -61,7 +62,7 @@ const authenticateJWT = (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, getJwtSecret());
         req.user = decoded;
         next();
     } catch (error) {

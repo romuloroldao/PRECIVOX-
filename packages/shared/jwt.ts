@@ -1,11 +1,13 @@
 // Utilitarios JWT centralizados (HS512, com fallback HS256 para compatibilidade)
 import { SignJWT, jwtVerify } from 'jose';
+import { getJwtSecret } from '../../lib/jwt-secret';
 
-type Role = "ADMIN" | "GESTOR" | "CLIENTE";
-const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '15m'; // Access token: 15 min
+type Role = 'ADMIN' | 'GESTOR' | 'CLIENTE';
+const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '15m';
 
-const secret = new TextEncoder().encode(JWT_SECRET);
+function getSecretKey(): Uint8Array {
+  return new TextEncoder().encode(getJwtSecret());
+}
 
 export interface JWTPayload {
   sub?: string;
@@ -25,7 +27,7 @@ export async function generateToken(payload: JWTPayload, expiresIn?: string): Pr
     .setProtectedHeader({ alg: 'HS512' })
     .setIssuedAt()
     .setExpirationTime(expiration)
-    .sign(secret);
+    .sign(getSecretKey());
 
   return token;
 }
@@ -36,7 +38,7 @@ export async function generateToken(payload: JWTPayload, expiresIn?: string): Pr
 export async function validateAccessToken(token: string): Promise<JWTPayload | null> {
   for (const alg of ['HS512', 'HS256'] as const) {
     try {
-      const { payload } = await jwtVerify(token, secret, { algorithms: [alg] });
+      const { payload } = await jwtVerify(token, getSecretKey(), { algorithms: [alg] });
       return payload as JWTPayload;
     } catch {
       continue;

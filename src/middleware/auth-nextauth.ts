@@ -1,8 +1,7 @@
 // Middleware adicional para suportar autenticação via cookies do NextAuth
 import { Request, Response, NextFunction } from 'express';
 import { getToken } from 'next-auth/jwt';
-
-const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || 'seu-secret-super-seguro';
+import { getJwtSecret } from '@/lib/jwt-secret';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -29,9 +28,9 @@ export const authenticateNextAuth = async (
     }
 
     // Tentar obter token do NextAuth via cookies
-    const token = await getToken({ 
-      req: req as any, 
-      secret: NEXTAUTH_SECRET 
+    const token = await getToken({
+      req: req as any,
+      secret: getJwtSecret(),
     });
 
     if (!token) {

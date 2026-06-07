@@ -10,8 +10,7 @@
  */
 
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+import { getJwtSecret } from '../lib/jwt-secret-loader.js';
 
 const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/users/login', '/users/register'];
 
@@ -36,8 +35,11 @@ function validateJWT(req, res, next) {
     return res.status(401).json({ error: 'Missing token' });
   }
 
-  if (!JWT_SECRET) {
-    console.error('validateJWT: JWT_SECRET não definido');
+  let JWT_SECRET;
+  try {
+    JWT_SECRET = getJwtSecret();
+  } catch (err) {
+    console.error('validateJWT: JWT_SECRET inválido ou ausente', err);
     return res.status(500).json({ error: 'Internal authentication error' });
   }
 

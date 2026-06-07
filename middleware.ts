@@ -87,9 +87,8 @@ export function middleware(request: NextRequest) {
   // VALIDAR AUTENTICAÇÃO PARA APIs PROTEGIDAS
   // ============================================
   
-  // TokenManager.validateSession é assíncrono, mas middleware não pode ser async
-  // Então vamos apenas passar e deixar a validação nas rotas individuais
-  // Isso garante que APIs sempre retornem JSON, não HTML
+  // TokenManager.validateSession é assíncrono — validação nas rotas via requireApiSession.
+  // Ver app/.cursor/rules/api-auth-required.mdc
   
   return NextResponse.next();
 }

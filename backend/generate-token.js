@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { query } from './config/database.js';
+import { createRequire } from 'node:module';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'precivox-secret-key-2024';
+const { getJwtSecret } = createRequire(import.meta.url)('../lib/jwt-secret.cjs');
 
 async function generateToken() {
   try {
@@ -25,7 +26,7 @@ async function generateToken() {
       name: user.name
     };
     
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign(payload, getJwtSecret(), { expiresIn: '24h' });
     
     console.log('✅ Token gerado com sucesso!');
     console.log('👤 Usuário:', user.name);

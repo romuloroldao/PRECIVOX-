@@ -1,9 +1,12 @@
 // Middleware de Autenticação JWT para PRECIVOX
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '@/lib/jwt-secret';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'seu-secret-super-seguro';
-const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || JWT_SECRET;
+function resolveSecrets(): { jwtSecret: string; nextAuthSecret: string } {
+  const secret = getJwtSecret();
+  return { jwtSecret: secret, nextAuthSecret: secret };
+}
 
 export interface AuthRequest extends Request {
   user?: {
@@ -32,7 +35,8 @@ async function tryNextAuthCookie(req: Request): Promise<any | null> {
 
     // Tentar decodificar o token do NextAuth
     try {
-      const decoded = jwt.verify(sessionToken, NEXTAUTH_SECRET) as any;
+      const { nextAuthSecret } = resolveSecrets();
+      const decoded = jwt.verify(sessionToken, nextAuthSecret) as any;
       return decoded;
     } catch (e) {
       return null;
@@ -60,7 +64,8 @@ export const authenticate = async (
       const token = authHeader.substring(7);
 
       // Tenta validar com JWT_SECRET (backend) e, em fallback, com NEXTAUTH_SECRET
-      const secretsToTry = [JWT_SECRET, NEXTAUTH_SECRET];
+      const { jwtSecret, nextAuthSecret } = resolveSecrets();
+      const secretsToTry = [jwtSecret, nextAuthSecret];
       for (const secret of secretsToTry) {
         try {
           decoded = jwt.verify(token, secret) as any;
@@ -146,7 +151,7 @@ export const generateToken = (user: {
       role: user.role,
       nome: user.nome,
     },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: '7d' }
   );
 };

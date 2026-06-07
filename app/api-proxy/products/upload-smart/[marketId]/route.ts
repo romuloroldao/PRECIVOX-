@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import jwt from 'jsonwebtoken';
+import { generateToken } from '@/lib/jwt';
 import { internalFetch } from '@/lib/internal-backend';
 
 export const dynamic = 'force-dynamic';
@@ -27,14 +27,13 @@ export async function POST(
 
     const formData = await request.formData();
 
-    const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'seu-secret-super-seguro';
     const tokenPayload = {
-      id: (session.user as any).id,
+      id: (session.user as { id: string }).id,
       email: session.user.email,
-      role: (session.user as any).role || 'CLIENTE',
+      role: ((session.user as { role?: string }).role as 'ADMIN' | 'GESTOR' | 'CLIENTE') || 'CLIENTE',
       nome: session.user.name || '',
     };
-    const signedToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30m' });
+    const signedToken = await generateToken(tokenPayload, '30m');
 
     const backendResponse = await internalFetch(
       `/api/v1/products/upload-smart/${marketId}`,

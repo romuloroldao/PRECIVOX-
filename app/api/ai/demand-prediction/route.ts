@@ -5,13 +5,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { DemandPredictor } from '@/core/ai';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
+    const auth = await requireApiSession(request, { roles: ['ADMIN', 'GESTOR'] });
+    if (isAuthResponse(auth)) return auth;
+
     try {
         const body = await request.json();
         const { produtoId, unidadeId, periodoHistorico, periodoPrevisao } = body;
 
-        // Validar parâmetros
         if (!produtoId || !unidadeId) {
             return NextResponse.json({
                 success: false,
@@ -19,7 +22,6 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Criar engine e executar previsão
         const predictor = new DemandPredictor();
         const result = await predictor.predict({
             produtoId,
@@ -29,12 +31,13 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Erro interno do servidor';
         console.error('Erro na API de previsão de demanda:', error);
 
         return NextResponse.json({
             success: false,
-            error: error.message || 'Erro interno do servidor'
+            error: message
         }, { status: 500 });
     }
 }

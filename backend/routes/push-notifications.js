@@ -4,6 +4,7 @@
 
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../lib/jwt-secret-loader.js';
 import { PushNotificationService } from '../../core/dist/services/push-notification.service.js';
 
 const router = express.Router();
@@ -18,7 +19,7 @@ const authenticateJWT = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, getJwtSecret());
         req.user = decoded;
         next();
     } catch (error) {

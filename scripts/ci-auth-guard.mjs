@@ -20,7 +20,6 @@ const GRANDFATHERED_JWT_VERIFY = new Set([
 
 /** Imports jsonwebtoken permitidos até migração para jose. */
 const GRANDFATHERED_JSONWEBTOKEN = new Set([
-  'app/api-proxy/products/upload-smart/[marketId]/route.ts',
   'src/middleware/auth.ts',
   'src/routes/mercados.ts',
 ]);

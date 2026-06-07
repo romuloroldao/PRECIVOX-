@@ -4,6 +4,7 @@
 
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../lib/jwt-secret-loader.js';
 import { ReportExportService } from '../../core/dist/services/report-export.service.js';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -20,7 +21,7 @@ const authenticateJWT = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, getJwtSecret());
         req.user = decoded;
         next();
     } catch (error) {
