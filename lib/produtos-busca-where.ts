@@ -55,6 +55,15 @@ export function buildProdutoWhereFromBuscaParams(params: BuscaQueryParams): {
   const whereProduct: Record<string, unknown> = { ativo: true };
   const andClauses: Record<string, unknown>[] = [];
 
+  if (params.mercado) {
+    andClauses.push({
+      OR: [
+        { mercadoId: params.mercado },
+        { mercadoId: null, estoques: { some: { unidades: { mercadoId: params.mercado } } } },
+      ],
+    });
+  }
+
   if (busca) {
     andClauses.push({
       OR: [

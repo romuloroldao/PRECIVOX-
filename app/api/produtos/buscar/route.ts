@@ -10,6 +10,21 @@ import {
 import { getPrecoReferenciaRegionalParaProduto } from '@/lib/ai/conversao-metrics';
 import { buscarMelhorAlternativa } from '@/lib/melhor-alternativa-preco';
 import { getProvaSocialBatch } from '@/lib/prova-social-hiperlocal';
+import {
+  buildEstoqueWhereComparativo,
+  formatarOfertaComparativa,
+} from '@/lib/produtos-busca-comparativo';
+import {
+  CAP_RANKING,
+  ordenarPorRankingHibrido,
+  paginarRankingHibrido,
+} from '@/lib/ranking-busca-hibrido';
+import {
+  calcularPerfilPreciDeEventos,
+  mesclarComAjustes,
+  type PerfilPreciAjustes,
+  type PerfilPreciScores,
+} from '@/lib/perfil-preci';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
@@ -57,6 +72,31 @@ async function registrarBuscasSemResultadoPorMercado(
   await Promise.all(mercados.map((m) => registrarSeZero(m.id)));
 }
 
+async function scoresPreciParaRanking(request: NextRequest): Promise<PerfilPreciScores | null> {
+  const user = await TokenManager.validateSession({
+    headers: request.headers,
+    cookies: request.cookies,
+  });
+  if (!user?.id || user.id === 'anonymous') return null;
+
+  const fim = new Date();
+  const inicio = new Date();
+  inicio.setDate(inicio.getDate() - 30);
+
+  const [eventos, dbUser] = await Promise.all([
+    EventCollector.getUserEventsGlobal(user.id, inicio, fim),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { perfilPreci: true },
+    }),
+  ]);
+
+  const calculado = calcularPerfilPreciDeEventos(eventos);
+  const ajustes =
+    (dbUser?.perfilPreci as { ajustes?: PerfilPreciAjustes } | null)?.ajustes ?? null;
+  return mesclarComAjustes(calculado.scores, ajustes);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -65,6 +105,16 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     const params = buscaParamsFromSearchParams(searchParams);
+    const modoComparativo = searchParams.get('modoComparativo') === 'true';
+    const sessionUser = await TokenManager.validateSession({
+      headers: request.headers,
+      cookies: request.cookies,
+    });
+    const ordenacaoParam = searchParams.get('ordenacao');
+    const ordenacao =
+      ordenacaoParam ||
+      (sessionUser?.id && sessionUser.id !== 'anonymous' ? 'hibrido' : 'nome');
+    const usarHibrido = ordenacao === 'hibrido';
     const { whereProduct, estoqueFilter, hasEstoqueWhere } = buildProdutoWhereFromBuscaParams(params);
     const busca = params.busca?.trim() || '';
 
@@ -79,31 +129,101 @@ export async function GET(request: NextRequest) {
       ).catch(() => {});
     }
 
-    const [produtos, total] = await Promise.all([
-      prisma.produtos.findMany({
-        where: whereProduct,
-        skip,
-        take: limit,
-        orderBy: [{ nome: 'asc' }, { dataAtualizacao: 'desc' }],
+    if (modoComparativo) {
+      const whereEstoque = buildEstoqueWhereComparativo(params);
+      const totalOfertas = await prisma.estoques.count({ where: whereEstoque });
+      const poolTake = usarHibrido ? Math.min(CAP_RANKING, totalOfertas) : limit;
+      const poolSkip = usarHibrido ? 0 : skip;
+
+      const estoques = await prisma.estoques.findMany({
+        where: whereEstoque,
+        skip: poolSkip,
+        take: poolTake,
+        orderBy: [
+          { produtos: { nome: 'asc' } },
+          { preco: 'asc' },
+          { atualizadoEm: 'desc' },
+        ],
         include: {
-          estoques: {
-            ...(hasEstoqueWhere ? { where: estoqueFilter } : {}),
-            orderBy: [{ emPromocao: 'desc' }, { preco: 'asc' }, { atualizadoEm: 'desc' }],
-            take: 1,
-            include: {
-              unidades: {
-                include: {
-                  mercados: true,
-                },
+          produtos: true,
+          unidades: { include: { mercados: true } },
+        },
+      });
+
+      let produtosFormatados = estoques.map(formatarOfertaComparativa);
+
+      if (usarHibrido && produtosFormatados.length > 0) {
+        const scores = await scoresPreciParaRanking(request);
+        produtosFormatados = paginarRankingHibrido(
+          ordenarPorRankingHibrido(produtosFormatados, scores),
+          page,
+          limit
+        );
+      }
+
+      const includeProvaSocial =
+        request.nextUrl.searchParams.get('includeProvaSocial') === 'true' && params.mercado;
+
+      let dataOut = produtosFormatados;
+      if (includeProvaSocial && params.mercado) {
+        const cap = 36;
+        const head = produtosFormatados.slice(0, cap);
+        const tail = produtosFormatados.slice(cap);
+        const pids = head
+          .map((row) => row.produto.id)
+          .filter((id): id is string => Boolean(id));
+        const provaMap = await getProvaSocialBatch(params.mercado, pids);
+        const enriched = head.map((row) => {
+          const prova = provaMap.get(row.produto.id);
+          return prova ? { ...row, provaSocial: prova } : row;
+        });
+        dataOut = [...enriched, ...tail];
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: dataOut,
+          modoComparativo: true,
+          ordenacao: usarHibrido ? 'hibrido' : ordenacao,
+          pagination: {
+            page,
+            limit,
+            total: totalOfertas,
+            totalPages: Math.ceil(totalOfertas / limit),
+            hasMore: skip + produtosFormatados.length < totalOfertas,
+          },
+        },
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const total = await prisma.produtos.count({ where: whereProduct });
+    const poolTake = usarHibrido ? Math.min(CAP_RANKING, total) : limit;
+    const poolSkip = usarHibrido ? 0 : skip;
+
+    const produtos = await prisma.produtos.findMany({
+      where: whereProduct,
+      skip: poolSkip,
+      take: poolTake,
+      orderBy: [{ nome: 'asc' }, { dataAtualizacao: 'desc' }],
+      include: {
+        estoques: {
+          ...(hasEstoqueWhere ? { where: estoqueFilter } : {}),
+          orderBy: [{ emPromocao: 'desc' }, { preco: 'asc' }, { atualizadoEm: 'desc' }],
+          take: 1,
+          include: {
+            unidades: {
+              include: {
+                mercados: true,
               },
             },
           },
         },
-      }),
-      prisma.produtos.count({ where: whereProduct }),
-    ]);
+      },
+    });
 
-    const produtosFormatados = produtos.map((produto) => {
+    let produtosFormatados = produtos.map((produto) => {
       const estoque = produto.estoques[0];
       const unidade = estoque?.unidades;
       const mercadoRel = unidade?.mercados;
@@ -149,6 +269,15 @@ export async function GET(request: NextRequest) {
         produto,
       };
     });
+
+    if (usarHibrido && produtosFormatados.length > 0) {
+      const scores = await scoresPreciParaRanking(request);
+      produtosFormatados = paginarRankingHibrido(
+        ordenarPorRankingHibrido(produtosFormatados, scores),
+        page,
+        limit
+      );
+    }
 
     const includeRef =
       request.nextUrl.searchParams.get('includeReferencia') === 'true' && params.mercado;
@@ -249,6 +378,7 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         data: dataOut,
+        ordenacao: usarHibrido ? 'hibrido' : ordenacao,
         pagination: {
           page,
           limit,

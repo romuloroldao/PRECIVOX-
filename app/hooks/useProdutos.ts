@@ -73,6 +73,10 @@ interface UseProdutosParams {
   /** Calcula melhor alternativa + economia líquida (primeiros itens). */
   includeEconomia?: boolean;
   includeProvaSocial?: boolean;
+  /** Uma linha por oferta (estoque × mercado), para comparar preços. */
+  modoComparativo?: boolean;
+  /** hibrido | nome | preco_asc — default hibrido na API se logado */
+  ordenacao?: string;
 }
 
 export type ProdutoProvaSocial = {
@@ -127,6 +131,8 @@ export function useProdutos(params: UseProdutosParams = {}) {
     includeReferencia = false,
     includeEconomia = false,
     includeProvaSocial = false,
+    modoComparativo = false,
+    ordenacao,
   } = params;
 
   // Debounce na busca
@@ -154,6 +160,8 @@ export function useProdutos(params: UseProdutosParams = {}) {
       if (includeReferencia && mercado) queryParams.append('includeReferencia', 'true');
       if (includeEconomia) queryParams.append('includeEconomia', 'true');
       if (includeProvaSocial && mercado) queryParams.append('includeProvaSocial', 'true');
+      if (modoComparativo) queryParams.append('modoComparativo', 'true');
+      if (ordenacao) queryParams.append('ordenacao', ordenacao);
       queryParams.append('page', targetPage.toString());
       queryParams.append('limit', initialLimit.toString());
 
@@ -162,6 +170,7 @@ export function useProdutos(params: UseProdutosParams = {}) {
 
       const response = await fetch(`/api/produtos/buscar?${queryParams.toString()}`, {
         cache: 'no-store',
+        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -253,6 +262,9 @@ export function useProdutos(params: UseProdutosParams = {}) {
     initialLimit,
     includeReferencia,
     includeEconomia,
+    includeProvaSocial,
+    modoComparativo,
+    ordenacao,
   ]);
 
   useEffect(() => {

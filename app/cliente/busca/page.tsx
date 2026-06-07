@@ -10,12 +10,16 @@ import { SearchAutocomplete } from '@/components/SearchAutocomplete';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { BuscaSemResultadoInteligente } from '@/components/cliente/BuscaSemResultadoInteligente';
 import { ListaSugestoesInline } from '@/components/cliente/ListaSugestoesInline';
+import { MercadoSelector } from '@/components/cliente/MercadoSelector';
+import { CatalogoMercadosResumo } from '@/components/cliente/CatalogoMercadosResumo';
+import { OfertaAgregadaRegiaoChip } from '@/components/cliente/OfertaAgregadaRegiaoChip';
+import { ProductCompareGroup } from '@/components/cliente/ProductCompareGroup';
 import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
 import { CompraConfirmacaoPrompt } from '@/components/cliente/CompraConfirmacaoPrompt';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry';
-import { Filter, ShoppingCart, X } from 'lucide-react';
+import { Filter, ShoppingCart, X, GitCompareArrows } from 'lucide-react';
 
 export default function BuscaPage() {
   const [modo, setModo] = useState<'cards' | 'lista'>('cards');
@@ -43,8 +47,12 @@ export default function BuscaPage() {
   const totalItensRef = useRef<number | null>(null);
   const [mercadoSugestao, setMercadoSugestao] = useState<string | null>(null);
 
-  /** Mercado inferido por eventos recentes ou pela primeira linha da lista. */
+  /** Contexto para scan, NPS e sugestões — não filtra a busca. */
   const mercadoContexto = mercadoSugestao ?? itens[0]?.unidade?.mercado?.id ?? null;
+
+  /** Filtro explícito da busca — default vazio = todos os mercados. */
+  const [mercadoFiltro, setMercadoFiltro] = useState('');
+  const [modoComparativo, setModoComparativo] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,11 +119,12 @@ export default function BuscaPage() {
     emPromocao,
     disponivel,
     debounceDelay: 0,
-    initialLimit: 100,
-    mercado: mercadoContexto ?? undefined,
-    includeReferencia: Boolean(mercadoContexto),
-    includeEconomia: true,
-    includeProvaSocial: true,
+    initialLimit: modoComparativo ? 80 : 100,
+    mercado: mercadoFiltro || undefined,
+    includeReferencia: Boolean(mercadoFiltro),
+    includeEconomia: !modoComparativo,
+    includeProvaSocial: Boolean(mercadoFiltro),
+    modoComparativo,
   });
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -144,10 +153,21 @@ export default function BuscaPage() {
     setPrecoMax('');
     setEmPromocao(undefined);
     setDisponivel(undefined);
+    setMercadoFiltro('');
     setBusca('');
   };
 
-  const temFiltros = categoria || marca || precoMin || precoMax || emPromocao !== undefined || disponivel !== undefined || busca;
+  const temFiltros =
+    categoria ||
+    marca ||
+    precoMin ||
+    precoMax ||
+    emPromocao !== undefined ||
+    disponivel !== undefined ||
+    mercadoFiltro ||
+    busca;
+
+  const mercadoSemResultado = mercadoFiltro || mercadoContexto;
 
   return (
     <DashboardLayout role="CLIENTE">
@@ -167,7 +187,30 @@ export default function BuscaPage() {
                 <ScanInteligenteEntry mercadoId={mercadoContexto} className="shrink-0" />
               </div>
 
-              {/* Busca */}
+              <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <MercadoSelector value={mercadoFiltro} onChange={setMercadoFiltro} className="lg:flex-1" />
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-gray-200/80">
+                  <input
+                    type="checkbox"
+                    checked={modoComparativo}
+                    onChange={(e) => setModoComparativo(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-precivox-blue focus:ring-precivox-blue"
+                  />
+                  <GitCompareArrows className="h-4 w-4 text-precivox-blue" />
+                  <span className="font-medium text-gray-800">Comparar ofertas por mercado</span>
+                </label>
+              </div>
+              <CatalogoMercadosResumo
+                mercadoFiltro={mercadoFiltro}
+                modoComparativo={modoComparativo}
+                className="mb-3"
+              />
+              {mercadoFiltro && (
+                <div className="mb-3">
+                  <OfertaAgregadaRegiaoChip mercadoId={mercadoFiltro} />
+                </div>
+              )}
+
               <div className="mb-3 flex gap-2 md:gap-4">
                 <SearchAutocomplete
                   value={busca}
@@ -329,14 +372,43 @@ export default function BuscaPage() {
 
               {/* Contador de resultados */}
               {!loading && (
-                <div className="text-sm text-gray-600 mb-4">
-                  {total > 0 ? `${Math.min(produtos.length, total)} de ${total}` : produtos.length}{' '}
-                  {total === 1 || produtos.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
-                  {busca && (
-                    <span className="ml-2">para "{busca}"</span>
+                <div className="mb-4 space-y-1">
+                  <p className="text-sm text-gray-600">
+                    {total > 0 ? (
+                      <>
+                        Exibindo <strong>{produtos.length.toLocaleString('pt-BR')}</strong> de{' '}
+                        <strong>{total.toLocaleString('pt-BR')}</strong>
+                      </>
+                    ) : (
+                      produtos.length.toLocaleString('pt-BR')
+                    )}{' '}
+                    {modoComparativo
+                      ? total === 1 || produtos.length === 1
+                        ? 'oferta com estoque'
+                        : 'ofertas com estoque'
+                      : total === 1 || produtos.length === 1
+                        ? 'produto com estoque'
+                        : 'produtos com estoque'}
+                    {busca && <span className="ml-1">para &quot;{busca}&quot;</span>}
+                    {categoria && (
+                      <span className="ml-1">na categoria &quot;{categoria}&quot;</span>
+                    )}
+                    {mercadoFiltro && (
+                      <span className="ml-1 text-precivox-blue">· um mercado selecionado</span>
+                    )}
+                  </p>
+                  {hasMore && (
+                    <p className="text-xs text-amber-800/90">
+                      A busca carrega em páginas de {modoComparativo ? 80 : 100} itens — role até o fim
+                      da lista ou use <strong>Carregar mais</strong> para ver o restante (
+                      {(total - produtos.length).toLocaleString('pt-BR')} ainda não exibidos).
+                    </p>
                   )}
-                  {categoria && (
-                    <span className="ml-2">na categoria "{categoria}"</span>
+                  {!mercadoFiltro && total > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Ofertas de todos os mercados ativos; use o filtro <strong>Mercado</strong> acima
+                      para restringir.
+                    </p>
                   )}
                 </div>
               )}
@@ -371,10 +443,10 @@ export default function BuscaPage() {
                 </div>
               </div>
             ) : produtos.length === 0 ? (
-              busca.trim().length >= 2 && mercadoContexto ? (
+              busca.trim().length >= 2 && mercadoSemResultado ? (
                 <BuscaSemResultadoInteligente
                   busca={busca}
-                  mercadoId={mercadoContexto}
+                  mercadoId={mercadoSemResultado}
                   onEquivalenteAdicionado={() => {
                     if (typeof window !== 'undefined') {
                       window.dispatchEvent(
@@ -403,20 +475,32 @@ export default function BuscaPage() {
               <>
                 <ListaSugestoesInline mercadoId={mercadoContexto} />
                 {modo === 'cards' ? (
-                  <ProductCard produtos={produtos} />
+                  modoComparativo ? (
+                    <ProductCompareGroup produtos={produtos} />
+                  ) : (
+                    <ProductCard produtos={produtos} />
+                  )
                 ) : (
                   <ProductList produtos={produtos} />
                 )}
                 {/* Lazy load incremental */}
                 {hasMore && (
-                  <div className="mt-8 flex flex-col items-center gap-3">
+                  <div className="mt-8 flex flex-col items-center gap-3 rounded-xl border border-dashed border-precivox-blue/30 bg-blue-50/50 px-4 py-6">
                     <div ref={sentinelRef} className="h-1 w-full" />
+                    <p className="text-center text-sm text-gray-700">
+                      Faltam{' '}
+                      <strong>{(total - produtos.length).toLocaleString('pt-BR')}</strong>{' '}
+                      {modoComparativo ? 'ofertas' : 'produtos'} para listar tudo desta busca
+                    </p>
                     <button
+                      type="button"
                       onClick={loadMore}
                       disabled={loadingMore}
-                      className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium disabled:opacity-50"
+                      className="px-6 py-2.5 bg-precivox-blue text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 shadow-sm"
                     >
-                      {loadingMore ? 'Carregando mais produtos...' : 'Carregar mais produtos'}
+                      {loadingMore
+                        ? 'Carregando…'
+                        : `Carregar mais (+${Math.min(modoComparativo ? 80 : 100, total - produtos.length).toLocaleString('pt-BR')})`}
                     </button>
                   </div>
                 )}
