@@ -36,9 +36,26 @@ Correção: `chaveLogicaProduto` não referenciava campo inexistente em `compute
 
 CI: `.github/workflows/typecheck-lib.yml`
 
-## Fase 4 — `app/` e `components/` (próximo)
+## Fase 4 — engines IA, upload, catálogo, parceiro ✅
 
-Só quando `lib/` restante estiver coberto (engines IA grandes, upload-handler, sync completo).
+Módulos restantes de `lib/` antes de `app/`:
+
+- `lib/produtos-{nome-normalize,busca-where,busca-comparativo}.ts`
+- `lib/events/frontend-events.ts`
+- `lib/upload-handler.ts`, `lib/scan-ocr-{parse,merge}.ts`, `lib/preco-crowd-feedback.ts`
+- `lib/catalogo-mercado.ts`, `lib/lista-rota-{proposta,ia}.ts`, `lib/raio-familiar.ts`
+- `lib/partner-api-auth.ts`, `lib/parceiro-sla.ts`, `lib/sync-agendado.ts`
+- `lib/ai/{nps-themes,intent-score-engine,resumo-semana-gestor,gondola-engine,promotion-engine,report-generator,grooc-engine,behavior-engine,health-engine,conversao-metrics}.ts`
+
+Correções strict:
+
+- `report-generator.ts` — tipos `MarketHealthScore` / `PromotionSuggestion`
+- `benchmark-preco-regional.ts` — filtro `unidades` sem `null`; `_avg` opcional (transitivo)
+- `catalogo-mercado.ts` — `computeSkuNacionalFields` em vez de campos inexistentes em `computeCamposChaveProduto`
+
+## Fase 5 — `app/` e `components/` (próximo)
+
+Só quando todo `lib/` estiver coberto ou restarem dependências transitivas mínimas.
 
 ## Comando
 
