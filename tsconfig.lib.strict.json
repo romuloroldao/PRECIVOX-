@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noEmit": true
+  },
+  "include": [
+    "lib/redirect.ts",
+    "lib/safe-callback-url.ts",
+    "lib/utils.ts",
+    "lib/password.ts",
+    "lib/validations.ts",
+    "lib/geo.ts",
+    "lib/geocoding.ts",
+    "lib/geolocation.ts",
+    "lib/geofence-constants.ts",
+    "lib/raio-familiar-constants.ts",
+    "lib/estoque-truth-labels.ts",
+    "lib/crowd-reputacao-labels.ts",
+    "lib/regiao-preco-ui.ts"
+  ],
+  "exclude": ["node_modules"]
+}

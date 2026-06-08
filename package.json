@@ -45,7 +45,8 @@
     "test:e2e:ci": "jest tests/e2e --runInBand --forceExit",
     "playwright:install": "playwright install chromium",
     "playwright:install:ci": "playwright install --with-deps chromium",
-    "ci:auth-guard": "node scripts/ci-auth-guard.mjs"
+    "ci:auth-guard": "node scripts/ci-auth-guard.mjs",
+    "typecheck:lib": "tsc -p tsconfig.lib.strict.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
