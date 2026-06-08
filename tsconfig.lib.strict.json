@@ -19,7 +19,15 @@
     "lib/raio-familiar-constants.ts",
     "lib/estoque-truth-labels.ts",
     "lib/crowd-reputacao-labels.ts",
-    "lib/regiao-preco-ui.ts"
+    "lib/regiao-preco-ui.ts",
+    "lib/jwt-secret.ts",
+    "lib/jwt.ts",
+    "lib/api-auth.ts",
+    "lib/token-manager.ts",
+    "lib/auth-helpers.ts",
+    "lib/auth-client.ts",
+    "lib/logout-client.ts",
+    "lib/internal-backend.ts"
   ],
   "exclude": ["node_modules"]
 }

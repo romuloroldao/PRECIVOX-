@@ -62,7 +62,7 @@ export class TokenManager {
         id: user.id,
         email: user.email,
         role: user.role,
-        nome: user.nome || null,
+        nome: user.nome ?? '',
         tokenVersion: normalizedTokenVersion,
       },
       this.ACCESS_TOKEN_EXPIRES_IN
