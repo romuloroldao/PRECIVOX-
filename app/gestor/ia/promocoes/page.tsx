@@ -1,11 +1,28 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
 import { BenchmarkPrecoRegionalCard } from '@/components/gestor/BenchmarkPrecoRegionalCard';
 
 export default function ModuloPromocoesPage() {
+  const [mercadoId, setMercadoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/markets', { credentials: 'include', cache: 'no-store' });
+        if (!res.ok) return;
+        const json = await res.json();
+        const id = json.data?.[0]?.id as string | undefined;
+        if (id) setMercadoId(id);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, []);
+
   return (
     <DashboardLayout role="GESTOR">
       <div className="space-y-6">
@@ -19,9 +36,16 @@ export default function ModuloPromocoesPage() {
           </p>
         </div>
 
-        <PricingAssistidoCard />
-
-        <BenchmarkPrecoRegionalCard />
+        {mercadoId ? (
+          <>
+            <PricingAssistidoCard mercadoId={mercadoId} />
+            <BenchmarkPrecoRegionalCard mercadoId={mercadoId} />
+          </>
+        ) : (
+          <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
+            Carregando mercado…
+          </div>
+        )}
 
         <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
           <p className="font-medium text-gray-900">Como funciona</p>

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
+import { getDashboardUrl } from '@/lib/redirect';
 
 interface Produto {
   id: string;
@@ -84,11 +85,22 @@ export default function ProdutosPage() {
 
   const loadUnidades = async () => {
     try {
-      const response = await fetch('/api/unidades');
-      if (response.ok) {
-        const data = await response.json();
-        setUnidades(data || []);
-      }
+      const marketsRes = await fetch('/api/markets', { credentials: 'include', cache: 'no-store' });
+      if (!marketsRes.ok) return;
+      const marketsJson = await marketsRes.json();
+      const mercados = marketsJson.data ?? [];
+      const batches = await Promise.all(
+        mercados.map(async (mercado: { id: string }) => {
+          const res = await fetch(`/api/unidades?mercadoId=${encodeURIComponent(mercado.id)}`, {
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          if (!res.ok) return [];
+          const json = await res.json();
+          return json.success ? json.data ?? [] : [];
+        })
+      );
+      setUnidades(batches.flat());
     } catch (error) {
       console.error('Erro ao carregar unidades:', error);
     }
@@ -158,7 +170,7 @@ export default function ProdutosPage() {
 
   // Verificar permissões
   if (session?.user && (session.user as any).role !== 'ADMIN' && (session.user as any).role !== 'GESTOR') {
-    router.push('/dashboard');
+    router.push(getDashboardUrl((session.user as any).role ?? 'CLIENTE'));
     return null;
   }
 
