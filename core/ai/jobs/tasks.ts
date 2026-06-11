@@ -75,6 +75,21 @@ export class AIJobs {
         }
     }
 
+    /** ML leve batch — churn + elasticidade por usuário/mercado (Épico 12) */
+    static async runMlLeveBatch() {
+        logger.info('AIJobs', '🧠 [JOB] Batch ML leve (churn + elasticidade)...');
+        try {
+            const { executarMlLeveBatch } = await import('../../../lib/ml-leve/batch');
+            const resumo = await executarMlLeveBatch();
+            logger.info(
+                'AIJobs',
+                `✅ [JOB] ML leve: ${resumo.processados} ok, ${resumo.erros} erros, ${resumo.ignorados} ignorados`
+            );
+        } catch (error) {
+            logger.error('AIJobs', '❌ [JOB] Erro no batch ML leve:', error);
+        }
+    }
+
     /** Push retenção — cesta provável + dia de mercado (2.3 / 6.3) */
     static async runRetentionPush() {
         logger.info('AIJobs', '🔔 [JOB] Push de retenção (cesta / dia de mercado)...');
