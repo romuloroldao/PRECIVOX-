@@ -1,6 +1,8 @@
-# Épico 16 — Parceiros âncora ✅
+# Épico 16 — Parceiros âncora ✅ (MVP técnico)
 
 MVP jun/2026.
+
+> **Estado comercial:** produto ainda **não lançado** — nenhum parceiro âncora designado em prod. A infra (campo, APIs, UI, regras) está pronta; a designação das 3–5 redes por região piloto acontece **no go-live**, quando houver contratos Tier 2+ fechados.
 
 ## Objetivo
 
