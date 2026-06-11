@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import Link from 'next/link';
+import { getDashboardUrl } from '@/lib/redirect';
 import UploadDatabase from '@/components/UploadDatabase';
 import { SyncAgendadoCard } from '@/components/gestor/SyncAgendadoCard';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
@@ -79,7 +80,7 @@ export default function GestorProdutosPage() {
   useEffect(() => {
     if (session?.user && (session.user as any).role !== 'GESTOR') {
       toast.error('Acesso não autorizado');
-      router.push('/dashboard');
+      router.push(getDashboardUrl((session.user as any).role ?? 'CLIENTE'));
     }
   }, [session, router, toast]);
 

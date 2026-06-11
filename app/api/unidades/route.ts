@@ -1,34 +1,21 @@
 // API Route: Gerenciar unidades
-import { getServerSession } from 'next-auth';
-
-
-import { authOptions } from '@/lib/auth';
-
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sincronizarGeocodificacaoUnidade } from '@/lib/unidade-geocode';
-
-import { NextResponse } from 'next/server';
+import { requireApiUser } from '@/lib/gestor-api-mercado';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await requireApiUser(request);
+    if (user instanceof NextResponse) return user;
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const mercadoId = searchParams.get('mercadoId');
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
 
     if (!mercadoId) {
       return NextResponse.json(
@@ -49,7 +36,7 @@ export async function GET(request: Request) {
       );
     }
 
-    if (userRole === 'GESTOR' && mercado.gestorId !== userId) {
+    if (user.role === 'GESTOR' && mercado.gestorId !== user.id) {
       return NextResponse.json(
         { success: false, error: 'Acesso negado' },
         { status: 403 }
@@ -87,19 +74,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
+    const user = await requireApiUser(request);
+    if (user instanceof NextResponse) return user;
 
     const body = await request.json();
     const {
@@ -134,7 +112,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (userRole === 'GESTOR' && mercado.gestorId !== userId) {
+    if (user.role === 'GESTOR' && mercado.gestorId !== user.id) {
       return NextResponse.json(
         { success: false, error: 'Acesso negado' },
         { status: 403 }

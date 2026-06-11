@@ -7,6 +7,7 @@ import { useMercadoVivoGeofenceContext } from '@/components/cliente/MercadoVivoG
 import { useMercadoSelos } from '@/app/hooks/useMercadoSelos';
 import { GeofenceRaioSelector } from '@/components/cliente/GeofenceRaioSelector';
 import { MercadoSeloBadge } from '@/components/cliente/MercadoSeloBadge';
+import { MercadoCrowdReputacaoChip } from '@/components/cliente/MercadoCrowdReputacaoChip';
 
 interface Props {
   enabled?: boolean;
@@ -72,6 +73,7 @@ export function MercadoVivoBanner({ enabled = true }: Props) {
                   className="!bg-white/20 !text-white !ring-white/40"
                 />
               )}
+              <MercadoCrowdReputacaoChip mercadoId={deteccao.mercadoId} />
             </p>
             {deteccao.distanciaMetros != null && deteccao.distanciaMetros >= 0 && (
               <p className="text-xs text-emerald-50">~{deteccao.distanciaMetros} m da entrada</p>

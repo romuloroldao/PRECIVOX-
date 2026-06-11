@@ -1,99 +1,67 @@
 // API Route: Módulo de Compras e Reposição Inteligente
-import { getServerSession } from 'next-auth';
-
-
-import { authOptions } from '@/lib/auth';
-
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isGestorAuthResponse, requireGestorApiAccess } from '@/lib/gestor-api-mercado';
 
-import { NextResponse } from 'next/server';
-
-// Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+const PONTO_REPOSICAO_PADRAO = 20;
+const DEMANDA_DIARIA_PADRAO = 10 / 7;
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { mercadoId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireGestorApiAccess(request, params.mercadoId);
+    if (isGestorAuthResponse(auth)) return auth.response;
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const mercadoId = auth.mercadoId;
 
-    const mercadoId = params.mercadoId;
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
-
-    // Verificar acesso ao mercado
-    const mercado = await prisma.mercados.findUnique({
-      where: { id: mercadoId }
+    const estoquesBaixos = await prisma.estoques.findMany({
+      where: {
+        unidades: { mercadoId, ativa: true },
+        produtos: { ativo: true },
+        quantidade: { lt: PONTO_REPOSICAO_PADRAO },
+      },
+      select: {
+        quantidade: true,
+        produtos: {
+          select: {
+            id: true,
+            nome: true,
+            giroEstoqueMedio: true,
+          },
+        },
+        unidades: {
+          select: { nome: true },
+        },
+      },
+      orderBy: { quantidade: 'asc' },
+      take: 10,
     });
 
-    if (!mercado) {
-      return NextResponse.json(
-        { success: false, error: 'Mercado não encontrado' },
-        { status: 404 }
-      );
-    }
+    const produtosProcessados = estoquesBaixos.map((item) => {
+      const demandaDiaria =
+        item.produtos.giroEstoqueMedio && item.produtos.giroEstoqueMedio > 0
+          ? item.produtos.giroEstoqueMedio
+          : DEMANDA_DIARIA_PADRAO;
+      const diasRestantes = item.quantidade / demandaDiaria;
+      const quantidadeRepor = Math.max(0, PONTO_REPOSICAO_PADRAO - item.quantidade);
 
-    if (userRole === 'GESTOR' && mercado.gestorId !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    // Buscar produtos em risco de ruptura
-    // TODO: Implementar lógica de IA para calcular demanda prevista e dias restantes
-    // Por enquanto, usando SQL para buscar produtos com estoque baixo
-
-    const produtosEmRuptura = await prisma.$queryRaw<any[]>`
-      SELECT 
-        p.id,
-        p.nome,
-        u.nome as unidade,
-        e.quantidade as estoqueAtual,
-        COALESCE(p.demandaPrevista7d, 10) as demandaSemanal,
-        COALESCE(p.pontoReposicao, 20) as pontoReposicao,
-        CASE 
-          WHEN COALESCE(p.demandaPrevista7d, 0) > 0 
-          THEN CAST(e.quantidade AS FLOAT) / (CAST(p.demandaPrevista7d AS FLOAT) / 7.0)
-          ELSE 7
-        END as diasRestantes,
-        CASE 
-          WHEN COALESCE(p.demandaPrevista7d, 0) > 0 
-          THEN GREATEST(COALESCE(p.pontoReposicao, 20) - e.quantidade, 0)
-          ELSE 0
-        END as quantidadeRepor
-      FROM estoques e
-      INNER JOIN produtos p ON e."produtoId" = p.id
-      INNER JOIN unidades u ON e."unidadeId" = u.id
-      WHERE u."mercadoId" = ${mercadoId}
-        AND u.ativa = true
-        AND p.ativo = true
-        AND e.quantidade < COALESCE(p."pontoReposicao", 20)
-      ORDER BY diasRestantes ASC
-      LIMIT 10
-    `;
-
-    // Processar dados para o formato esperado pelo frontend
-    const produtosProcessados = produtosEmRuptura.map((produto) => ({
-      id: produto.id,
-      nome: produto.nome,
-      unidade: produto.unidade,
-      estoqueAtual: produto.estoqueAtual,
-      demandaDiaria: Number((produto.demandaSemanal / 7).toFixed(1)),
-      diasRestantes: Number(produto.diasRestantes.toFixed(1)),
-      quantidadeRepor: Math.ceil(produto.quantidadeRepor),
-      prioridade: produto.diasRestantes < 1 ? 'CRITICA' : produto.diasRestantes < 3 ? 'ALTA' : 'MEDIA'
-    }));
+      return {
+        id: item.produtos.id,
+        nome: item.produtos.nome,
+        unidade: item.unidades.nome,
+        estoqueAtual: item.quantidade,
+        demandaDiaria: Number(demandaDiaria.toFixed(1)),
+        diasRestantes: Number(diasRestantes.toFixed(1)),
+        quantidadeRepor: Math.ceil(quantidadeRepor),
+        prioridade:
+          diasRestantes < 1 ? 'CRITICA' : diasRestantes < 3 ? 'ALTA' : 'MEDIA',
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -102,9 +70,9 @@ export async function GET(
         resumo: {
           totalProdutos: produtosProcessados.length,
           criticos: produtosProcessados.filter((p) => p.prioridade === 'CRITICA').length,
-          altos: produtosProcessados.filter((p) => p.prioridade === 'ALTA').length
-        }
-      }
+          altos: produtosProcessados.filter((p) => p.prioridade === 'ALTA').length,
+        },
+      },
     });
   } catch (error) {
     console.error('Erro ao buscar dados de compras:', error);

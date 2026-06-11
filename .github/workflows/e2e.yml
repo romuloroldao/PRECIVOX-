@@ -49,10 +49,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Prisma generate & migrate
+      - name: Prisma generate & schema (CI)
         run: |
           npx prisma generate
-          npx prisma migrate deploy
+          # Banco CI é sempre vazio: migrate deploy falha porque migrations legadas
+          # (add_nextauth_support) rodam depois de 202511071200_unify_user_table.
+          npx prisma db push --accept-data-loss
 
       - name: Seed usuários de teste
         run: npm run db:seed
@@ -81,6 +83,7 @@ jobs:
         run: npm run test:e2e:ci
         env:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CI: true
 
       - name: Stop server
         if: always()

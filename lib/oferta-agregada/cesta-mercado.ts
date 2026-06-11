@@ -18,13 +18,13 @@ async function buscarMatchNoCatalogo(
 }> {
   const baseWhere = {
     ativo: true,
-    OR: [{ mercadoId }, { mercadoId: null }],
+    estoques: { some: { unidades: { mercadoId, ativa: true } } },
   };
 
   if (chave.startsWith('ean:')) {
     const ean = chave.slice(4);
     const p = await prisma.produtos.findFirst({
-      where: { ...baseWhere, OR: [{ skuNacional: chave }, { codigoBarras: { contains: ean } }] },
+      where: { ...baseWhere, codigoBarras: { contains: ean } },
       select: { id: true, nome: true },
     });
     if (p) {
@@ -51,7 +51,7 @@ async function buscarMatchNoCatalogo(
 
   if (chave.startsWith('ins:')) {
     const p = await prisma.produtos.findFirst({
-      where: { ...baseWhere, skuNacional: chave },
+      where: { ...baseWhere, chaveInsight: { contains: chave.slice(4) } },
       select: { id: true, nome: true },
     });
     if (p) {

@@ -6,7 +6,7 @@ import { withAdmin } from '@/lib/api/auth/withAdmin';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Recalcula nome_chave e chave_insight para todos os produtos (admin). */
+/** Recalcula chaves, SKU nacional e embedding para todos os produtos (admin). */
 export const POST = withAdmin(async (_req: NextRequest) => {
   const rows = await prisma.produtos.findMany({
     select: {
@@ -31,6 +31,8 @@ export const POST = withAdmin(async (_req: NextRequest) => {
       data: {
         nomeChave: chaves.nomeChave,
         chaveInsight: chaves.chaveInsight,
+        skuNacional: chaves.skuNacional,
+        embeddingJson: chaves.embeddingJson,
         dataAtualizacao: new Date(),
       },
     });

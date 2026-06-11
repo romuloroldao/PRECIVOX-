@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
+import { getDashboardUrl } from '@/lib/redirect';
 
 interface Estoque {
   id: string;
@@ -65,7 +66,7 @@ export default function GestorProdutoEditPage() {
   useEffect(() => {
     if (session?.user && (session.user as any).role !== 'GESTOR') {
       toast.error('Acesso não autorizado');
-      router.push('/dashboard');
+      router.push(getDashboardUrl((session.user as any).role ?? 'CLIENTE'));
     }
   }, [session, router, toast]);
 

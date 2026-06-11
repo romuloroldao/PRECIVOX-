@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { ContribuidorBadge } from '@/components/cliente/ContribuidorBadge';
 import { RelatorioSemanaCard } from '@/components/cliente/RelatorioSemanaCard';
+import { MlLeveClienteCard } from '@/components/cliente/MlLeveClienteCard';
 import type { EixoPreci, PerfilPreciScores } from '@/lib/perfil-preci';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -135,6 +136,7 @@ export default function PerfilPreciPage() {
         {loading && <p className="text-gray-500">Carregando…</p>}
 
         {mercadoId && <RelatorioSemanaCard mercadoId={mercadoId} />}
+        {mercadoId && <MlLeveClienteCard mercadoId={mercadoId} />}
 
         {intent && (
           <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">

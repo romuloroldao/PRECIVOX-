@@ -29,6 +29,21 @@ export async function reconhecerTextoEtiqueta(
   }
 }
 
+/** OCR + EAN para crowd/scan (Épico 14). */
+export async function processarFotoScan(
+  _tipo: 'etiqueta' | 'embalagem' | 'item',
+  file: File
+): Promise<{ texto: string; eans: string[] }> {
+  const texto = await reconhecerTextoEtiqueta(file);
+  let eans: string[] = [];
+  try {
+    eans = await detectarCodigoBarrasImagem(file);
+  } catch {
+    eans = [];
+  }
+  return { texto, eans };
+}
+
 /** EAN via BarcodeDetector nativo (Chrome/Android), quando disponível. */
 export async function detectarCodigoBarrasImagem(
   source: ImageBitmapSource

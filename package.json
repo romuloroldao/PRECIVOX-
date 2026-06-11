@@ -42,7 +42,7 @@
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:e2e": "jest tests/e2e",
-    "test:e2e:ci": "jest tests/e2e --runInBand --forceExit",
+    "test:e2e:ci": "NODE_OPTIONS=--experimental-vm-modules jest tests/e2e --runInBand --forceExit",
     "playwright:install": "playwright install chromium",
     "playwright:install:ci": "playwright install --with-deps chromium",
     "ci:auth-guard": "node scripts/ci-auth-guard.mjs",

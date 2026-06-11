@@ -14,6 +14,7 @@ import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
 import { PrecoCrowdActions } from '@/components/cliente/PrecoCrowdActions';
 import { EsperaQueValeChip } from '@/components/cliente/EsperaQueValeChip';
 import { AtacadoVarejoChip } from '@/components/cliente/AtacadoVarejoChip';
+import { SkuNacionalChip } from '@/components/cliente/SkuNacionalChip';
 
 interface ProductCardProps {
   produtos: Produto[];
@@ -354,6 +355,10 @@ function CardLinhaSubstituto({
                 <>
                   <EsperaQueValeChip produtoId={String(pid)} mercadoId={mercadoId} />
                   <AtacadoVarejoChip produtoId={String(pid)} mercadoId={mercadoId} />
+                  <SkuNacionalChip
+                    produtoCatalogoId={String(pid)}
+                    mercadoId={mercadoId}
+                  />
                 </>
               )}
               {produto.referenciaRegiao?.media != null && !produto.melhorAlternativa && (
