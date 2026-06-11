@@ -1,4 +1,4 @@
-# Épico 15 — Embeddings catálogo + SKU nacional
+# Épico 15 — Embeddings catálogo + SKU nacional ✅
 
 MVP jun/2026.
 
