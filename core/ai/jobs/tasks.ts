@@ -75,15 +75,35 @@ export class AIJobs {
         }
     }
 
-    /** ML leve batch — churn + elasticidade por usuário/mercado (Épico 12) */
+    /** ML leve batch — churn + elasticidade (Épico 12) via API cron (evita import lib/ no build AI) */
     static async runMlLeveBatch() {
         logger.info('AIJobs', '🧠 [JOB] Batch ML leve (churn + elasticidade)...');
         try {
-            const { executarMlLeveBatch } = await import('../../../lib/ml-leve/batch');
-            const resumo = await executarMlLeveBatch();
+            const secret = process.env.CRON_SECRET;
+            const base =
+                process.env.INTERNAL_API_URL ||
+                process.env.NEXT_PUBLIC_URL ||
+                'http://127.0.0.1:3000';
+            if (!secret) {
+                logger.warn('AIJobs', '⚠️ CRON_SECRET ausente — batch ML leve ignorado');
+                return;
+            }
+            const res = await fetch(`${base.replace(/\/$/, '')}/api/cron/ml-leve-batch?limite=400`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${secret}` },
+            });
+            const json = (await res.json()) as {
+                success?: boolean;
+                data?: { processados: number; erros: number; ignorados: number };
+                error?: string;
+            };
+            if (!res.ok || !json.success) {
+                throw new Error(json.error ?? `HTTP ${res.status}`);
+            }
+            const r = json.data!;
             logger.info(
                 'AIJobs',
-                `✅ [JOB] ML leve: ${resumo.processados} ok, ${resumo.erros} erros, ${resumo.ignorados} ignorados`
+                `✅ [JOB] ML leve: ${r.processados} ok, ${r.erros} erros, ${r.ignorados} ignorados`
             );
         } catch (error) {
             logger.error('AIJobs', '❌ [JOB] Erro no batch ML leve:', error);
