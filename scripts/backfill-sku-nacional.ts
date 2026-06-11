@@ -4,7 +4,53 @@
  * Uso: npm run db:backfill:sku-nacional [-- --take=500 --skip=0]
  */
 import 'dotenv/config';
-import { backfillSkuNacionalBatch } from '@/lib/sku-nacional/resolver';
+import { PrismaClient } from '@prisma/client';
+import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
+
+const prisma = new PrismaClient();
+
+async function backfillSkuNacionalBatch(opts?: { take?: number; skip?: number }) {
+  const take = Math.min(opts?.take ?? 500, 2000);
+  const skip = opts?.skip ?? 0;
+
+  const rows = await prisma.produtos.findMany({
+    skip,
+    take,
+    orderBy: { id: 'asc' },
+    select: {
+      id: true,
+      nome: true,
+      codigoBarras: true,
+      marca: true,
+      categoria: true,
+    },
+  });
+
+  for (const p of rows) {
+    const campos = computeCamposChaveProduto({
+      nome: p.nome,
+      codigoBarras: p.codigoBarras,
+      marca: p.marca,
+      categoria: p.categoria,
+    });
+    await prisma.produtos.update({
+      where: { id: p.id },
+      data: {
+        nomeChave: campos.nomeChave,
+        chaveInsight: campos.chaveInsight,
+        skuNacional: campos.skuNacional,
+        embeddingJson: campos.embeddingJson,
+        dataAtualizacao: new Date(),
+      },
+    });
+  }
+
+  const restantes = await prisma.produtos.count({
+    where: { OR: [{ skuNacional: null }, { skuNacional: '' }] },
+  });
+
+  return { processados: rows.length, restantes };
+}
 
 async function main() {
   const args = process.argv.slice(2);
@@ -24,4 +70,4 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(() => process.exit(0));
+  .finally(() => prisma.$disconnect());
