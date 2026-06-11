@@ -4,9 +4,9 @@
 > **Categoria:** Infraestrutura de decisão de consumo — não comparador de preços.  
 > **Princípios:** MVP first · baixo custo · IA híbrida · dados proprietários · IA explicável.
 
-**Última atualização:** 28/05/2026  
+**Última atualização:** 11/06/2026  
 **Horizonte:** 0–36 meses (MVP → escala → plataforma)  
-**Fase operacional atual:** **Fase 2 — PMF regional** (10.1 e 4.4 entregues; próximo: 10.2, 9.4, 11.x)  
+**Fase operacional atual:** **Fase 3 — Escala** (Épico 12 ✅; Épico 13 em entrega; próximo: 14 Crowd v2)  
 **Handoff detalhado:** [`CHECKPOINT_ROADMAP_MAIO2026.md`](./CHECKPOINT_ROADMAP_MAIO2026.md)
 
 ---
@@ -54,8 +54,8 @@
 ```
 FASE 0 — Fundação          │ Catálogo, busca, lista, eventos, IA gestor          ✅ estável
 FASE 1 — MVP visão (0–3m)  │ EL, truth layer, crowd, Perfil PRECI, retenção      ✅ entregue
-FASE 2 — PMF (3–9m)        │ Despensa, mercado ao vivo, sync, SLA parceiro       ← AQUI
-FASE 3 — Escala (9–18m)    │ ML leve, oferta agregada, API parceiro, monetização
+FASE 2 — PMF (3–9m)        │ Despensa, mercado ao vivo, sync, SLA parceiro       ✅ entregue
+FASE 3 — Escala (9–18m)    │ ML leve, oferta agregada, API parceiro, monetização ← AQUI
 FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 ```
 
@@ -205,18 +205,18 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 
 ---
 
-# FASE 3 — Escala (meses 9–18)
+# FASE 3 — Escala (meses 9–18) — EM CURSO
 
 **Objetivo:** Replicar cidade a cidade; moat de dados; receita B2B recorrente.
 
-| Épico | Entregas principais |
-|-------|---------------------|
-| **12 — ML leve** | Basket completion, churn, elasticidade por usuário (batch) |
-| **13 — Oferta agregada** | Mercado “aceita” cesta agregada da região |
-| **14 — Crowd v2** | Foto etiqueta OCR, reputação mercado, anti-fraude |
-| **15 — Embeddings catálogo** | Unificação SKU nacional com chave local |
-| **16 — Parceiros âncora** | 3–5 redes / atacados por região piloto |
-| **17 — Monetização** | SaaS gestor + insights CPG agregados + promo direcionada |
+| Épico | Entregas principais | Status |
+|-------|---------------------|--------|
+| **12 — ML leve** | Basket completion, churn, elasticidade por usuário (batch) | ✅ |
+| **13 — Oferta agregada** | Mercado “aceita” cesta agregada da região | 🟡 PR + migration |
+| **14 — Crowd v2** | Foto etiqueta OCR, reputação mercado, anti-fraude | 🔲 |
+| **15 — Embeddings catálogo** | Unificação SKU nacional com chave local | 🔲 |
+| **16 — Parceiros âncora** | 3–5 redes / atacados por região piloto | 🔲 |
+| **17 — Monetização** | SaaS gestor + insights CPG agregados + promo direcionada | 🔲 |
 
 **Métricas:** densidade grafo (confirmações/km²) · ARR B2B · CAC orgânico (viral card)
 
@@ -305,11 +305,10 @@ flowchart TD
 
 | Prioridade | Item | Doc |
 |------------|------|-----|
-| P0 | **PR + QA** da branch `feature/sprint-2-comportamento-crowd` | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| P1 | **PR + QA** branch acumulada | `CHECKPOINT_ROADMAP_MAIO2026.md` §10 |
-| Ops | Configurar `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` em prod | push retenção |
-| Ops | Migration `parceiro_webhook` em produção | ✅ aplicada |
-| Ops | Deploy build + **Ctrl+Shift+R** se ChunkLoadError | `app/layout.tsx` recovery |
+| P0 | **Épico 13** — migration `oferta_agregada` + deploy + QA gestor/cliente | `EPICO_13_OFERTA_AGREGADA.md` |
+| P1 | **Épico 14** — Crowd v2 (OCR etiqueta, reputação) | `EPICO_14_CROWD_V2.md` |
+| P1 | **PR #2** — TypeScript strict incremental (`chore/ts-strict-lib`) | — |
+| Ops | Rodar batch ML leve (`POST /api/cron/ml-leve-batch`) | `EPICO_12_ML_LEVE.md` |
 
 **Histórico sprints:** [`ISSUES_SPRINT0.md`](./ISSUES_SPRINT0.md) · [`FASE1_SPRINTS.md`](./FASE1_SPRINTS.md)
 
@@ -327,4 +326,4 @@ flowchart TD
 
 ---
 
-*Roadmap revisado em 28/05/2026 após entrega do 9.3 e alinhamento ao checkpoint. Revisar ao fim de cada release com métricas reais.*
+*Roadmap revisado em 11/06/2026 após Épico 12 (ML leve) e entrega do Épico 13 (oferta agregada). Revisar ao fim de cada release com métricas reais.*

@@ -1,3 +1,4 @@
+import { prisma } from '@/lib/prisma';
 import {
   OFERTA_AGREGADA_PADRAO,
   type OfertaAgregadaConfig,
@@ -22,9 +23,11 @@ function parseConfig(raw: unknown): OfertaAgregadaConfig {
 }
 
 export async function obterConfigOfertaAgregada(mercadoId: string): Promise<OfertaAgregadaConfig> {
-  void mercadoId;
-  // Persistência em `mercados.oferta_agregada` após migration do Épico 13
-  return { ...OFERTA_AGREGADA_PADRAO };
+  const m = await prisma.mercados.findUnique({
+    where: { id: mercadoId },
+    select: { ofertaAgregada: true },
+  });
+  return parseConfig(m?.ofertaAgregada);
 }
 
 export async function salvarConfigOfertaAgregada(
@@ -37,7 +40,10 @@ export async function salvarConfigOfertaAgregada(
     ...patch,
     ultimoAceite: patch.ultimoAceite ?? atual.ultimoAceite,
   };
-  void mercadoId;
+  await prisma.mercados.update({
+    where: { id: mercadoId },
+    data: { ofertaAgregada: merged as object, dataAtualizacao: new Date() },
+  });
   return merged;
 }
 
