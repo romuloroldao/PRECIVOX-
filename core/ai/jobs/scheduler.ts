@@ -36,6 +36,11 @@ export class AIScheduler {
             await AIJobs.runRetentionPush();
         }, 'Push Retenção Cesta/Dia Mercado');
 
+        // 6. ML leve batch — 3h (Épico 12)
+        this.scheduleJob('0 3 * * *', async () => {
+            await AIJobs.runMlLeveBatch();
+        }, 'ML Leve Batch');
+
         logger.info('Scheduler', `✅ ${this.jobs.length} tarefas agendadas com sucesso`);
     }
 

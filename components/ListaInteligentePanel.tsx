@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ToastContainer';
 import { computeShoppingRoute, dicaDeslocamento } from '@/lib/lista-rota-ia';
 import type { RotaPasso } from '@/lib/lista-rota-ia';
+import { BasketCompletionBlock } from '@/components/cliente/BasketCompletionBlock';
 
 export type ListaInteligenteVariant = 'drawer' | 'inline';
 
@@ -624,6 +625,8 @@ export function ListaInteligentePanel({
 
           {secaoIaAberta && (
             <div className="mt-3 space-y-3 pb-1">
+              <BasketCompletionBlock itens={itens} />
+
               <p className="text-xs leading-relaxed text-emerald-900/85">
                 {dicaDeslocamento(insights?.mercados ?? 1, kmRota)}
               </p>
