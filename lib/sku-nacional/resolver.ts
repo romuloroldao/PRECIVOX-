@@ -12,14 +12,23 @@ export async function buscarOfertasPorSkuNacional(
     where: {
       skuNacional,
       ativo: true,
-      ...(opts?.excluirMercadoId ? { NOT: { mercadoId: opts.excluirMercadoId } } : {}),
+      ...(opts?.excluirMercadoId
+        ? {
+            NOT: {
+              estoques: {
+                some: {
+                  unidades: { mercadoId: opts.excluirMercadoId },
+                },
+              },
+            },
+          }
+        : {}),
     },
     take: limit * 2,
     select: {
       id: true,
       nome: true,
       marca: true,
-      mercadoId: true,
       estoques: {
         where: { disponivel: true, quantidade: { gt: 0 } },
         orderBy: [{ emPromocao: 'desc' }, { preco: 'asc' }],
@@ -45,7 +54,7 @@ export async function buscarOfertasPorSkuNacional(
   for (const p of produtos) {
     const est = p.estoques[0];
     if (!est) continue;
-    const mercadoId = p.mercadoId ?? est.unidades?.mercados?.id ?? '';
+    const mercadoId = est.unidades?.mercados?.id ?? '';
     if (!mercadoId || mercadosVistos.has(mercadoId)) continue;
     mercadosVistos.add(mercadoId);
 
@@ -83,12 +92,19 @@ export async function resolverSkuPorProdutoId(
 ): Promise<{ skuNacional: string | null; resumo: ResumoSkuNacional | null }> {
   const p = await prisma.produtos.findUnique({
     where: { id: produtoId },
-    select: { skuNacional: true, mercadoId: true },
+    select: {
+      skuNacional: true,
+      estoques: {
+        take: 1,
+        select: { unidades: { select: { mercadoId: true } } },
+      },
+    },
   });
   if (!p?.skuNacional) return { skuNacional: null, resumo: null };
 
+  const mercadoLocal = p.estoques[0]?.unidades?.mercadoId;
   const resumo = await buscarOfertasPorSkuNacional(p.skuNacional, {
-    excluirMercadoId: p.mercadoId ?? undefined,
+    excluirMercadoId: mercadoLocal ?? undefined,
     limit: 12,
   });
   return { skuNacional: p.skuNacional, resumo };

@@ -280,7 +280,7 @@ model produtos {
   // nome_chave: tokens normalizados; chave_insight: EAN ou nome+marca+cat para agregação regional
   nomeChave                                                                    String?                 @map("nome_chave") @db.VarChar(512)
   chaveInsight                                                                 String?                 @map("chave_insight") @db.VarChar(768)
-  mercadoId                                                                    String?
+  mercadoId                                                                    String?                 @map("mercado_id")
   skuNacional                                                                  String?                 @map("sku_nacional")
   embeddingJson                                                                Json?                   @map("embedding_json")
   alertas_ia                                                                 alertas_ia[]
