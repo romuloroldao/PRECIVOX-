@@ -295,6 +295,7 @@ model produtos {
 
   @@index([nomeChave])
   @@index([chaveInsight])
+  @@index([skuNacional])
 }
 
 model produtos_relacionados {
