@@ -1,7 +1,7 @@
 // API Route: Módulo de Compras e Reposição Inteligente
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireGestorApiAccess } from '@/lib/gestor-api-mercado';
+import { isGestorAuthResponse, requireGestorApiAccess } from '@/lib/gestor-api-mercado';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -15,7 +15,7 @@ export async function GET(
 ) {
   try {
     const auth = await requireGestorApiAccess(request, params.mercadoId);
-    if (!auth.ok) return auth.response;
+    if (isGestorAuthResponse(auth)) return auth.response;
 
     const mercadoId = auth.mercadoId;
 

@@ -84,6 +84,12 @@ export async function requireGestorApiAccess(
   return { ok: true, user, mercadoId: resolved.mercadoId };
 }
 
+export function isGestorAuthResponse(
+  result: GestorApiAuthResult
+): result is { ok: false; response: NextResponse } {
+  return result.ok === false;
+}
+
 export async function requireApiUser(req: NextRequest): Promise<SessionUser | NextResponse> {
   const user = await TokenManager.validateSession({
     headers: req.headers,

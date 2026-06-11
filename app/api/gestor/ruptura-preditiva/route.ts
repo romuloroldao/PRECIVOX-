@@ -3,14 +3,14 @@ import {
   getAlertasRupturaPreditiva,
   sincronizarAlertasRupturaPreditiva,
 } from '@/lib/ruptura-preditiva';
-import { requireGestorApiAccess } from '@/lib/gestor-api-mercado';
+import { isGestorAuthResponse, requireGestorApiAccess } from '@/lib/gestor-api-mercado';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireGestorApiAccess(req, req.nextUrl.searchParams.get('mercadoId'));
-    if (!auth.ok) return auth.response;
+    if (isGestorAuthResponse(auth)) return auth.response;
     const { mercadoId } = auth;
 
     const dias = parseInt(req.nextUrl.searchParams.get('dias') || '7', 10);
