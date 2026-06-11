@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
+import { getDashboardUrl } from '@/lib/redirect';
 
 interface User {
   id: string;
@@ -68,7 +69,7 @@ export default function UserDetailsPage() {
         }
         if (response.status === 403) {
           toast.error('Acesso não autorizado');
-          router.push('/dashboard');
+          router.push(getDashboardUrl((session.user as any).role ?? 'CLIENTE'));
           return;
         }
         throw new Error('Erro ao carregar usuário');
@@ -97,7 +98,7 @@ export default function UserDetailsPage() {
     // Verificar se é admin
     if ((session.user as any)?.role !== 'ADMIN') {
       toast.error('Acesso não autorizado');
-      router.push('/dashboard');
+      router.push(getDashboardUrl((session.user as any).role ?? 'CLIENTE'));
       return;
     }
 
