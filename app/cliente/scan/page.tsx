@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   Sparkles,
 } from 'lucide-react';
+import { CrowdEtiquetaConfirm } from '@/components/cliente/CrowdEtiquetaConfirm';
 
 type ScanMatch = {
   produtoId: string;
@@ -330,6 +331,15 @@ export default function ScanInteligentePage() {
                   <ShoppingCart className="h-4 w-4" />
                   Adicionar à lista
                 </button>
+                <CrowdEtiquetaConfirm
+                  estoqueId={m.estoqueId}
+                  precoCatalogo={precoExibido(m)}
+                  textoOcrInicial={textoOcr}
+                  precoEtiqueta={
+                    meta?.precoDetectado ??
+                    (precoManual ? parseFloat(precoManual.replace(',', '.')) : null)
+                  }
+                />
               </li>
             ))}
           </ul>

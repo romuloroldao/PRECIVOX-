@@ -9,6 +9,9 @@ import {
   truthFromCrowdDivergencia,
   CONFIANCA,
 } from '@/lib/estoque-truth';
+import { validarFeedbackCrowd } from '@/lib/crowd-v2/antifraude';
+import { somarConfirmacoesPonderadasEstoque } from '@/lib/crowd-confirmacoes-ponderadas';
+import { confirmacoesEquivalentesPonderadas } from '@/lib/crowd-reputacao-peso';
 
 export type FeedbackPrecoTipo = 'confirmado' | 'mais_caro' | 'mais_barato';
 
@@ -30,6 +33,15 @@ export async function processarFeedbackPreco(input: {
 
   if (!estoque?.unidades) {
     throw new Error('Estoque não encontrado');
+  }
+
+  const anti = await validarFeedbackCrowd({
+    userId: input.userId,
+    estoqueId: input.estoqueId,
+    tipo: input.tipo === 'confirmado' ? 'preco_confirmado' : 'preco_reportado',
+  });
+  if (anti.ok === false) {
+    throw new Error(anti.motivo);
   }
 
   const mercadoId = estoque.unidades.mercadoId;
@@ -58,17 +70,8 @@ export async function processarFeedbackPreco(input: {
   let confirmacoesRecentes = 0;
   let divergenciasRecentes = 0;
   try {
-    [confirmacoesRecentes, divergenciasRecentes] = await Promise.all([
-      prisma.userEvent.count({
-        where: {
-          type: 'preco_confirmado',
-          timestamp: { gte: desde },
-          metadata: {
-            path: ['estoqueId'],
-            equals: input.estoqueId,
-          },
-        },
-      }),
+    const [pesoPonderado, divergencias] = await Promise.all([
+      somarConfirmacoesPonderadasEstoque(input.estoqueId, desde),
       prisma.userEvent.count({
         where: {
           type: 'preco_reportado',
@@ -80,6 +83,8 @@ export async function processarFeedbackPreco(input: {
         },
       }),
     ]);
+    confirmacoesRecentes = confirmacoesEquivalentesPonderadas(pesoPonderado);
+    divergenciasRecentes = divergencias;
   } catch (e) {
     console.error('[preco-crowd-feedback] user_events indisponível:', e);
     if (input.tipo === 'confirmado') confirmacoesRecentes = 1;
