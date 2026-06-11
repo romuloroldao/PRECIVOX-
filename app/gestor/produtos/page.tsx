@@ -11,6 +11,7 @@ import UploadDatabase from '@/components/UploadDatabase';
 import { SyncAgendadoCard } from '@/components/gestor/SyncAgendadoCard';
 import { CatalogoSaudeCard } from '@/components/gestor/CatalogoSaudeCard';
 import { ParceiroSlaCard } from '@/components/gestor/ParceiroSlaCard';
+import { ParceiroAncoraGestorCard } from '@/components/gestor/ParceiroAncoraGestorCard';
 import { PricingAssistidoCard } from '@/components/gestor/PricingAssistidoCard';
 import { RupturaPreditivaCard } from '@/components/gestor/RupturaPreditivaCard';
 import { BenchmarkPrecoRegionalCard } from '@/components/gestor/BenchmarkPrecoRegionalCard';
@@ -229,6 +230,7 @@ export default function GestorProdutosPage() {
         {mercadoId && <CatalogoSaudeCard mercadoId={mercadoId} />}
 
         {mercadoId && <ParceiroSlaCard mercadoId={mercadoId} />}
+        {mercadoId && <ParceiroAncoraGestorCard mercadoId={mercadoId} />}
 
         {mercadoId && <RupturaPreditivaCard mercadoId={mercadoId} compact />}
 

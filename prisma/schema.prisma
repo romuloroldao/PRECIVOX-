@@ -198,6 +198,7 @@ model mercados {
   parceiroSlaContrato  Json?                @map("parceiro_sla_contrato")
   parceiroWebhook      Json?                @map("parceiro_webhook")
   ofertaAgregada       Json?                @map("oferta_agregada")
+  parceiroAncora       Json?                @map("parceiro_ancora")
   acoes_gestor         acoes_gestor[]
   alertas_ia           alertas_ia[]
   analises_ia          analises_ia[]

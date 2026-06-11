@@ -131,6 +131,14 @@ export async function montarPropostaConsolidacaoRota(
     }
   }
 
+  const { obterAncoraPreferidaRegiao } = await import('@/lib/parceiros-ancora/regiao');
+  const ancoraDesignada = await obterAncoraPreferidaRegiao(
+    [...porMercado.keys()][0] ?? anchorId
+  );
+  if (ancoraDesignada && porMercado.has(ancoraDesignada.mercadoId)) {
+    anchorId = ancoraDesignada.mercadoId;
+  }
+
   const anchorNomeRow = await prisma.mercados.findFirst({
     where: { id: anchorId },
     select: { nome: true },
