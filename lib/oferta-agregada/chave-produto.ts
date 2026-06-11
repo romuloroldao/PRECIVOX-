@@ -26,7 +26,7 @@ export function chaveLogicaProduto(p: ProdutoChaveInput): string {
     marca: p.marca,
     categoria: p.categoria,
   });
-  return computed.skuNacional || `insight:${computed.chaveInsight}`;
+  return `insight:${computed.chaveInsight}`;
 }
 
 export function labelProdutoLogico(p: ProdutoChaveInput): string {

@@ -101,13 +101,7 @@ export async function sugerirBasketCompletion(
     where: {
       id: { in: top.map(([id]) => id) },
       ativo: true,
-      OR: [
-        { mercadoId },
-        {
-          mercadoId: null,
-          estoques: { some: { unidades: { mercadoId, ativa: true } } },
-        },
-      ],
+      estoques: { some: { unidades: { mercadoId, ativa: true } } },
     },
     select: { id: true, nome: true },
   });

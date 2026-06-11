@@ -71,7 +71,7 @@ export async function requireGestorApiAccess(
   }
 
   const resolved = await resolveMercadoIdForGestorApi(user, mercadoIdParam);
-  if (!resolved.ok) {
+  if (resolved.ok === false) {
     return {
       ok: false,
       response: NextResponse.json(

@@ -197,6 +197,7 @@ model mercados {
   parceiroTier         Int                  @default(1) @map("parceiro_tier")
   parceiroSlaContrato  Json?                @map("parceiro_sla_contrato")
   parceiroWebhook      Json?                @map("parceiro_webhook")
+  ofertaAgregada       Json?                @map("oferta_agregada")
   acoes_gestor         acoes_gestor[]
   alertas_ia           alertas_ia[]
   analises_ia          analises_ia[]
@@ -279,6 +280,9 @@ model produtos {
   // nome_chave: tokens normalizados; chave_insight: EAN ou nome+marca+cat para agregação regional
   nomeChave                                                                    String?                 @map("nome_chave") @db.VarChar(512)
   chaveInsight                                                                 String?                 @map("chave_insight") @db.VarChar(768)
+  mercadoId                                                                    String?
+  skuNacional                                                                  String?                 @map("sku_nacional")
+  embeddingJson                                                                Json?                   @map("embedding_json")
   alertas_ia                                                                 alertas_ia[]
   analises_ia                                                                analises_ia[]
   estoques                                                                   estoques[]

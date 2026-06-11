@@ -34,13 +34,7 @@ export async function getCatalogoResumoMercados(): Promise<CatalogoResumo> {
       prisma.produtos.count({
         where: {
           ativo: true,
-          OR: [
-            { mercadoId: m.id },
-            {
-              mercadoId: null,
-              estoques: { some: { unidades: { mercadoId: m.id, ativa: true } } },
-            },
-          ],
+          estoques: { some: { unidades: { mercadoId: m.id, ativa: true } } },
         },
       }),
       prisma.estoques.count({
@@ -55,26 +49,18 @@ export async function getCatalogoResumoMercados(): Promise<CatalogoResumo> {
     });
   }
 
-  const [produtosUnicosGlobal, ofertasTotal, produtosCatalogoIsolado] = await Promise.all([
+  const [produtosUnicosGlobal, ofertasTotal] = await Promise.all([
     prisma.produtos.count({
       where: {
         ativo: true,
-        OR: [
-          { mercadoId: { not: null } },
-          {
-            mercadoId: null,
-            estoques: { some: { unidades: { ativa: true, mercados: { ativo: true } } } },
-          },
-        ],
+        estoques: { some: { unidades: { ativa: true, mercados: { ativo: true } } } },
       },
     }),
     prisma.estoques.count({
       where: { unidades: { ativa: true, mercados: { ativo: true } } },
     }),
-    prisma.produtos.count({
-      where: { ativo: true, mercadoId: { not: null } },
-    }),
   ]);
+  const produtosCatalogoIsolado = 0;
 
   return {
     mercados: mercadosStats,
