@@ -159,6 +159,7 @@ export async function getBenchmarkPrecoRegional(
     };
   }
 
+  const unidadesFiltro = unidadesRef;
   const cacheRegional = new Map<string, { media: number; amostra: number }>();
 
   async function mediaRegional(chave: ChaveRef): Promise<{ media: number; amostra: number } | null> {
@@ -170,15 +171,16 @@ export async function getBenchmarkPrecoRegional(
 
     const [agg, amostra] = await Promise.all([
       prisma.estoques.aggregate({
-        where: { produtos: produtoWhere, unidades: unidadesRef },
+        where: { produtos: produtoWhere, unidades: unidadesFiltro },
         _avg: { preco: true },
       }),
       prisma.estoques.count({
-        where: { produtos: produtoWhere, unidades: unidadesRef, quantidade: { gt: 0 } },
+        where: { produtos: produtoWhere, unidades: unidadesFiltro, quantidade: { gt: 0 } },
       }),
     ]);
 
-    const avg = agg._avg.preco ? Number(agg._avg.preco) : null;
+    const avgPreco = agg._avg?.preco;
+    const avg = avgPreco ? Number(avgPreco) : null;
     if (!avg || avg <= 0 || amostra < 2) return null;
 
     const entry = { media: Math.round(avg * 100) / 100, amostra };

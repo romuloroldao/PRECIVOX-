@@ -8,12 +8,11 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { Adapter, AdapterUser } from 'next-auth/adapters';
+import type { Adapter, AdapterAccount, AdapterUser } from 'next-auth/adapters';
 
 export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
   return {
-    // Criar usuário
-    async createUser(user) {
+    async createUser(user: Omit<AdapterUser, 'id'>) {
       const newUser = await prisma.user.create({
         data: {
           id: `user-${Date.now()}-${Math.random().toString(36).substring(7)}`,
@@ -125,7 +124,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
     },
 
     // Linkar conta OAuth
-    async linkAccount(account) {
+    async linkAccount(account: AdapterAccount) {
       await prisma.accounts.create({
         data: {
           id: `account-${Date.now()}-${Math.random().toString(36).substring(7)}`,
@@ -145,7 +144,7 @@ export function CustomPrismaAdapter(prisma: PrismaClient): Adapter {
     },
 
     // Deslinkar conta OAuth
-    async unlinkAccount({ providerAccountId, provider }) {
+    async unlinkAccount({ providerAccountId, provider }: Pick<AdapterAccount, 'providerAccountId' | 'provider'>) {
       await prisma.accounts.delete({
         where: {
           provider_provider_account_id: {

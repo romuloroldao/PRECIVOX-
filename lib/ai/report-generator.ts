@@ -7,7 +7,7 @@
 
 import { MarketHealthEngine } from './health-engine';
 import { PromotionEngine } from './promotion-engine';
-import { WeeklyMarketReport, AIAnalysisResult } from './types';
+import { WeeklyMarketReport, AIAnalysisResult, MarketHealthScore, PromotionSuggestion } from './types';
 
 export class ReportGenerator {
   /**
@@ -139,11 +139,11 @@ export class ReportGenerator {
   }
 
   private static generateTextualExplanation(
-    healthScore: any,
+    healthScore: MarketHealthScore,
     variacao: number,
     tendencia: string,
     insights: WeeklyMarketReport['topInsights'],
-    promocoes: any[]
+    promocoes: PromotionSuggestion[]
   ): string {
     let explicacao = `Relatório Semanal de Saúde do Mercado\n\n`;
 
@@ -184,8 +184,8 @@ export class ReportGenerator {
     if (healthScore.recomendacoes.length > 0) {
       explicacao += `RECOMENDAÇÕES PRIORITÁRIAS\n`;
       healthScore.recomendacoes
-        .filter(r => r.prioridade === 'alta')
-        .forEach((rec, i) => {
+        .filter((r: MarketHealthScore['recomendacoes'][number]) => r.prioridade === 'alta')
+        .forEach((rec: MarketHealthScore['recomendacoes'][number], i: number) => {
           explicacao += `${i + 1}. ${rec.acao}\n`;
           explicacao += `   Motivo: ${rec.motivo}\n`;
           explicacao += `   Impacto esperado: +${rec.impactoEsperado} pontos no Health Score\n\n`;
