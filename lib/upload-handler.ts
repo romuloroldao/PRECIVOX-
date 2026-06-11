@@ -247,6 +247,8 @@ export async function processarUpload(
               unidadeMedida: produtoData.unidadeMedida || 'UN',
               nomeChave: chaves.nomeChave,
               chaveInsight: chaves.chaveInsight,
+              skuNacional: chaves.skuNacional,
+              embeddingJson: chaves.embeddingJson,
               ativo: true,
               dataCriacao: new Date(),
               dataAtualizacao: new Date(),
@@ -268,6 +270,8 @@ export async function processarUpload(
               unidadeMedida: produtoData.unidadeMedida || produto.unidadeMedida,
               nomeChave: chaves.nomeChave,
               chaveInsight: chaves.chaveInsight,
+              skuNacional: chaves.skuNacional,
+              embeddingJson: chaves.embeddingJson,
               // Reativar no catálogo ao reimportar (evita sumir da busca do cliente)
               ativo: true,
               dataAtualizacao: new Date(),

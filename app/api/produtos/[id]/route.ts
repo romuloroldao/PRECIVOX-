@@ -201,6 +201,8 @@ export async function PUT(
         ...(validatedData.ativo !== undefined && { ativo: validatedData.ativo }),
         nomeChave: mergedChaves.nomeChave,
         chaveInsight: mergedChaves.chaveInsight,
+        skuNacional: mergedChaves.skuNacional,
+        embeddingJson: mergedChaves.embeddingJson,
         dataAtualizacao: new Date(),
       },
       include: {
