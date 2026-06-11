@@ -6,7 +6,7 @@
 
 **Última atualização:** 11/06/2026  
 **Horizonte:** 0–36 meses (MVP → escala → plataforma)  
-**Fase operacional atual:** **Fase 3 — Escala** (Épico 12 ✅; Épico 13 em entrega; próximo: 14 Crowd v2)  
+**Fase operacional atual:** **Fase 3 — Escala** (Épicos 12–14 ✅; próximo: 15 SKU nacional)  
 **Handoff detalhado:** [`CHECKPOINT_ROADMAP_MAIO2026.md`](./CHECKPOINT_ROADMAP_MAIO2026.md)
 
 ---
@@ -213,7 +213,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 |-------|---------------------|--------|
 | **12 — ML leve** | Basket completion, churn, elasticidade por usuário (batch) | ✅ |
 | **13 — Oferta agregada** | Mercado “aceita” cesta agregada da região | ✅ |
-| **14 — Crowd v2** | Foto etiqueta OCR, reputação mercado, anti-fraude | 🔲 |
+| **14 — Crowd v2** | Foto etiqueta OCR, reputação mercado, anti-fraude | ✅ |
 | **15 — Embeddings catálogo** | Unificação SKU nacional com chave local | 🔲 |
 | **16 — Parceiros âncora** | 3–5 redes / atacados por região piloto | 🔲 |
 | **17 — Monetização** | SaaS gestor + insights CPG agregados + promo direcionada | 🔲 |
@@ -305,7 +305,7 @@ flowchart TD
 
 | Prioridade | Item | Doc |
 |------------|------|-----|
-| P0 | **Épico 14** — Crowd v2 (OCR etiqueta, reputação) | `EPICO_14_CROWD_V2.md` |
+| P0 | **Épico 15** — SKU nacional / embeddings catálogo | `EPICO_15_EMBEDDINGS_CATALOGO.md` |
 | P1 | **PR #2** — TypeScript strict incremental (`chore/ts-strict-lib`) | — |
 | Ops | Rodar batch ML leve (`POST /api/cron/ml-leve-batch`) | `EPICO_12_ML_LEVE.md` |
 

@@ -1,4 +1,4 @@
-# Épico 14 — Crowd v2
+# Épico 14 — Crowd v2 ✅
 
 MVP entregue em jun/2026.
 
