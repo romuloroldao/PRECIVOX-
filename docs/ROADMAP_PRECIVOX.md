@@ -212,7 +212,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | Épico | Entregas principais | Status |
 |-------|---------------------|--------|
 | **12 — ML leve** | Basket completion, churn, elasticidade por usuário (batch) | ✅ |
-| **13 — Oferta agregada** | Mercado “aceita” cesta agregada da região | 🟡 PR + migration |
+| **13 — Oferta agregada** | Mercado “aceita” cesta agregada da região | ✅ |
 | **14 — Crowd v2** | Foto etiqueta OCR, reputação mercado, anti-fraude | 🔲 |
 | **15 — Embeddings catálogo** | Unificação SKU nacional com chave local | 🔲 |
 | **16 — Parceiros âncora** | 3–5 redes / atacados por região piloto | 🔲 |
@@ -305,8 +305,7 @@ flowchart TD
 
 | Prioridade | Item | Doc |
 |------------|------|-----|
-| P0 | **Épico 13** — migration `oferta_agregada` + deploy + QA gestor/cliente | `EPICO_13_OFERTA_AGREGADA.md` |
-| P1 | **Épico 14** — Crowd v2 (OCR etiqueta, reputação) | `EPICO_14_CROWD_V2.md` |
+| P0 | **Épico 14** — Crowd v2 (OCR etiqueta, reputação) | `EPICO_14_CROWD_V2.md` |
 | P1 | **PR #2** — TypeScript strict incremental (`chore/ts-strict-lib`) | — |
 | Ops | Rodar batch ML leve (`POST /api/cron/ml-leve-batch`) | `EPICO_12_ML_LEVE.md` |
 

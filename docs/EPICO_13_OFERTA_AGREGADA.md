@@ -1,4 +1,4 @@
-# Épico 13 — Oferta agregada (Fase 3)
+# Épico 13 — Oferta agregada (Fase 3) ✅
 
 > Mercado **aceita** atender a **cesta agregada da região** — demanda consolidada e anônima de consumidores do bairro.
 
