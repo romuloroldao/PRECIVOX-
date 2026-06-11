@@ -13,6 +13,7 @@ import { RupturaPreditivaCard } from '@/components/gestor/RupturaPreditivaCard';
 import { BenchmarkPrecoRegionalCard } from '@/components/gestor/BenchmarkPrecoRegionalCard';
 import { ResumoSemanaGroocCard } from '@/components/gestor/ResumoSemanaGroocCard';
 import { MlLeveGestorCard } from '@/components/gestor/MlLeveGestorCard';
+import { OfertaAgregadaGestorCard } from '@/components/gestor/OfertaAgregadaGestorCard';
 import { HeatmapIntencaoCard } from '@/components/gestor/HeatmapIntencaoCard';
 import { PreciIndexCestaCard } from '@/components/gestor/PreciIndexCestaCard';
 
@@ -196,6 +197,7 @@ export default function GestorHomePage() {
             <BenchmarkPrecoRegionalCard mercadoId={mercado.id} compact />
             <PreciIndexCestaCard mercadoId={mercado.id} compact />
             <PricingAssistidoCard mercadoId={mercado.id} compact />
+            <OfertaAgregadaGestorCard mercadoId={mercado.id} />
             <MlLeveGestorCard mercadoId={mercado.id} compact />
           </>
         )}
