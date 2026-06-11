@@ -100,9 +100,16 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
+  // ssh2 usa binário nativo (.node) — não pode entrar no bundle webpack
+  experimental: {
+    serverComponentsExternalPackages: ['ssh2', 'ssh2-sftp-client'],
+  },
+
   // Webpack Safe-Guards
   webpack: (config, { isServer }) => {
-    if (!isServer) {
+    if (isServer) {
+      config.externals = [...(config.externals ?? []), 'ssh2', 'ssh2-sftp-client'];
+    } else {
       // Bloquear Prisma no client-side
       config.resolve.fallback = {
         ...config.resolve.fallback,
