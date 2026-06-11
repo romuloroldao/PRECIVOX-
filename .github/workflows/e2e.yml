@@ -83,6 +83,7 @@ jobs:
         run: npm run test:e2e:ci
         env:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CI: true
 
       - name: Stop server
         if: always()
