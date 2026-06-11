@@ -199,6 +199,7 @@ model mercados {
   parceiroWebhook      Json?                @map("parceiro_webhook")
   ofertaAgregada       Json?                @map("oferta_agregada")
   parceiroAncora       Json?                @map("parceiro_ancora")
+  monetizacao          Json?                @map("monetizacao")
   acoes_gestor         acoes_gestor[]
   alertas_ia           alertas_ia[]
   analises_ia          analises_ia[]
@@ -252,6 +253,7 @@ model planos_de_pagamento {
   limiteUnidades Int        @default(1)
   limiteUploadMb Int        @default(10)
   limiteUsuarios Int        @default(5)
+  features       Json?
   ativo          Boolean    @default(true)
   dataCriacao    DateTime   @default(now())
   mercados       mercados[]

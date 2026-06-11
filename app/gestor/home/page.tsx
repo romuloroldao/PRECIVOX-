@@ -16,6 +16,9 @@ import { MlLeveGestorCard } from '@/components/gestor/MlLeveGestorCard';
 import { OfertaAgregadaGestorCard } from '@/components/gestor/OfertaAgregadaGestorCard';
 import { HeatmapIntencaoCard } from '@/components/gestor/HeatmapIntencaoCard';
 import { PreciIndexCestaCard } from '@/components/gestor/PreciIndexCestaCard';
+import { MonetizacaoSaasGestorCard } from '@/components/gestor/MonetizacaoSaasGestorCard';
+import { CpgInsightsGestorCard } from '@/components/gestor/CpgInsightsGestorCard';
+import { PromoDirecionadaGestorCard } from '@/components/gestor/PromoDirecionadaGestorCard';
 
 interface Mercado {
   id: string;
@@ -199,6 +202,9 @@ export default function GestorHomePage() {
             <PricingAssistidoCard mercadoId={mercado.id} compact />
             <OfertaAgregadaGestorCard mercadoId={mercado.id} />
             <MlLeveGestorCard mercadoId={mercado.id} compact />
+            <MonetizacaoSaasGestorCard mercadoId={mercado.id} />
+            <PromoDirecionadaGestorCard mercadoId={mercado.id} />
+            <CpgInsightsGestorCard mercadoId={mercado.id} />
           </>
         )}
 

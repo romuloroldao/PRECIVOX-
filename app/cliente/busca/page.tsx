@@ -14,6 +14,7 @@ import { MercadoSelector } from '@/components/cliente/MercadoSelector';
 import { CatalogoMercadosResumo } from '@/components/cliente/CatalogoMercadosResumo';
 import { OfertaAgregadaRegiaoChip } from '@/components/cliente/OfertaAgregadaRegiaoChip';
 import { ParceiroAncoraRegiaoChip } from '@/components/cliente/ParceiroAncoraRegiaoChip';
+import { PromoDirecionadaChip } from '@/components/cliente/PromoDirecionadaChip';
 import { ProductCompareGroup } from '@/components/cliente/ProductCompareGroup';
 import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
@@ -210,6 +211,7 @@ export default function BuscaPage() {
                 <div className="mb-3 space-y-2">
                   <OfertaAgregadaRegiaoChip mercadoId={mercadoFiltro} />
                   <ParceiroAncoraRegiaoChip mercadoId={mercadoFiltro} />
+                  <PromoDirecionadaChip mercadoId={mercadoFiltro} />
                 </div>
               )}
 
