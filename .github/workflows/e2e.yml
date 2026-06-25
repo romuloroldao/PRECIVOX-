@@ -10,9 +10,7 @@ on:
 env:
   NODE_VERSION: '18.20.8'
   DATABASE_URL: postgresql://postgres:ci@localhost:5432/precivox_ci
-  NEXTAUTH_URL: http://localhost:3000
   NEXT_PUBLIC_URL: http://localhost:3000
-  NEXTAUTH_SECRET: ci-e2e-nextauth-secret-32chars-minimum
   JWT_SECRET: ci-e2e-jwt-secret-32chars-minimum
   E2E_LOGIN: 'true'
 
@@ -52,8 +50,7 @@ jobs:
       - name: Prisma generate & schema (CI)
         run: |
           npx prisma generate
-          # Banco CI é sempre vazio: migrate deploy falha porque migrations legadas
-          # (add_nextauth_support) rodam depois de 202511071200_unify_user_table.
+          # Banco CI é sempre vazio: db push alinha schema (incl. PR-5 sem accounts/sessions).
           npx prisma db push --accept-data-loss
 
       - name: Seed usuários de teste
