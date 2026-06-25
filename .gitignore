@@ -106,3 +106,28 @@ precivox/
 how*
 tat*
 top*
+
+# Skills do agente / tooling local (não fazem parte do projeto)
+.agents/
+skills-lock.json
+LEIA-ME-INSTALAR-SKILLS.md
+
+# Dotfiles de runtime (workspace root é /root)
+.pki/
+.tmux.conf
+.precivox-bash-aliases
+
+# Artefatos de build TypeScript (regeneráveis via typecheck:lib / build:ai)
+*.tsbuildinfo
+lib/ml-leve/*.js
+lib/ml-leve/*.js.map
+lib/ml-leve/*.d.ts
+lib/ml-leve/*.d.ts.map
+lib/push-retencao.js
+lib/push-retencao.js.map
+lib/push-retencao.d.ts
+lib/push-retencao.d.ts.map
+lib/sync-agendado.js
+lib/sync-agendado.js.map
+lib/sync-agendado.d.ts
+lib/sync-agendado.d.ts.map
