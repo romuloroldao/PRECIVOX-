@@ -45,6 +45,7 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=4096
           NEXT_TELEMETRY_DISABLED: 1
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://ci:ci@localhost:5432/ci' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-build-placeholder-secret-32chars-min' }}
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-build-placeholder-jwt-secret-32ch' }}
 
