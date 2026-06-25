@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
 import { truthFromPartnerApi, truthFromUpload } from '@/lib/estoque-truth';
+import { marcarPendente } from '@/lib/imagens/produto-imagem-service';
 
 export type UploadOrigem = 'upload' | 'partner_api';
 import Papa from 'papaparse';
@@ -250,10 +251,12 @@ export async function processarUpload(
               skuNacional: chaves.skuNacional,
               embeddingJson: chaves.embeddingJson,
               ativo: true,
+              imagemStatus: 'PENDENTE',
               dataCriacao: new Date(),
               dataAtualizacao: new Date(),
             },
           });
+          void marcarPendente(produto.id);
         } else {
           const chaves = computeCamposChaveProduto({
             nome: produtoData.nome || produto.nome,

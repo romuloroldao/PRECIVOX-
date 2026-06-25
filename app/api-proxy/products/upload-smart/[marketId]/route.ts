@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 import { generateToken } from '@/lib/jwt';
 import { internalFetch } from '@/lib/internal-backend';
 
@@ -20,18 +19,17 @@ export async function POST(
       );
     }
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
-    }
+    const auth = await requireApiSession(request);
+    if (isAuthResponse(auth)) return auth;
 
     const formData = await request.formData();
 
     const tokenPayload = {
-      id: (session.user as { id: string }).id,
-      email: session.user.email,
-      role: ((session.user as { role?: string }).role as 'ADMIN' | 'GESTOR' | 'CLIENTE') || 'CLIENTE',
-      nome: session.user.name || '',
+      id: auth.id,
+      email: auth.email,
+      role: auth.role,
+      nome: auth.nome ?? '',
+      tokenVersion: auth.tokenVersion ?? 0,
     };
     const signedToken = await generateToken(tokenPayload, '30m');
 
