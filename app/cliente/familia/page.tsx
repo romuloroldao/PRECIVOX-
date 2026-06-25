@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import DashboardLayout from '@/components/DashboardLayout';
 import { ClientePage } from '@/components/cliente/ClientePage';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';

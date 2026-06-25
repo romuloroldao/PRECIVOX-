@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { Plus, Search, ShoppingCart } from 'lucide-react';
 import { useLista } from '@/app/context/ListaContext';
 import { listasSalvasToSummaries, mergeListSummaries } from '@/lib/listas-merge';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useLista, type ItemLista } from '@/app/context/ListaContext';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';
 import type { ItemListaCompartilhada } from '@/lib/raio-familiar';

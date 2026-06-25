@@ -19,7 +19,7 @@ import {
   ScanLine,
   ShoppingCart,
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useGeofenceRaio } from '@/app/hooks/useGeofenceRaio';
 import { GeofenceRaioSelector } from '@/components/cliente/GeofenceRaioSelector';
 

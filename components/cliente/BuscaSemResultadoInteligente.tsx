@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { ProductCard } from '@/components/ProductCard';
 import type { Produto } from '@/app/hooks/useProdutos';
 import { PackagePlus, Sparkles } from 'lucide-react';

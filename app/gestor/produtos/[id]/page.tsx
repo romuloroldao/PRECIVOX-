@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import { getDashboardUrl } from '@/lib/redirect';

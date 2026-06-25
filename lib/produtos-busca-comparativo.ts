@@ -71,6 +71,8 @@ export type OfertaFormatada = {
   categoria: string | null;
   marca: string | null;
   imagem: string | null;
+  imagemThumb: string | null;
+  imagemStatus: string | null;
   truth: {
     fonte: string;
     confianca: number;
@@ -108,6 +110,8 @@ export function formatarOfertaComparativa(
       categoria: string | null;
       marca: string | null;
       imagem: string | null;
+  imagemThumb: string | null;
+  imagemStatus: string | null;
       [key: string]: unknown;
     };
     unidades: {
@@ -141,6 +145,8 @@ export function formatarOfertaComparativa(
     categoria: produto.categoria,
     marca: produto.marca,
     imagem: produto.imagem,
+    imagemThumb: (produto as { imagemThumb?: string | null }).imagemThumb ?? null,
+    imagemStatus: (produto as { imagemStatus?: string | null }).imagemStatus ?? null,
     truth: {
       fonte: estoque.fonte ?? 'UPLOAD_GESTOR',
       confianca: estoque.confianca ?? 70,

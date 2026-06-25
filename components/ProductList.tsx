@@ -6,6 +6,7 @@ import { useToast } from '@/components/ToastContainer';
 import { ShoppingCart } from 'lucide-react';
 import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
 import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
+import { ProductImage } from '@/components/ui';
 
 interface ProductListProps {
   produtos: Produto[];
@@ -28,6 +29,8 @@ export function ProductList({ produtos, onAbrirLista }: ProductListProps) {
       emPromocao: produto.emPromocao,
       quantidade: produto.quantidade,
       imagem: produto.imagem,
+      imagemThumb: produto.imagemThumb,
+      imagemStatus: produto.imagemStatus,
       categoria: produto.categoria,
       marca: produto.marca,
       unidade: produto.unidade,
@@ -75,17 +78,13 @@ export function ProductList({ produtos, onAbrirLista }: ProductListProps) {
               <tr key={produto.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {produto.imagem ? (
-                        <img
-                          src={produto.imagem}
-                          alt={produto.nome}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <span className="text-gray-400 text-xl">📦</span>
-                      )}
-                    </div>
+                    <ProductImage
+                      src={produto.imagem}
+                      thumbSrc={produto.imagemThumb}
+                      alt={produto.nome}
+                      size="sm"
+                      status={produto.imagemStatus}
+                    />
                     <div>
                       <div className="text-sm font-medium text-gray-900">
                         {produto.nome}

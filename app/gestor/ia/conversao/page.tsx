@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import type { RegiaoPrecoRef } from '@/lib/ai/conversao-metrics';
 import { REGIAO_PRECO_UI, detalheRegiaoPreco, type RegiaoPrecoApi } from '@/lib/regiao-preco-ui';
 

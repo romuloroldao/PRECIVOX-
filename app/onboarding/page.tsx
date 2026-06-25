@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/shared';
 import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 
 type OnboardingStep = 1 | 2 | 3;
 

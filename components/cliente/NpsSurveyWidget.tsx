@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { X, MessageCircleHeart } from 'lucide-react';
 
 const STORAGE_SNOOZE = 'precivox_nps_snooze_until';

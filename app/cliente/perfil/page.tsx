@@ -8,7 +8,7 @@ import { ContribuidorBadge } from '@/components/cliente/ContribuidorBadge';
 import { RelatorioSemanaCard } from '@/components/cliente/RelatorioSemanaCard';
 import { MlLeveClienteCard } from '@/components/cliente/MlLeveClienteCard';
 import type { EixoPreci, PerfilPreciScores } from '@/lib/perfil-preci';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { Sparkles, Clock } from 'lucide-react';
 import { EL_CONFIG_LIMITS, labelFaixaValorHora, type ElConfigUsuario } from '@/lib/el-config-usuario';
 

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import UnidadeForm from '@/components/UnidadeForm';
 import UploadDatabase from '@/components/UploadDatabase';
 import Breadcrumbs from '@/components/Breadcrumbs';

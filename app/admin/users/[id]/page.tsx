@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/components/ToastContainer';
 import { getDashboardUrl } from '@/lib/redirect';

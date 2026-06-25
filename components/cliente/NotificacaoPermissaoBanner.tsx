@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { Bell, Loader2 } from 'lucide-react';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

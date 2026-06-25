@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import {
   recordProductViewed,
   recordProductAddedToList,

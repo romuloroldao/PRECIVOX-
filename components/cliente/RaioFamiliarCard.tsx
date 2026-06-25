@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Users, ChevronRight } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';
 
 export function RaioFamiliarCard() {

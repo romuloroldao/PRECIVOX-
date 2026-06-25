@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { getRoleLabel } from '@/lib/redirect';
 import { fullLogout } from '@/lib/logout-client';
 import Logo from '@/components/Logo';

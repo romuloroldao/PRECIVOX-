@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { MapPin, Navigation, Loader2 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useMercadoVivoGeofenceContext } from '@/components/cliente/MercadoVivoGeofenceProvider';
 import { useMercadoSelos } from '@/app/hooks/useMercadoSelos';
 import { GeofenceRaioSelector } from '@/components/cliente/GeofenceRaioSelector';

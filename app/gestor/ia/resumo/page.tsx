@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { ArrowLeft, Calendar, Sparkles } from 'lucide-react';
 import type { RegiaoPrecoRef } from '@/lib/ai/conversao-metrics';
 import { REGIAO_PRECO_UI, type RegiaoPrecoApi } from '@/lib/regiao-preco-ui';

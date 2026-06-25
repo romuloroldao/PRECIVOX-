@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getServerSessionUser } from '@/lib/api-auth';
 import { getDashboardUrl } from '@/lib/redirect';
 
 export default async function DashboardRedirectPage() {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as { role?: string } | undefined)?.role;
+  const user = await getServerSessionUser();
+  const role = user?.role;
 
   if (role === 'ADMIN' || role === 'GESTOR' || role === 'CLIENTE') {
     redirect(getDashboardUrl(role));

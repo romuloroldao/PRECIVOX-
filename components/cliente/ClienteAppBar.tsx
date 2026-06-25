@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { LogOut } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { fullLogout } from '@/lib/logout-client';

@@ -1,7 +1,7 @@
 'use client';
 
 import { Trash2 } from 'lucide-react';
-import { Card, QuantityStepper } from '@/components/ui';
+import { Card, QuantityStepper, ProductImage } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { ItemLista } from '@/app/context/ListaContext';
 
@@ -45,18 +45,13 @@ export function ListaItemRow({
           {index + 1}
         </span>
 
-        <div
-          className={cn(
-            'flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100',
-            compact ? 'h-10 w-10' : 'h-14 w-14'
-          )}
-        >
-          {item.imagem ? (
-            <img src={item.imagem} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className={compact ? 'text-lg text-slate-400' : 'text-2xl text-slate-400'}>📦</span>
-          )}
-        </div>
+        <ProductImage
+          src={item.imagem}
+          thumbSrc={item.imagemThumb}
+          alt={item.nome}
+          size={compact ? 'xs' : 'md'}
+          status={item.imagemStatus}
+        />
 
         <div className="min-w-0 flex-1">
           <h4

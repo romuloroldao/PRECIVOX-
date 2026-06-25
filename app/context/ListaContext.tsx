@@ -14,6 +14,8 @@ export interface ItemLista {
   emPromocao: boolean;
   quantidade: number;
   imagem?: string;
+  imagemThumb?: string;
+  imagemStatus?: string;
   categoria?: string;
   marca?: string;
   unidade: {

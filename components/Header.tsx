@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { fullLogout } from '@/lib/logout-client';
 import Link from 'next/link';
 import Logo from '@/components/Logo';

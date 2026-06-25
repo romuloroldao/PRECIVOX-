@@ -8,7 +8,7 @@ import { Produto } from '@/app/hooks/useProdutos';
 import { useToast } from '@/components/ToastContainer';
 import { recordProdutoSubstituicaoAceita } from '@/lib/events/frontend-events';
 import { ShoppingCart, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, Button } from '@/components/ui';
+import { Card, Button, ProductImage } from '@/components/ui';
 import { UX } from '@/lib/ux-copy';
 import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
 import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
@@ -44,6 +44,8 @@ export function ProductCard({ produtos, onAdicionar, onAbrirLista }: ProductCard
       emPromocao: produto.emPromocao,
       quantidade: produto.quantidade,
       imagem: produto.imagem,
+      imagemThumb: produto.imagemThumb,
+      imagemStatus: produto.imagemStatus,
       categoria: produto.categoria,
       marca: produto.marca,
       unidade: produto.unidade,
@@ -275,17 +277,15 @@ function CardLinhaSubstituto({
           hover
           className="overflow-hidden"
         >
-          {/* Imagem do produto */}
-          <div className="relative h-48 bg-gray-100 flex items-center justify-center">
-            {produto.imagem ? (
-              <img
-                src={produto.imagem}
-                alt={produto.nome}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="text-gray-400 text-4xl">📦</div>
-            )}
+          {/* Imagem do produto — reconhecimento sem competir com preço/ações */}
+          <div className="relative">
+            <ProductImage
+              src={produto.imagem}
+              thumbSrc={produto.imagemThumb}
+              alt={produto.nome}
+              size="card"
+              status={produto.imagemStatus}
+            />
             {produto.emPromocao && (
               <div className="absolute top-2 right-2 rounded-full bg-promo-500 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm">
                 Promoção

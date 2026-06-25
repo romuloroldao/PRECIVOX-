@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 import { ClientePage } from '@/components/cliente/ClientePage';

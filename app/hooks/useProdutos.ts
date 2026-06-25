@@ -35,6 +35,8 @@ export interface Produto {
   categoria?: string;
   marca?: string;
   imagem?: string;
+  imagemThumb?: string;
+  imagemStatus?: string;
   /** Catálogo `produtos.id` quando a API envia `produto.id`. */
   produtoCatalogoId?: string;
   referenciaRegiao?: { media: number; diferencaPct: number | null } | null;
@@ -203,6 +205,8 @@ export function useProdutos(params: UseProdutosParams = {}) {
         categoria: item.categoria || item.produto?.categoria || '',
         marca: item.marca || item.produto?.marca || '',
         imagem: item.imagem || item.produto?.imagem || '',
+        imagemThumb: item.imagemThumb || item.produto?.imagemThumb || '',
+        imagemStatus: item.imagemStatus || item.produto?.imagemStatus || undefined,
         produtoCatalogoId: item.produto?.id || undefined,
         referenciaRegiao: item.referenciaRegiao ?? undefined,
         precoEfetivo: item.precoEfetivo != null ? Number(item.precoEfetivo) : undefined,

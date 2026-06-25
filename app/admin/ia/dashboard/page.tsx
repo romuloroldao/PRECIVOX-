@@ -18,7 +18,7 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useApiQuery, useApiMutation } from '@/lib/hooks';
 import { SkeletonStats, SkeletonCard, SkeletonCardList } from '@/components/SkeletonLoader';
 import { ErrorDisplay } from '@/components/ErrorBoundary';

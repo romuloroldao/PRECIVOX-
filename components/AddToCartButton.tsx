@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Loader2, Check } from 'lucide-react';
 import { useLista } from '@/app/context/ListaContext';

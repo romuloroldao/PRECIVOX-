@@ -11,7 +11,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { Plus, Search, X } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { ClientePage } from '@/components/cliente/ClientePage';
