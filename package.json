@@ -36,6 +36,8 @@
     "seed:gestor-cliente": "tsx scripts/ensure-gestor-cliente.ts",
     "db:reativar-produtos": "tsx scripts/reativar-produtos-com-estoque.ts",
     "db:backfill:sku-nacional": "tsx scripts/backfill-sku-nacional.ts",
+    "db:backfill:produto-imagens": "tsx scripts/backfill-produto-imagens.ts",
+    "db:backfill:produto-imagens:process": "tsx scripts/backfill-produto-imagens.ts --process",
     "db:setup:go-live": "tsx scripts/setup-go-live-comercial.ts",
     "db:fix:ownership": "bash scripts/fix-db-ownership.sh",
     "email:test": "tsx scripts/test-transactional-email.ts",
@@ -50,6 +52,8 @@
     "playwright:install": "playwright install chromium",
     "playwright:install:ci": "playwright install --with-deps chromium",
     "ci:auth-guard": "node scripts/ci-auth-guard.mjs",
+    "auth:smoke": "bash scripts/auth-smoke.sh",
+    "clean:nextauth-env": "bash scripts/strip-nextauth-from-env.sh",
     "typecheck:lib": "tsc -p tsconfig.lib.strict.json"
   },
   "dependencies": {
@@ -74,7 +78,6 @@
     "lucide-react": "^0.548.0",
     "multer": "^1.4.5-lts.1",
     "next": "^14.2.33",
-    "next-auth": "^4.24.13",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.7",
     "papaparse": "^5.4.1",
@@ -83,6 +86,7 @@
     "react-hook-form": "^7.65.0",
     "recharts": "^3.5.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.1",
     "ssh2-sftp-client": "^10.0.3",
     "tailwind-merge": "^3.3.1",

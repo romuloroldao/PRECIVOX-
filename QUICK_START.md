@@ -15,7 +15,7 @@ cp env.example.txt .env
 # Mínimo necessário:
 # - DATABASE_URL="postgresql://user:pass@localhost:5432/precivox"
 # - JWT_SECRET="sua-chave-secreta-min-32-caracteres"
-# - NEXTAUTH_SECRET="outra-chave-secreta-min-32-caracteres"
+# - NEXT_PUBLIC_URL="http://localhost:3000"
 
 # 4. Setup completo (migrations + seed)
 npm run setup
@@ -71,13 +71,10 @@ Edite o arquivo `.env`:
 # Banco de Dados
 DATABASE_URL="postgresql://postgres:sua_senha@localhost:5432/precivox"
 
-# JWT (MUDE ESTAS CHAVES!)
+# JWT (MUDE ESTA CHAVE!)
 JWT_SECRET="minha-chave-super-secreta-precivox-2024"
 JWT_EXPIRES_IN="7d"
-
-# NextAuth (MUDE ESTA CHAVE!)
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="minha-nextauth-secret-precivox-2024"
+NEXT_PUBLIC_URL="http://localhost:3000"
 
 # Login Social (opcional, deixe false no início)
 ALLOW_SOCIAL_LOGIN=false

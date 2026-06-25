@@ -25,14 +25,11 @@ update_env_var() {
     echo "✅ ${var_name} configurado"
 }
 
-# Verificar e configurar NEXTAUTH_URL
-if ! grep -q "^NEXTAUTH_URL=" "$ENV_FILE"; then
-    update_env_var "NEXTAUTH_URL" "https://precivox.com.br"
-else
-    # Atualizar se já existe mas está incorreto
-    sed -i 's|^NEXTAUTH_URL=.*|NEXTAUTH_URL="https://precivox.com.br"|' "$ENV_FILE"
-    echo "✅ NEXTAUTH_URL atualizado"
-fi
+# Remover variáveis legado NextAuth (Fase 2 concluída)
+sed -i '/^NEXTAUTH_URL=/d' "$ENV_FILE"
+sed -i '/^NEXTAUTH_SECRET=/d' "$ENV_FILE"
+sed -i '/^NEXT_PUBLIC_NEXTAUTH_URL=/d' "$ENV_FILE"
+echo "✅ Variáveis NEXTAUTH_* removidas (se existiam)"
 
 # Verificar e configurar NEXT_PUBLIC_URL
 if ! grep -q "^NEXT_PUBLIC_URL=" "$ENV_FILE"; then
@@ -43,13 +40,11 @@ else
 fi
 
 # Garantir que não há trailing slashes
-sed -i 's|NEXTAUTH_URL="https://precivox.com.br/"|NEXTAUTH_URL="https://precivox.com.br"|' "$ENV_FILE"
 sed -i 's|NEXT_PUBLIC_URL="https://precivox.com.br/"|NEXT_PUBLIC_URL="https://precivox.com.br"|' "$ENV_FILE"
 
 echo ""
 echo "✅ Variáveis de ambiente configuradas:"
-echo "   NEXTAUTH_URL=$(grep "^NEXTAUTH_URL=" "$ENV_FILE" | cut -d'=' -f2)"
 echo "   NEXT_PUBLIC_URL=$(grep "^NEXT_PUBLIC_URL=" "$ENV_FILE" | cut -d'=' -f2)"
+echo "   JWT_SECRET=$(grep "^JWT_SECRET=" "$ENV_FILE" | head -1 | cut -d'=' -f2 | cut -c1-8)..."
 echo ""
-echo "📝 Verifique se DATABASE_URL está configurado corretamente."
-
+echo "📝 Verifique se DATABASE_URL e JWT_SECRET estão configurados corretamente."

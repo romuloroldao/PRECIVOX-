@@ -41,6 +41,11 @@ export class AIScheduler {
             await AIJobs.runMlLeveBatch();
         }, 'ML Leve Batch');
 
+        // 7. Backfill imagens de produtos — a cada 5 min
+        this.scheduleJob('*/5 * * * *', async () => {
+            await AIJobs.runProductImageBackfill();
+        }, 'Backfill Imagens Produtos');
+
         logger.info('Scheduler', `✅ ${this.jobs.length} tarefas agendadas com sucesso`);
     }
 

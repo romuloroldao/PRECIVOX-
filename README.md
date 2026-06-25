@@ -156,12 +156,9 @@ pm2 start ecosystem.config.js
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/precivox"
 
-# NextAuth
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="seu-secret-super-seguro"
-
-# JWT
-JWT_SECRET="seu-jwt-secret"
+# JWT / TokenManager (sessão)
+JWT_SECRET="seu-secret-super-seguro"
+NEXT_PUBLIC_URL="http://localhost:3000"
 
 # OAuth (opcional)
 GOOGLE_CLIENT_ID="..."

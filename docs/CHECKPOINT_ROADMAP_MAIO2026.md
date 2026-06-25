@@ -105,7 +105,7 @@ Ordem executada nas últimas conversas:
 |----------|-----|
 | `DATABASE_URL` | Em `.env.production` no deploy (não commitar) |
 | `CRON_SECRET` | **Não configurado** em produção → `POST /api/cron/sync-agendado` retorna 503 (esperado). Sync automático roda via **scheduler PM2** (`*/30 * * * *`). |
-| `NEXTAUTH_*`, `JWT_SECRET` | Auth cliente/gestor |
+| `JWT_SECRET` | Auth TokenManager (cliente/gestor/admin) |
 
 ### Problemas conhecidos em produção
 

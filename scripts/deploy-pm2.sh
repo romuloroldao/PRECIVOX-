@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 
 echo ">>> Raiz do projeto: $ROOT"
-echo ">>> Garanta que NEXTAUTH_SECRET, DATABASE_URL, INTERNAL_API_SECRET estão exportados."
+echo ">>> Garanta que JWT_SECRET, DATABASE_URL, INTERNAL_API_SECRET estão exportados."
 echo ">>> Continuando em 3s (Ctrl+C para cancelar e exportar env)..."
 sleep 3
 

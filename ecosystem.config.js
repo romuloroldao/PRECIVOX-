@@ -6,7 +6,7 @@
  * - Sem tsx em produção: backend é backend/server.js (Node ESM).
  * - Frontend: Next.js via bin do next (node_modules/next/dist/bin/next).
  * - Variáveis de ambiente: carregadas de .env.production (na pasta do ecosystem)
- *   para o frontend (NEXTAUTH_SECRET, JWT_SECRET, DATABASE_URL). Backend usa seu próprio .env.
+ *   para o frontend (JWT_SECRET, DATABASE_URL, NEXT_PUBLIC_URL). Backend usa seu próprio .env.
  *
  * cwd produção: DEPLOY_DEST (padrão /home/deploy/apps/precivox)
  * Build/fonte:   DEPLOY_SRC  (padrão /root) — ver deploy-prod.sh
@@ -38,6 +38,11 @@ function loadEnvProduction() {
   }
 }
 loadEnvProduction();
+
+// Legado NextAuth removido (Fase 2) — não propagar para processos PM2
+delete process.env.NEXTAUTH_URL;
+delete process.env.NEXTAUTH_SECRET;
+delete process.env.NEXT_PUBLIC_NEXTAUTH_URL;
 
 module.exports = {
   apps: [
@@ -73,9 +78,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        // Canônico: apex (igual .env.production). Cookie NextAuth usa domain .precivox.com.br (www incluído).
-        NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'https://precivox.com.br',
-        NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+        // Canônico: apex (igual .env.production). Cookies Precivox usam domain .precivox.com.br.
         JWT_SECRET: process.env.JWT_SECRET,
         DATABASE_URL: process.env.DATABASE_URL,
         NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL || 'https://precivox.com.br',

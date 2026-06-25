@@ -110,6 +110,21 @@ export class AIJobs {
         }
     }
 
+    /** Backfill de imagens de produtos via Open Food Facts */
+    static async runProductImageBackfill() {
+        logger.info('AIJobs', '🖼️ [JOB] Backfill de imagens de produtos...');
+        try {
+            const { runProductImageBackfill } = await import('../../../lib/imagens/produto-imagem-service');
+            const resumo = await runProductImageBackfill();
+            logger.info(
+                'AIJobs',
+                `✅ [JOB] Imagens: ${resumo.processados} processados, ${resumo.automatica} automáticas, ${resumo.invalida} inválidas, ${resumo.pendente} pendentes`
+            );
+        } catch (error) {
+            logger.error('AIJobs', '❌ [JOB] Erro no backfill de imagens:', error);
+        }
+    }
+
     /** Push retenção — cesta provável + dia de mercado (2.3 / 6.3) */
     static async runRetentionPush() {
         logger.info('AIJobs', '🔔 [JOB] Push de retenção (cesta / dia de mercado)...');

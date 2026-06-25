@@ -6,11 +6,11 @@ Tudo que o Next.js expõe (páginas, `/api/*`, auth) deve ser acessado pelo **do
 
 | Variável | Valor esperado |
 |----------|----------------|
-| `NEXTAUTH_URL` | `https://precivox.com.br` |
+| `JWT_SECRET` | segredo HS512 (mín. 16 chars) — TokenManager |
 | `NEXT_PUBLIC_URL` | `https://precivox.com.br` |
 
 - **Não** use `http://` em produção.
-- Se `NEXTAUTH_URL` for só `www` ou só `apex` misturado com o que o usuário digita na barra, cookies de sessão podem falhar. O cookie de sessão usa `domain: .precivox.com.br` (válido para `precivox.com.br` e `www.precivox.com.br`), mas o **URL canônico** dos links e e-mails deve ser **um só** — recomendado: **apex** (`https://precivox.com.br`).
+- Cookies de sessão Precivox usam `domain: .precivox.com.br` (válido para `precivox.com.br` e `www.precivox.com.br`). O **URL canônico** dos links e e-mails deve ser **um só** — recomendado: **apex** (`https://precivox.com.br`).
 
 ## Nginx (exemplo)
 

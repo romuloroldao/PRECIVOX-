@@ -68,11 +68,10 @@ Exporte no shell ou no script de deploy:
 
 ```bash
 export NODE_ENV=production
-export NEXTAUTH_SECRET='...'           # obrigatório para NextAuth
-export NEXTAUTH_URL='https://www.precivox.com.br'
-export DATABASE_URL='...'              # se o backend usar Prisma/Postgres
+export JWT_SECRET='...'                # obrigatório — TokenManager (sessão)
+export NEXT_PUBLIC_URL='https://precivox.com.br'
+export DATABASE_URL='...'
 export INTERNAL_API_SECRET='...'      # BFF → backend (internalFetch)
-# Outras que o backend ou o Next precisem (BACKEND_INTERNAL_URL, etc.)
 ```
 
 Depois:
@@ -82,7 +81,7 @@ pm2 start ecosystem.config.js --update-env
 pm2 save
 ```
 
-Assim o PM2 herda o ambiente atual (incluindo `NEXTAUTH_SECRET`, etc.).
+Assim o PM2 herda o ambiente atual (incluindo `JWT_SECRET`, etc.).
 
 ---
 
@@ -162,7 +161,7 @@ Não usar `npx` em produção: resolve dinâmico e menos estável.
    Processo morre no bootstrap → ver `pm2 logs` e teste manual (passo 3).
 
 2. **Variáveis de ambiente ausentes**  
-   Ex.: `NEXTAUTH_SECRET`, `DATABASE_URL`, `INTERNAL_API_SECRET`.  
+   Ex.: `JWT_SECRET`, `DATABASE_URL`, `INTERNAL_API_SECRET`.  
    Exportar antes de `pm2 start` ou usar `--update-env` após export.
 
 3. **Entrypoint errado**  
@@ -178,7 +177,7 @@ Não usar `npx` em produção: resolve dinâmico e menos estável.
 
 - [ ] `cd /home/deploy/apps/precivox`
 - [ ] `npm ci && npm run build`
-- [ ] Exportar env (NEXTAUTH_SECRET, DATABASE_URL, INTERNAL_API_SECRET, etc.)
+- [ ] Exportar env (JWT_SECRET, DATABASE_URL, INTERNAL_API_SECRET, etc.)
 - [ ] Testar backend manual: `cd backend && PORT=3001 node server.js`
 - [ ] Testar frontend manual: `PORT=3000 node node_modules/next/dist/bin/next start`
 - [ ] `pm2 delete all || true`
