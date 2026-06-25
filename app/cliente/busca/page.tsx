@@ -5,29 +5,72 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductList } from '@/components/ProductList';
 import { ListaLateral } from '@/components/ListaLateral';
-import { ToggleViewButton } from '@/components/ToggleViewButton';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { BuscaSemResultadoInteligente } from '@/components/cliente/BuscaSemResultadoInteligente';
 import { ListaSugestoesInline } from '@/components/cliente/ListaSugestoesInline';
-import { MercadoSelector } from '@/components/cliente/MercadoSelector';
 import { CatalogoMercadosResumo } from '@/components/cliente/CatalogoMercadosResumo';
 import { OfertaAgregadaRegiaoChip } from '@/components/cliente/OfertaAgregadaRegiaoChip';
 import { ParceiroAncoraRegiaoChip } from '@/components/cliente/ParceiroAncoraRegiaoChip';
 import { PromoDirecionadaChip } from '@/components/cliente/PromoDirecionadaChip';
 import { ProductCompareGroup } from '@/components/cliente/ProductCompareGroup';
+import { BuscaFiltrosSheet } from '@/components/cliente/BuscaFiltrosSheet';
 import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
 import { CompraConfirmacaoPrompt } from '@/components/cliente/CompraConfirmacaoPrompt';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry';
-import { Filter, ShoppingCart, X, GitCompareArrows } from 'lucide-react';
+import {
+  Chip,
+  PageHeader,
+  ProductGridSkeleton,
+  ErrorState,
+  EmptyState,
+} from '@/components/ui';
+import { UX, type OrdenacaoBusca } from '@/lib/ux-copy';
+import {
+  Filter,
+  ShoppingCart,
+  ChevronDown,
+  ChevronUp,
+  PanelRightClose,
+  PanelRightOpen,
+} from 'lucide-react';
+
+const STORAGE_LISTA_COLLAPSED = 'precivox_lista_desktop_collapsed';
 
 export default function BuscaPage() {
   const [modo, setModo] = useState<'cards' | 'lista'>('cards');
   const [expandida, setExpandida] = useState(false);
   const { totalItens, itens, total: totalLista, listaAtivaId } = useLista();
   const [promptCompraAtivo, setPromptCompraAtivo] = useState(false);
+  const desktopListaInitRef = useRef(false);
+
+  const handleToggleLista = () => {
+    setExpandida((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+        sessionStorage.setItem(STORAGE_LISTA_COLLAPSED, next ? '0' : '1');
+      }
+      return next;
+    });
+  };
+
+  const handleAbrirLista = () => {
+    setExpandida(true);
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+      sessionStorage.setItem(STORAGE_LISTA_COLLAPSED, '0');
+    }
+  };
+
+  useEffect(() => {
+    if (desktopListaInitRef.current || totalItens === 0) return;
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(min-width: 1024px)').matches) return;
+    if (sessionStorage.getItem(STORAGE_LISTA_COLLAPSED) === '1') return;
+    desktopListaInitRef.current = true;
+    setExpandida(true);
+  }, [totalItens]);
 
   useEffect(() => {
     if (totalItens < 2) {
@@ -46,15 +89,16 @@ export default function BuscaPage() {
       document.removeEventListener('visibilitychange', onVis);
     };
   }, [totalItens]);
+
   const totalItensRef = useRef<number | null>(null);
   const [mercadoSugestao, setMercadoSugestao] = useState<string | null>(null);
-
-  /** Contexto para scan, NPS e sugestões — não filtra a busca. */
   const mercadoContexto = mercadoSugestao ?? itens[0]?.unidade?.mercado?.id ?? null;
 
-  /** Filtro explícito da busca — default vazio = todos os mercados. */
   const [mercadoFiltro, setMercadoFiltro] = useState('');
   const [modoComparativo, setModoComparativo] = useState(true);
+  const [ordenacao, setOrdenacao] = useState<OrdenacaoBusca>('hibrido');
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [maisOpcoesAbertas, setMaisOpcoesAbertas] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,21 +128,11 @@ export default function BuscaPage() {
     );
   }, [totalItens, mercadoContexto]);
 
-  /** Abre o painel lateral ao adicionar itens (ignora o primeiro snapshot pós-mount / localStorage). */
   useEffect(() => {
-    if (totalItensRef.current === null) {
-      totalItensRef.current = totalItens;
-      return;
-    }
-    if (totalItens > totalItensRef.current) {
-      setExpandida(true);
-    }
     totalItensRef.current = totalItens;
   }, [totalItens]);
+
   const [busca, setBusca] = useState('');
-  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
-  
-  // Filtros
   const [categoria, setCategoria] = useState('');
   const [marca, setMarca] = useState('');
   const [precoMin, setPrecoMin] = useState('');
@@ -127,6 +161,7 @@ export default function BuscaPage() {
     includeEconomia: !modoComparativo,
     includeProvaSocial: Boolean(mercadoFiltro),
     modoComparativo,
+    ordenacao,
   });
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -135,12 +170,9 @@ export default function BuscaPage() {
     if (!hasMore || loading || loadingMore) return;
     const node = sentinelRef.current;
     if (!node) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          loadMore();
-        }
+        if (entries[0]?.isIntersecting) loadMore();
       },
       { rootMargin: '250px 0px' }
     );
@@ -156,296 +188,165 @@ export default function BuscaPage() {
     setEmPromocao(undefined);
     setDisponivel(undefined);
     setMercadoFiltro('');
+    setOrdenacao('hibrido');
     setBusca('');
   };
 
-  const temFiltros =
-    categoria ||
-    marca ||
-    precoMin ||
-    precoMax ||
-    emPromocao !== undefined ||
-    disponivel !== undefined ||
-    mercadoFiltro ||
-    busca;
+  const temFiltros = Boolean(
+    categoria || marca || precoMin || precoMax || emPromocao !== undefined ||
+    disponivel !== undefined || mercadoFiltro || busca || ordenacao !== 'hibrido'
+  );
+
+  const filtrosAtivosCount = [
+    marca, precoMin, precoMax, mercadoFiltro,
+    emPromocao !== undefined, disponivel !== undefined,
+    ordenacao !== 'hibrido',
+  ].filter(Boolean).length;
 
   const mercadoSemResultado = mercadoFiltro || mercadoContexto;
 
+  const filtrosState = {
+    categoria,
+    marca,
+    precoMin,
+    precoMax,
+    emPromocao,
+    disponivel,
+    mercadoFiltro,
+    ordenacao,
+    modoComparativo,
+    modoVisual: modo,
+  };
+
+  const handleFiltrosChange = (patch: Partial<typeof filtrosState>) => {
+    if (patch.marca !== undefined) setMarca(patch.marca);
+    if (patch.precoMin !== undefined) setPrecoMin(patch.precoMin);
+    if (patch.precoMax !== undefined) setPrecoMax(patch.precoMax);
+    if (patch.emPromocao !== undefined) setEmPromocao(patch.emPromocao);
+    if (patch.disponivel !== undefined) setDisponivel(patch.disponivel);
+    if (patch.mercadoFiltro !== undefined) setMercadoFiltro(patch.mercadoFiltro);
+    if (patch.ordenacao !== undefined) setOrdenacao(patch.ordenacao);
+    if (patch.modoComparativo !== undefined) setModoComparativo(patch.modoComparativo);
+    if (patch.modoVisual !== undefined) setModo(patch.modoVisual);
+  };
+
   return (
-    <DashboardLayout role="CLIENTE">
-      {/* lg: painel empurra o grid; mobile: drawer por cima */}
-      {/* items-start: coluna da lista não acompanha altura do main — permite sticky no aside (lg) */}
-      <div className="flex min-h-[calc(100vh-10rem)] flex-col gap-0 lg:flex-row lg:items-start">
-        <main className="min-w-0 flex-1 transition-[padding] duration-300">
-          <div className="mx-auto max-w-7xl p-4 md:p-6">
-            {/* Header */}
-            <div className="mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                Buscar Produtos
-              </h1>
+    <DashboardLayout role="CLIENTE" fullWidth>
+      <div className="flex min-h-[calc(100dvh-4rem)] flex-col lg:h-[calc(100dvh-4rem)] lg:flex-row lg:items-stretch lg:overflow-hidden">
+        <main className="min-w-0 flex-1 lg:overflow-y-auto lg:overscroll-y-contain">
+          <div className="mx-auto max-w-none px-4 py-4 md:px-6 md:py-6 lg:px-8 xl:max-w-[1200px]">
+            <PageHeader
+              title={UX.busca.titulo}
+              mobileDescription={UX.busca.subtitulo}
+            />
 
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <MercadoVivoBanner />
-                <ScanInteligenteEntry mercadoId={mercadoContexto} className="shrink-0" />
-              </div>
-
-              <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <MercadoSelector value={mercadoFiltro} onChange={setMercadoFiltro} className="lg:flex-1" />
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-gray-200/80">
-                  <input
-                    type="checkbox"
-                    checked={modoComparativo}
-                    onChange={(e) => setModoComparativo(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-precivox-blue focus:ring-precivox-blue"
-                  />
-                  <GitCompareArrows className="h-4 w-4 text-precivox-blue" />
-                  <span className="font-medium text-gray-800">Comparar ofertas por mercado</span>
-                </label>
-              </div>
-              <CatalogoMercadosResumo
-                mercadoFiltro={mercadoFiltro}
-                modoComparativo={modoComparativo}
-                className="mb-3"
+            {/* Busca — elemento principal */}
+            <div className="mb-3">
+              <SearchAutocomplete
+                value={busca}
+                onChange={setBusca}
+                placeholder={UX.busca.placeholder}
               />
-              {mercadoFiltro && (
-                <div className="mb-3 space-y-2">
-                  <OfertaAgregadaRegiaoChip mercadoId={mercadoFiltro} />
-                  <ParceiroAncoraRegiaoChip mercadoId={mercadoFiltro} />
-                  <PromoDirecionadaChip mercadoId={mercadoFiltro} />
-                </div>
-              )}
-
-              <div className="mb-3 flex gap-2 md:gap-4">
-                <SearchAutocomplete
-                  value={busca}
-                  onChange={setBusca}
-                  placeholder="Digite o nome do produto, marca ou código de barras..."
-                />
-              </div>
-
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Filtros da busca, visualização e lista inteligente
-              </p>
-              <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setFiltrosAbertos(!filtrosAbertos)}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                    filtrosAbertos || temFiltros
-                      ? 'bg-precivox-blue text-white hover:bg-blue-700'
-                      : 'bg-white text-gray-800 shadow-sm ring-1 ring-gray-200/80 hover:bg-gray-100'
-                  }`}
-                >
-                  <Filter className="h-5 w-5 shrink-0" />
-                  <span>Filtros</span>
-                  {temFiltros && (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                        filtrosAbertos || temFiltros
-                          ? 'bg-white text-precivox-blue'
-                          : 'bg-precivox-blue text-white'
-                      }`}
-                    >
-                      !
-                    </span>
-                  )}
-                </button>
-
-                <ToggleViewButton modo={modo} setModo={setModo} />
-
-                <button
-                  type="button"
-                  onClick={() => setExpandida(true)}
-                  className={`relative flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-                    expandida
-                      ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300'
-                      : 'bg-white text-emerald-800 shadow-sm ring-1 ring-emerald-200/90 hover:bg-emerald-50'
-                  }`}
-                  aria-expanded={expandida}
-                  aria-controls="lista-inteligente-panel"
-                >
-                  <ShoppingCart className="h-5 w-5 shrink-0" />
-                  <span className="hidden sm:inline">Lista inteligente</span>
-                  <span className="sm:hidden">Lista</span>
-                  {totalItens > 0 && (
-                    <span
-                      className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-xs font-bold ${
-                        expandida ? 'bg-white/25 text-white' : 'bg-emerald-600 text-white'
-                      }`}
-                    >
-                      {totalItens > 99 ? '99+' : totalItens}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              {/* Filtro de Categorias - SEMPRE VISÍVEL */}
-              <CategoryFilter
-                categoriaSelecionada={categoria}
-                onCategoriaChange={setCategoria}
-              />
-
-              {/* Painel de Filtros Avançados */}
-              {filtrosAbertos && (
-                <div className="bg-white border-2 border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Filtros Avançados</h3>
-                    {temFiltros && (
-                      <button
-                        onClick={limparFiltros}
-                        className="text-sm text-precivox-blue hover:underline flex items-center gap-1"
-                      >
-                        <X className="w-4 h-4" />
-                        Limpar todos
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Marca
-                      </label>
-                      <input
-                        type="text"
-                        value={marca}
-                        onChange={(e) => setMarca(e.target.value)}
-                        placeholder="Ex: Nestlé"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-precivox-blue focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Preço Mínimo
-                      </label>
-                      <input
-                        type="number"
-                        value={precoMin}
-                        onChange={(e) => setPrecoMin(e.target.value)}
-                        placeholder="R$ 0,00"
-                        step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-precivox-blue focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Preço Máximo
-                      </label>
-                      <input
-                        type="number"
-                        value={precoMax}
-                        onChange={(e) => setPrecoMax(e.target.value)}
-                        placeholder="R$ 1000,00"
-                        step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-precivox-blue focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="emPromocao"
-                        checked={emPromocao === true}
-                        onChange={(e) => setEmPromocao(e.target.checked ? true : undefined)}
-                        className="w-4 h-4 text-precivox-blue border-gray-300 rounded focus:ring-precivox-blue"
-                      />
-                      <label htmlFor="emPromocao" className="text-sm text-gray-700">
-                        Apenas produtos em promoção
-                      </label>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="disponivel"
-                        checked={disponivel === true}
-                        onChange={(e) => setDisponivel(e.target.checked ? true : undefined)}
-                        className="w-4 h-4 text-precivox-blue border-gray-300 rounded focus:ring-precivox-blue"
-                      />
-                      <label htmlFor="disponivel" className="text-sm text-gray-700">
-                        Apenas produtos disponíveis
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Contador de resultados */}
-              {!loading && (
-                <div className="mb-4 space-y-1">
-                  <p className="text-sm text-gray-600">
-                    {total > 0 ? (
-                      <>
-                        Exibindo <strong>{produtos.length.toLocaleString('pt-BR')}</strong> de{' '}
-                        <strong>{total.toLocaleString('pt-BR')}</strong>
-                      </>
-                    ) : (
-                      produtos.length.toLocaleString('pt-BR')
-                    )}{' '}
-                    {modoComparativo
-                      ? total === 1 || produtos.length === 1
-                        ? 'oferta com estoque'
-                        : 'ofertas com estoque'
-                      : total === 1 || produtos.length === 1
-                        ? 'produto com estoque'
-                        : 'produtos com estoque'}
-                    {busca && <span className="ml-1">para &quot;{busca}&quot;</span>}
-                    {categoria && (
-                      <span className="ml-1">na categoria &quot;{categoria}&quot;</span>
-                    )}
-                    {mercadoFiltro && (
-                      <span className="ml-1 text-precivox-blue">· um mercado selecionado</span>
-                    )}
-                  </p>
-                  {hasMore && (
-                    <p className="text-xs text-amber-800/90">
-                      A busca carrega em páginas de {modoComparativo ? 80 : 100} itens — role até o fim
-                      da lista ou use <strong>Carregar mais</strong> para ver o restante (
-                      {(total - produtos.length).toLocaleString('pt-BR')} ainda não exibidos).
-                    </p>
-                  )}
-                  {!mercadoFiltro && total > 0 && (
-                    <p className="text-xs text-gray-500">
-                      Ofertas de todos os mercados ativos; use o filtro <strong>Mercado</strong> acima
-                      para restringir.
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
 
-            {/* Lista de Produtos */}
+            {/* Ações essenciais — uma linha */}
+            <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <Chip
+                selected={filtrosAbertos || filtrosAtivosCount > 0}
+                count={filtrosAtivosCount > 0 ? filtrosAtivosCount : undefined}
+                onClick={() => setFiltrosAbertos(true)}
+                aria-label={UX.busca.filtros}
+              >
+                <Filter className="h-4 w-4" />
+                {UX.busca.filtros}
+              </Chip>
+
+              <Chip
+                selected={expandida}
+                variant="success"
+                count={totalItens > 0 ? totalItens : undefined}
+                onClick={handleToggleLista}
+                aria-expanded={expandida}
+                aria-controls="lista-inteligente-panel"
+              >
+                {expandida ? (
+                  <PanelRightClose className="hidden h-4 w-4 lg:block" />
+                ) : (
+                  <PanelRightOpen className="hidden h-4 w-4 lg:block" />
+                )}
+                <ShoppingCart className="h-4 w-4 lg:hidden" />
+                <span className="hidden lg:inline">
+                  {expandida ? UX.busca.recolherLista : UX.busca.lista}
+                </span>
+                <span className="lg:hidden">{UX.busca.lista}</span>
+              </Chip>
+            </div>
+
+            {/* Categorias — filtro rápido */}
+            <CategoryFilter
+              categoriaSelecionada={categoria}
+              onCategoriaChange={setCategoria}
+            />
+
+            {/* Mais opções — progressive disclosure */}
+            <button
+              type="button"
+              onClick={() => setMaisOpcoesAbertas(!maisOpcoesAbertas)}
+              className="mt-2 flex w-full items-center justify-between rounded-lg px-1 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+              aria-expanded={maisOpcoesAbertas}
+            >
+              <span>{UX.busca.maisOpcoes}</span>
+              {maisOpcoesAbertas ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+
+            {maisOpcoesAbertas && (
+              <div className="mt-1 space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+                <MercadoVivoBanner />
+                <ScanInteligenteEntry mercadoId={mercadoContexto} />
+                {mercadoFiltro && (
+                  <div className="flex flex-wrap gap-2">
+                    <OfertaAgregadaRegiaoChip mercadoId={mercadoFiltro} />
+                    <ParceiroAncoraRegiaoChip mercadoId={mercadoFiltro} />
+                    <PromoDirecionadaChip mercadoId={mercadoFiltro} />
+                  </div>
+                )}
+                <CatalogoMercadosResumo
+                  mercadoFiltro={mercadoFiltro}
+                  modoComparativo={modoComparativo}
+                />
+              </div>
+            )}
+
+            {/* Contador */}
+            {!loading && total > 0 && (
+              <p className="mt-3 text-xs text-slate-500">
+                {UX.busca.resultados(produtos.length, total, modoComparativo)}
+                {busca && <> para &quot;{busca}&quot;</>}
+                {mercadoFiltro && <span className="text-primary-600"> · mercado selecionado</span>}
+              </p>
+            )}
+
+            {/* Resultados */}
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-precivox-blue"></div>
-                <span className="ml-4 text-gray-600">Carregando produtos...</span>
+              <div className="mt-4">
+                <ProductGridSkeleton count={6} />
               </div>
             ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                <div className="max-w-md mx-auto">
-                  <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-red-800 font-semibold text-lg mb-2">Erro ao carregar produtos</p>
-                  <p className="text-red-600 text-sm mb-4">
-                    {error.includes('Erro 500') || error.includes('Erro interno')
-                      ? 'O servidor está temporariamente indisponível. Por favor, tente novamente em alguns instantes.'
-                      : error.includes('Erro 404')
-                      ? 'Recurso não encontrado. Verifique sua conexão e tente novamente.'
-                      : error}
-                  </p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-6 py-2 bg-precivox-blue text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Tentar Novamente
-                  </button>
-                </div>
-              </div>
+              <ErrorState
+                className="mt-4"
+                title={UX.busca.erroTitulo}
+                message={
+                  error.includes('500') || error.includes('interno')
+                    ? UX.busca.erroGenerico
+                    : error
+                }
+                onRetry={() => window.location.reload()}
+                retryLabel={UX.busca.tentarNovamente}
+              />
             ) : produtos.length === 0 ? (
               busca.trim().length >= 2 && mercadoSemResultado ? (
                 <BuscaSemResultadoInteligente
@@ -466,45 +367,45 @@ export default function BuscaPage() {
                   }}
                 />
               ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                  <p className="text-gray-600 text-lg mb-2">Nenhum produto encontrado</p>
-                  <p className="text-gray-500 text-sm">
-                    {busca || categoria || temFiltros
-                      ? 'Tente ajustar os filtros de busca'
-                      : 'Só aparecem produtos com preço e estoque em alguma unidade. Se você já importou uma planilha, faça um novo upload ou peça ao gestor para reativar os itens no painel.'}
-                  </p>
-                </div>
+                <EmptyState
+                  className="mt-4"
+                  title={UX.busca.semResultado}
+                  message={
+                    busca || categoria || temFiltros
+                      ? UX.busca.semResultadoDica
+                      : 'Ainda não há produtos disponíveis. Tente novamente mais tarde.'
+                  }
+                  action={
+                    temFiltros
+                      ? { label: UX.busca.limparFiltros, onClick: limparFiltros }
+                      : undefined
+                  }
+                />
               )
             ) : (
               <>
                 <ListaSugestoesInline mercadoId={mercadoContexto} />
                 {modo === 'cards' ? (
                   modoComparativo ? (
-                    <ProductCompareGroup produtos={produtos} />
+                    <ProductCompareGroup produtos={produtos} onAbrirLista={handleAbrirLista} />
                   ) : (
-                    <ProductCard produtos={produtos} />
+                    <ProductCard produtos={produtos} onAbrirLista={handleAbrirLista} />
                   )
                 ) : (
-                  <ProductList produtos={produtos} />
+                  <ProductList produtos={produtos} onAbrirLista={handleAbrirLista} />
                 )}
-                {/* Lazy load incremental */}
                 {hasMore && (
-                  <div className="mt-8 flex flex-col items-center gap-3 rounded-xl border border-dashed border-precivox-blue/30 bg-blue-50/50 px-4 py-6">
+                  <div className="mt-8 flex flex-col items-center gap-3 rounded-xl border border-dashed border-primary-200 bg-primary-50/30 px-4 py-6">
                     <div ref={sentinelRef} className="h-1 w-full" />
-                    <p className="text-center text-sm text-gray-700">
-                      Faltam{' '}
-                      <strong>{(total - produtos.length).toLocaleString('pt-BR')}</strong>{' '}
-                      {modoComparativo ? 'ofertas' : 'produtos'} para listar tudo desta busca
-                    </p>
                     <button
                       type="button"
                       onClick={loadMore}
                       disabled={loadingMore}
-                      className="px-6 py-2.5 bg-precivox-blue text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 shadow-sm"
+                      className="rounded-lg bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:opacity-50"
                     >
                       {loadingMore
                         ? 'Carregando…'
-                        : `Carregar mais (+${Math.min(modoComparativo ? 80 : 100, total - produtos.length).toLocaleString('pt-BR')})`}
+                        : `${UX.busca.carregarMais} (+${Math.min(modoComparativo ? 80 : 100, total - produtos.length).toLocaleString('pt-BR')})`}
                     </button>
                   </div>
                 )}
@@ -513,8 +414,17 @@ export default function BuscaPage() {
           </div>
         </main>
 
-        <ListaLateral expandida={expandida} onToggle={() => setExpandida(!expandida)} />
+        <ListaLateral expandida={expandida} onToggle={handleToggleLista} />
       </div>
+
+      <BuscaFiltrosSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        filtros={filtrosState}
+        onChange={handleFiltrosChange}
+        onLimpar={limparFiltros}
+        temFiltros={temFiltros}
+      />
 
       <CompraConfirmacaoPrompt
         mercadoId={mercadoContexto}
@@ -526,4 +436,3 @@ export default function BuscaPage() {
     </DashboardLayout>
   );
 }
-

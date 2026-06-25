@@ -24,9 +24,11 @@ function logoHrefForRole(role: DashboardRole): string {
 interface DashboardLayoutProps {
   children: React.ReactNode;
   role: DashboardRole;
+  /** Remove max-width do conteúdo — layouts split (ex.: busca + lista lateral). */
+  fullWidth?: boolean;
 }
 
-export default function DashboardLayout({ children, role }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, role, fullWidth = false }: DashboardLayoutProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
   
@@ -52,6 +54,11 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
         </div>
       </div>
     );
+  }
+
+  /** Área cliente: shell (header + nav) vem do `app/cliente/layout.tsx`. */
+  if (role === 'CLIENTE') {
+    return <>{children}</>;
   }
 
   // Estado não autenticado: não redireciona automaticamente para evitar loops.
@@ -118,7 +125,13 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
       {role === 'GESTOR' && <GestorNav />}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ease-in-out">
+      <main
+        className={
+          fullWidth
+            ? 'w-full transition-all duration-300 ease-in-out'
+            : 'mx-auto max-w-7xl px-4 py-8 transition-all duration-300 ease-in-out sm:px-6 lg:px-8'
+        }
+      >
         {children}
       </main>
     </div>

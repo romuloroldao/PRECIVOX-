@@ -586,6 +586,30 @@ model UserEvent {
   @@map("user_events")
 }
 
+/// Solicitações de demonstração recebidas pelo formulário /demo.
+model DemoRequest {
+  id        String   @id @default(uuid())
+  ticketId  String   @unique @map("ticket_id")
+  nome      String
+  email     String
+  empresa   String
+  cidade    String
+  telefone  String?
+  interesse String
+  porte     String?
+  mensagem  String?  @db.Text
+  origem    String   @default("site-demo")
+  ip        String?
+  status    String   @default("novo") // novo, contatado, agendado, concluido, descartado
+  notas     String?  @db.Text
+  criadoEm  DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@index([status, criadoEm])
+  @@index([email])
+  @@map("demo_requests")
+}
+
 /// Resposta NPS (0–10) associada ao mercado avaliado (ex.: após compra ou pesquisa in-app).
 model NpsResponse {
   id        String   @id @default(uuid())
@@ -602,4 +626,19 @@ model NpsResponse {
 
   @@index([mercadoId, createdAt])
   @@map("nps_responses")
+}
+
+/// Assinantes da newsletter (opt-in via cadastro ou formulário público).
+model NewsletterSubscriber {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  nome           String?
+  status         String    @default("active") // active, unsubscribed
+  origem         String    @default("site") // site, signup, footer
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("newsletter_subscribers")
 }

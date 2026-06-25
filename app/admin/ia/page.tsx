@@ -22,17 +22,17 @@ export default function AdminIAPage() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      // Simular carregamento de estatísticas de IA
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setStats({
-        totalAnalises: 1250,
-        alertasAtivos: 23,
-        mercadosComIA: 8,
-        ultimaAnalise: new Date().toISOString()
-      });
-      
-      toast.success('Painel IA carregado com sucesso!');
+      const { authenticatedFetch } = await import('@/lib/auth-client');
+      const response = await authenticatedFetch('/api/admin/ia-stats');
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setStats(result.data);
+        }
+      } else {
+        toast.error('Erro ao carregar estatísticas de IA');
+      }
     } catch (error) {
       console.error('Erro ao carregar stats IA:', error);
       toast.error('Erro ao carregar estatísticas de IA');
@@ -57,9 +57,17 @@ export default function AdminIAPage() {
       <div className="max-w-7xl mx-auto">
         <Breadcrumbs />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Painel de Inteligência Artificial</h1>
-          <p className="text-gray-600">Gestão completa dos módulos de IA do PRECIVOX</p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Painel de Inteligência Artificial</h1>
+            <p className="text-gray-600">Gestão completa dos módulos de IA do PRECIVOX</p>
+          </div>
+          <Link
+            href="/admin/ia/dashboard"
+            className="inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Abrir GROOC Dashboard
+          </Link>
         </div>
 
         {/* Estatísticas Gerais */}
@@ -224,7 +232,7 @@ export default function AdminIAPage() {
                 <span className="font-semibold text-green-600">94%</span>
               </div>
             </div>
-            <Link href="/gestor/ia/dashboard" className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Link href="/admin/ia/dashboard" className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               Gerenciar Alertas
             </Link>
           </div>

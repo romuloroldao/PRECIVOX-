@@ -4,10 +4,10 @@
 > **Categoria:** Infraestrutura de decisão de consumo — não comparador de preços.  
 > **Princípios:** MVP first · baixo custo · IA híbrida · dados proprietários · IA explicável.
 
-**Última atualização:** 11/06/2026  
+**Última atualização:** 18/06/2026  
 **Horizonte:** 0–36 meses (MVP → escala → plataforma)  
-**Fase operacional atual:** **Fase 3 — Escala** (Épicos 12–17 ✅ MVP técnico; Fase 4 PRECI Network)  
-**Handoff detalhado:** [`CHECKPOINT_ROADMAP_MAIO2026.md`](./CHECKPOINT_ROADMAP_MAIO2026.md)
+**Fase operacional atual:** **Fase 4 — Go-live comercial** (Épicos 16–18 ✅ MVP técnico · piloto regional ativo)  
+**Handoff detalhado:** [`CHECKPOINT_ROADMAP_MAIO2026.md`](./CHECKPOINT_ROADMAP_MAIO2026.md) · [`CHECKLIST_GO_LIVE.md`](./CHECKLIST_GO_LIVE.md)
 
 ---
 
@@ -55,8 +55,8 @@
 FASE 0 — Fundação          │ Catálogo, busca, lista, eventos, IA gestor          ✅ estável
 FASE 1 — MVP visão (0–3m)  │ EL, truth layer, crowd, Perfil PRECI, retenção      ✅ entregue
 FASE 2 — PMF (3–9m)        │ Despensa, mercado ao vivo, sync, SLA parceiro       ✅ entregue
-FASE 3 — Escala (9–18m)    │ ML leve, oferta agregada, API parceiro, monetização ← AQUI
-FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
+FASE 3 — Escala (9–18m)    │ ML leve, oferta agregada, API parceiro, monetização ✅ MVP técnico
+FASE 4 — Go-live (18m+)    │ Âncoras + SaaS + PRECI Network + piloto real        🟡 em andamento
 ```
 
 ---
@@ -72,7 +72,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | 0.3 | Dashboard saúde do catálogo (gestor) | P0 | ✅ | `CatalogoSaudeCard`, `lib/catalogo-saude.ts` |
 | 0.4 | Expandir `UserEventType` (schema + API) | P0 | ✅ | Sprint 0 — `ISSUES_SPRINT0.md` |
 | 0.5 | Busca: exibir `atualizadoEm` no preço | P1 | ✅ | Truth layer + `PrecoTruthBadge` |
-| 0.6 | GROOC: respostas sempre com fontes | P1 | 🟡 | Reforçar padrão explicável |
+| 0.6 | GROOC: respostas sempre com fontes | P1 | ✅ | `grooc-fontes.ts`, UI dashboard |
 
 **Métricas:** taxa de sucesso de import · % produtos com preço &lt; SLA do tier · tempo lista→busca
 
@@ -88,7 +88,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 |---|---------|-----|--------|-----------|
 | 1.1 | **Economia Líquida™ (EL)** | P0 | ✅ | `lib/economia-liquida.ts`, `SPEC_ECONOMIA_LIQUIDA.md` |
 | 1.2 | EL na lista inteligente | P0 | ✅ | `ListaInteligentePanel`, chips busca |
-| 1.3 | EL no scan/foto (v1) | P1 | 🟡 | `lib/scan-inteligente.ts` após match |
+| 1.3 | EL no scan/foto (v1) | P1 | ✅ | `scan-inteligente.ts` + melhor alternativa na UI |
 | 1.4 | Config valor do tempo | P1 | ✅ | `el-config-usuario.ts`, perfil cliente |
 | 1.5 | Regra “Fique aqui” / “Vale X min” | P0 | ✅ | `explicacao` em `calcularEconomiaLiquida` |
 
@@ -98,9 +98,9 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 |---|---------|-----|--------|-----------|
 | 2.1 | Novos eventos | P0 | ✅ | `preco_confirmado`, `compra_confirmada`, etc. |
 | 2.2 | **Intent Score** heurístico | P0 | ✅ | `GET /api/cliente/intent-score` |
-| 2.3 | Push “cesta provável” (48–72h) | P0 | ✅ | `lib/push-retencao.ts`, cron + Web Push VAPID |
-| 2.4 | Ranking híbrido | P0 | 🟡 | Preço + EL + perfil; sem ML rank |
-| 2.5 | LLM só para explicação | P1 | 🟡 | GROOC B2B; B2C regras |
+| 2.3 | Push “cesta provável” (48–72h) | P0 | ✅ | `inferirHorasAteCompraProvavel`, `push-retencao.ts` |
+| 2.4 | Ranking híbrido | P0 | ✅ | `ranking-busca-hibrido.ts` |
+| 2.5 | LLM só para explicação | P1 | 🟡 | GROOC B2B ✅ fontes; B2C regras — **evoluir pós-lançamento** |
 
 ## Épico 3 — Truth layer
 
@@ -116,7 +116,7 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | # | Feature | Pri | Status | Onde está |
 |---|---------|-----|--------|-----------|
 | 4.1 | Confirmar preço (3 taps) | P0 | ✅ | `PrecoCrowdActions` |
-| 4.2 | Peso por reputação usuário | P1 | 🟡 | `lib/crowd-reputacao.ts` |
+| 4.2 | Peso por reputação usuário | P1 | 🔲 | `lib/crowd-reputacao.ts` — **pós-lançamento** |
 | 4.3 | Gamificação: níveis contribuidor | P1 | ✅ | `ContribuidorBadge` |
 | 4.4 | Badge mercado “Preço verificado” | P1 | ✅ | `MercadoSeloBadge`, `/api/public/mercado-selo` |
 
@@ -215,8 +215,9 @@ FASE 4 — Plataforma (18m+) │ PRECI Network, CPG, LATAM
 | **13 — Oferta agregada** | Mercado “aceita” cesta agregada da região | ✅ |
 | **14 — Crowd v2** | Foto etiqueta OCR, reputação mercado, anti-fraude | ✅ |
 | **15 — Embeddings catálogo** | Unificação SKU nacional com chave local | ✅ |
-| **16 — Parceiros âncora** | Infra 3–5 redes/região piloto (designação pós-lançamento) | ✅ MVP técnico |
-| **17 — Monetização** | SaaS gestor + insights CPG + promo direcionada | ✅ MVP técnico |
+| **16 — Parceiros âncora** | Infra 3–5 redes/região piloto | ✅ MVP · **5 âncoras designadas** (jun/2026) |
+| **17 — Monetização** | SaaS gestor + insights CPG + promo direcionada | ✅ MVP · **planos Essencial/Pro/Enterprise** ativos |
+| **18 — PRECI Network** | API intenção agregada LGPD para CPG/parceiros | ✅ MVP técnico |
 
 **Métricas:** densidade grafo (confirmações/km²) · ARR B2B · CAC orgânico (viral card)
 
@@ -301,14 +302,32 @@ flowchart TD
 
 ---
 
+# Trilha crítica — jun/2026
+
+| # | Item | Status | Notas |
+|---|------|--------|-------|
+| 1 | **Ops:** ownership PostgreSQL + `migrate deploy` | ✅ | Tabelas/schema `public` → `precivox_app`; migrations 21/21 aplicadas |
+| 2 | **Comercial:** planos SaaS + parceiros âncora | ✅ | `npm run db:setup:go-live` — 3 planos, 5 âncoras CEP5 piloto |
+| 3 | **Go-live:** QA checklist §5 (cliente + gestor) | 🟡 | Piloto Empório Select; ver [`CHECKLIST_GO_LIVE.md`](./CHECKLIST_GO_LIVE.md) §5 |
+| 4 | **P1 pós-lançamento:** crowd reputação (4.2) + LLM B2C (2.5) | 🔲 | Só após primeiro parceiro real em produção |
+| 5 | **Admin produção** | ✅ | Dashboard, users, mercados, IA, GROOC corrigidos (deploy 18/06) |
+
+**Parceiros âncora ativos (região piloto):** Empório Select Premium (#1), Atacadão Econômico (#2), SuperMax Atacado (#3), Mercadinho do Bairro (#4), Popular Preços Baixos (#5).
+
+**Gestor piloto:** `ricardo.almeida@precivox-seed.com` → Empório Select Premium · Plano **Pro** (7 módulos).
+
+---
+
 # Próximos passos imediatos
 
 | Prioridade | Item | Doc |
 |------------|------|-----|
-| P0 | **Fase 4** — PRECI Network / go-live comercial | — |
-| P1 | Designação parceiros âncora — **após lançamento** | `EPICO_16_PARCEIROS_ANCORA.md` |
-| P1 | Ativar cobrança SaaS + contratos CPG — **após lançamento** | `EPICO_17_MONETIZACAO.md` |
-| Ops | Backfill SKU nacional em prod (`npm run db:backfill:sku-nacional`) | `EPICO_15_EMBEDDINGS_CATALOGO.md` |
+| P0 | **Contrato comercial + gateway pagamento** (fora do sistema) | `CHECKLIST_GO_LIVE.md` §3 |
+| P0 | **Reimport catálogo piloto** — Empório 100% stale bloqueia selo âncora | gestor → upload |
+| P1 | `PRECI_NETWORK_API_KEYS` + contrato LGPD CPG externo | `EPICO_18_PRECI_NETWORK.md` |
+| P1 | Widget/SDK PRECI Network | `EPICO_18_PRECI_NETWORK.md` |
+| P1 | Fix `/cliente/perfil` chunk reload (QA 18/06) | bug P0 UX |
+| P2 | Crowd reputação 4.2 + LLM B2C explicativo 2.5 | pós-lançamento |
 
 **Histórico sprints:** [`ISSUES_SPRINT0.md`](./ISSUES_SPRINT0.md) · [`FASE1_SPRINTS.md`](./FASE1_SPRINTS.md)
 
@@ -326,4 +345,4 @@ flowchart TD
 
 ---
 
-*Roadmap revisado em 11/06/2026 após Épico 12 (ML leve) e entrega do Épico 13 (oferta agregada). Revisar ao fim de cada release com métricas reais.*
+*Roadmap revisado em 18/06/2026 após go-live comercial (ops DB, âncoras, planos SaaS, QA piloto). Revisar ao fim de cada release com métricas reais.*

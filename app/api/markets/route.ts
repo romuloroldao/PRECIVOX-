@@ -52,9 +52,21 @@ export async function GET(request: NextRequest) {
       });
     };
 
-    // ADMIN vê todos os mercados
+    const fetchAllMarketsForAdmin = async () => {
+      const mercados = await prisma.mercados.findMany({
+        include: baseInclude,
+        orderBy: { dataCriacao: 'desc' }
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: mercados
+      });
+    };
+
+    // ADMIN vê todos os mercados (ativos e inativos)
     if (user && userRole === 'ADMIN') {
-      return fetchAllActiveMarkets();
+      return fetchAllMarketsForAdmin();
     }
 
     // GESTOR vê apenas seus mercados

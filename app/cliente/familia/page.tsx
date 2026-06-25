@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/DashboardLayout';
+import { ClientePage } from '@/components/cliente/ClientePage';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';
 import { RAIO_FAMILIAR_MAX_MEMBROS } from '@/lib/raio-familiar-constants';
 import {
@@ -79,20 +80,11 @@ export default function FamiliaPage() {
 
   return (
     <DashboardLayout role="CLIENTE">
-      <div className="mx-auto max-w-lg space-y-5 pb-24">
-        <div className="flex items-center gap-3">
-          <Link href="/cliente/home" className="rounded-lg p-2 hover:bg-gray-100" aria-label="Voltar">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
-              <Users className="h-6 w-6 text-indigo-700" />
-              Raio familiar
-            </h1>
-            <p className="text-sm text-gray-600">Lista e preferências compartilhadas da casa</p>
-          </div>
-        </div>
-
+      <ClientePage
+        title="Raio familiar"
+        description="Lista e preferências compartilhadas da casa"
+      >
+      <div className="mx-auto max-w-lg space-y-5">
         {msg && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{msg}</p>}
         {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{erro}</p>}
 
@@ -242,6 +234,7 @@ export default function FamiliaPage() {
           </>
         )}
       </div>
+      </ClientePage>
     </DashboardLayout>
   );
 }

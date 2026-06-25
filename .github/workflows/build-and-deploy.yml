@@ -1,0 +1,85 @@
+# Build PRECIVOX em CI (reduz OOM na VPS).
+# Deploy na VPS: workflow_dispatch ou push em main com secrets configurados.
+name: Build PRECIVOX
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_to_vps:
+        description: 'Rsync + PM2 reload na VPS após build'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+env:
+  NODE_VERSION: '18.20.8'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Prisma generate
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://ci:ci@localhost:5432/ci' }}
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-build-placeholder-secret-32chars-min' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-build-placeholder-jwt-secret-32ch' }}
+
+      - name: Upload .next artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next/BUILD_ID
+            .next/static
+            .next/server
+            .next/*.json
+          retention-days: 7
+
+  deploy-vps:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_vps == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+      - name: Rsync artifact to VPS
+        run: |
+          RSYNC_HOST="${{ secrets.VPS_HOST }}"
+          RSYNC_USER="${{ secrets.VPS_USER:-root }}"
+          SRC="${{ secrets.VPS_DEPLOY_SRC:-/root }}"
+          ssh -o StrictHostKeyChecking=no "${RSYNC_USER}@${RSYNC_HOST}" "mkdir -p ${SRC}/.next"
+          rsync -az .next/ "${RSYNC_USER}@${RSYNC_HOST}:${SRC}/.next/"
+          ssh -o StrictHostKeyChecking=no "${RSYNC_USER}@${RSYNC_HOST}" \
+            "cd ${SRC} && bash scripts/deploy-prod-sync-only.sh"

@@ -7,8 +7,9 @@ import { useLista } from '@/app/context/ListaContext';
 import { Produto } from '@/app/hooks/useProdutos';
 import { useToast } from '@/components/ToastContainer';
 import { recordProdutoSubstituicaoAceita } from '@/lib/events/frontend-events';
-import { ShoppingCart, Users } from 'lucide-react';
+import { ShoppingCart, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, Button } from '@/components/ui';
+import { UX } from '@/lib/ux-copy';
 import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
 import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
 import { PrecoCrowdActions } from '@/components/cliente/PrecoCrowdActions';
@@ -19,11 +20,13 @@ import { SkuNacionalChip } from '@/components/cliente/SkuNacionalChip';
 interface ProductCardProps {
   produtos: Produto[];
   onAdicionar?: () => void;
+  /** Callback para abrir a lista lateral — usado no toast "Ver lista". */
+  onAbrirLista?: () => void;
 }
 
-export function ProductCard({ produtos, onAdicionar }: ProductCardProps) {
+export function ProductCard({ produtos, onAdicionar, onAbrirLista }: ProductCardProps) {
   const { adicionarItem, listaAtivaId } = useLista();
-  const { success } = useToast();
+  const { listaAdicionado } = useToast();
   const mercadoIds = useMemo(
     () => [...new Set(produtos.map((p) => p.unidade.mercado.id))],
     [produtos]
@@ -45,7 +48,11 @@ export function ProductCard({ produtos, onAdicionar }: ProductCardProps) {
       marca: produto.marca,
       unidade: produto.unidade,
     });
-    success(`${produto.nome} adicionado à lista!`);
+    const nomeCurto = produto.nome.length > 40 ? produto.nome.slice(0, 38) + '…' : produto.nome;
+    listaAdicionado(
+      `${nomeCurto} adicionado`,
+      onAbrirLista ? { label: 'Ver lista', onClick: onAbrirLista } : undefined
+    );
     onAdicionar?.();
   };
 
@@ -112,6 +119,7 @@ function CardLinhaSubstituto({
   onSubstituir: (origem: Produto, sub: Produto, modo: 'categoria' | 'equivalente') => void;
 }) {
   const [modoSub, setModoSub] = useState<'categoria' | 'equivalente' | null>(null);
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   type SubComExplicacao = Produto & {
     explicacao?: string;
     motivos?: string[];
@@ -285,115 +293,40 @@ function CardLinhaSubstituto({
             )}
           </div>
 
-          {/* Conteúdo do card */}
-          <div className="p-4 md:p-6">
-            <h3 className="font-semibold text-text-primary mb-2 line-clamp-2 text-sm md:text-base">
+          {/* Conteúdo do card — hierarquia simplificada */}
+          <div className="p-4 md:p-5">
+            <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-text-primary md:text-base">
               {produto.nome}
             </h3>
 
-            <div className="mb-3">
-              {produto.marca && (
-                <p className="text-xs text-text-secondary mb-1">Marca: {produto.marca}</p>
-              )}
-              {produto.categoria && (
-                <p className="text-xs text-text-secondary">Categoria: {produto.categoria}</p>
-              )}
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-baseline gap-2">
-                {produto.emPromocao && produto.precoPromocional ? (
-                  <>
-                    <span className="text-xl md:text-2xl font-bold text-success-600">
-                      R$ {produto.precoPromocional.toFixed(2).replace('.', ',')}
-                    </span>
-                    <span className="text-sm text-text-tertiary line-through">
-                      R$ {produto.preco.toFixed(2).replace('.', ',')}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-xl md:text-2xl font-bold text-text-primary">
+            <div className="mb-3 flex items-baseline gap-2">
+              {produto.emPromocao && produto.precoPromocional ? (
+                <>
+                  <span className="text-xl font-bold text-success-600 md:text-2xl">
+                    R$ {produto.precoPromocional.toFixed(2).replace('.', ',')}
+                  </span>
+                  <span className="text-sm text-text-tertiary line-through">
                     R$ {produto.preco.toFixed(2).replace('.', ',')}
                   </span>
-                )}
-              </div>
-              {produto.truth && (
-                <div className="mt-2">
-                  <PrecoTruthBadge
-                    compact
-                    verificadoEm={produto.truth.verificadoEm}
-                    atualizadoEm={produto.truth.atualizadoEm}
-                    confianca={confiancaLocal ?? produto.truth.confianca}
-                    fonte={produto.truth.fonte}
-                  />
-                </div>
-              )}
-              {produto.estoqueId && produto.disponivel && (
-                <PrecoCrowdActions
-                  estoqueId={produto.estoqueId}
-                  precoExibido={precoExibido}
-                  onFeedback={(c) => setConfiancaLocal(c)}
-                />
-              )}
-              {produto.melhorAlternativa?.economiaLiquida && (
-                <EconomiaLiquidaChip
-                  recomendacao={produto.melhorAlternativa.economiaLiquida.recomendacao}
-                  economiaLiquida={produto.melhorAlternativa.economiaLiquida.economiaLiquida}
-                  explicacao={produto.melhorAlternativa.economiaLiquida.explicacao}
-                  mercadoDestino={produto.melhorAlternativa.mercadoNome}
-                  distanciaKm={produto.melhorAlternativa.distanciaKm}
-                  tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
-                />
-              )}
-              {produto.provaSocial?.mensagem && (
-                <p className="mt-1 flex items-start gap-1 text-[11px] leading-snug text-sky-800">
-                  <Users className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-                  <span>{produto.provaSocial.mensagem}</span>
-                </p>
-              )}
-              {pid && mercadoId && (
-                <>
-                  <EsperaQueValeChip produtoId={String(pid)} mercadoId={mercadoId} />
-                  <AtacadoVarejoChip produtoId={String(pid)} mercadoId={mercadoId} />
-                  <SkuNacionalChip
-                    produtoCatalogoId={String(pid)}
-                    mercadoId={mercadoId}
-                  />
                 </>
-              )}
-              {produto.referenciaRegiao?.media != null && !produto.melhorAlternativa && (
-                <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-                  Referência média na sua região:{' '}
-                  <span className="font-semibold text-text-primary">
-                    R$ {produto.referenciaRegiao.media.toFixed(2).replace('.', ',')}
-                  </span>
-                  {produto.referenciaRegiao.diferencaPct != null &&
-                    Math.abs(produto.referenciaRegiao.diferencaPct) >= 12 && (
-                      <span className="mt-1 block text-amber-800/90">
-                        A diferença pode influenciar na lista — não é comparativo com outra rede, é só referência
-                        regional.
-                      </span>
-                    )}
-                </p>
+              ) : (
+                <span className="text-xl font-bold text-text-primary md:text-2xl">
+                  R$ {produto.preco.toFixed(2).replace('.', ',')}
+                </span>
               )}
             </div>
 
-            <div className="mb-4">
-              <p className="text-sm text-text-secondary">
-                <span className="font-medium">Loja:</span> {produto.unidade.mercado.nome}
-                {seloMercado && (
-                  <MercadoSeloBadge
-                    selo={seloMercado}
-                    seloCurto={seloCurto}
-                    compact
-                    className="ml-1 align-middle"
-                  />
-                )}
-              </p>
-              <p className="text-xs text-text-tertiary">
-                {produto.unidade.nome} - {produto.unidade.cidade}
-              </p>
-            </div>
+            <p className="mb-4 text-sm text-text-secondary">
+              {produto.unidade.mercado.nome}
+              {seloMercado && (
+                <MercadoSeloBadge
+                  selo={seloMercado}
+                  seloCurto={seloCurto}
+                  compact
+                  className="ml-1 align-middle"
+                />
+              )}
+            </p>
 
             <Button
               variant={produto.disponivel ? 'primary' : 'ghost'}
@@ -403,10 +336,93 @@ function CardLinhaSubstituto({
               disabled={!produto.disponivel}
               className="w-full"
             >
-              {produto.disponivel ? 'Adicionar à lista' : 'Indisponível'}
+              {produto.disponivel ? UX.produto.adicionar : 'Indisponível'}
             </Button>
 
-            {pid && blocoTroca}
+            {/* Detalhes secundários — progressive disclosure */}
+            {(produto.marca ||
+              produto.categoria ||
+              produto.truth ||
+              produto.melhorAlternativa ||
+              produto.provaSocial ||
+              pid ||
+              produto.referenciaRegiao) && (
+              <button
+                type="button"
+                onClick={() => setDetalhesAbertos(!detalhesAbertos)}
+                className="mt-3 flex w-full items-center justify-center gap-1 py-2 text-xs font-medium text-primary-600 hover:text-primary-700"
+                aria-expanded={detalhesAbertos}
+              >
+                {detalhesAbertos ? UX.produto.ocultarDetalhes : UX.produto.verDetalhes}
+                {detalhesAbertos ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
+
+            {detalhesAbertos && (
+              <div className="mt-2 space-y-2 border-t border-slate-100 pt-3">
+                {produto.marca && (
+                  <p className="text-xs text-text-secondary">Marca: {produto.marca}</p>
+                )}
+                {produto.categoria && (
+                  <p className="text-xs text-text-secondary">Categoria: {produto.categoria}</p>
+                )}
+                <p className="text-xs text-text-tertiary">
+                  {produto.unidade.nome} — {produto.unidade.cidade}
+                </p>
+                {produto.truth && (
+                  <PrecoTruthBadge
+                    compact
+                    verificadoEm={produto.truth.verificadoEm}
+                    atualizadoEm={produto.truth.atualizadoEm}
+                    confianca={confiancaLocal ?? produto.truth.confianca}
+                    fonte={produto.truth.fonte}
+                  />
+                )}
+                {produto.estoqueId && produto.disponivel && (
+                  <PrecoCrowdActions
+                    estoqueId={produto.estoqueId}
+                    precoExibido={precoExibido}
+                    onFeedback={(c) => setConfiancaLocal(c)}
+                  />
+                )}
+                {produto.melhorAlternativa?.economiaLiquida && (
+                  <EconomiaLiquidaChip
+                    recomendacao={produto.melhorAlternativa.economiaLiquida.recomendacao}
+                    economiaLiquida={produto.melhorAlternativa.economiaLiquida.economiaLiquida}
+                    explicacao={produto.melhorAlternativa.economiaLiquida.explicacao}
+                    mercadoDestino={produto.melhorAlternativa.mercadoNome}
+                    distanciaKm={produto.melhorAlternativa.distanciaKm}
+                    tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
+                  />
+                )}
+                {produto.provaSocial?.mensagem && (
+                  <p className="flex items-start gap-1 text-[11px] leading-snug text-sky-800">
+                    <Users className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                    <span>{produto.provaSocial.mensagem}</span>
+                  </p>
+                )}
+                {pid && mercadoId && (
+                  <div className="flex flex-wrap gap-1">
+                    <EsperaQueValeChip produtoId={String(pid)} mercadoId={mercadoId} />
+                    <AtacadoVarejoChip produtoId={String(pid)} mercadoId={mercadoId} />
+                    <SkuNacionalChip produtoCatalogoId={String(pid)} mercadoId={mercadoId} />
+                  </div>
+                )}
+                {produto.referenciaRegiao?.media != null && !produto.melhorAlternativa && (
+                  <p className="text-xs text-text-secondary">
+                    Média na região:{' '}
+                    <span className="font-semibold">
+                      R$ {produto.referenciaRegiao.media.toFixed(2).replace('.', ',')}
+                    </span>
+                  </p>
+                )}
+                {pid && blocoTroca}
+              </div>
+            )}
           </div>
         </Card>
   );

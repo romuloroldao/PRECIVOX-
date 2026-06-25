@@ -1,16 +1,22 @@
 /**
- * Dashboard Cliente - Tela Principal
- * 
- * SQUAD A - Frontend/UX
- * 
- * Tela principal após login do cliente
- * Mostra economia, listas recentes, badges
+ * Home do Cliente — tela principal após o login.
+ *
+ * Princípios desta tela (mobile-first):
+ * - Uma única ação principal clara: "Começar compra".
+ * - Divulgação progressiva: recursos avançados ficam atrás de seções
+ *   colapsáveis para evitar excesso de informação.
+ * - Linguagem simples em todos os textos.
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/shared';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { Plus, Search, ShoppingCart } from 'lucide-react';
+import { useLista } from '@/app/context/ListaContext';
+import { listasSalvasToSummaries, mergeListSummaries } from '@/lib/listas-merge';
+
 import { EconomyCard } from '@/components/cliente/EconomyCard';
 import { RecentLists } from '@/components/cliente/RecentLists';
 import { StreakCounter } from '@/components/cliente/StreakCounter';
@@ -28,9 +34,8 @@ import { PreciIndexBairroCard } from '@/components/cliente/PreciIndexBairroCard'
 import { EconomiaStreakCard } from '@/components/cliente/EconomiaStreakCard';
 import { ShareEconomiaCard } from '@/components/cliente/ShareEconomiaCard';
 import { NotificacaoPermissaoBanner } from '@/components/cliente/NotificacaoPermissaoBanner';
-import { TOKENS } from '@/styles/tokens';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { OnboardingChecklist } from '@/components/cliente/OnboardingChecklist';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 interface DashboardData {
   economy: {
@@ -59,13 +64,19 @@ export default function DashboardCliente() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const userId = (session?.user as any)?.id ?? null;
+  const { listasSalvas } = useLista();
+
+  const localLists = useMemo(
+    () => listasSalvasToSummaries(listasSalvas),
+    [listasSalvas]
+  );
 
   useEffect(() => {
     if (status === 'loading') return;
     if (!userId) {
       setData({
         economy: { totalSavings: 0, savingsThisMonth: 0 },
-        lists: [],
+        lists: localLists.slice(0, 6),
         badges: { unlocked: 0, total: 12, recentlyUnlocked: [] },
       });
       setIsLoading(false);
@@ -93,7 +104,7 @@ export default function DashboardCliente() {
             totalSavings: statsData.data?.totalSavings || 0,
             savingsThisMonth: statsData.data?.savingsThisMonth || 0,
           },
-          lists: listsData.data?.lists || [],
+          lists: mergeListSummaries(listsData.data?.lists || [], localLists).slice(0, 6),
           badges: {
             unlocked: badgesData.data?.stats?.unlockedBadges ?? badgesData.data?.unlockedBadges ?? 0,
             total: badgesData.data?.stats?.totalBadges ?? badgesData.data?.totalBadges ?? 12,
@@ -102,10 +113,10 @@ export default function DashboardCliente() {
         });
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError('Erro ao carregar dados');
+        setError('Não conseguimos carregar seus dados agora. Tente de novo em instantes.');
         setData({
           economy: { totalSavings: 0, savingsThisMonth: 0 },
-          lists: [],
+          lists: localLists.slice(0, 6),
           badges: { unlocked: 0, total: 12, recentlyUnlocked: [] },
         });
       } finally {
@@ -114,7 +125,7 @@ export default function DashboardCliente() {
     }
 
     fetchDashboardData();
-  }, [userId, status]);
+  }, [userId, status, localLists]);
 
   useEffect(() => {
     void (async () => {
@@ -128,61 +139,64 @@ export default function DashboardCliente() {
     })();
   }, []);
 
-  const handleCreateList = () => {
-    router.push('/cliente/busca');
-  };
-
-  const handleGoBusca = () => {
-    router.push('/cliente/busca');
-  };
+  const goBusca = () => router.push('/cliente/busca');
+  const hasLists = !!data && data.lists.length > 0;
 
   return (
-    <main style={styles.main}>
-      <div style={styles.container}>
-        {/* Header */}
-        <header style={styles.header}>
-          <div>
-            <h1 style={styles.greeting}>Olá! 👋</h1>
-            <p style={styles.subtitle}>Veja sua economia e listas</p>
-          </div>
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-3xl px-4 py-5 sm:py-6">
+        {/* Cabeçalho: saudação + UMA ação principal */}
+        <header className="mb-5">
+          <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Olá! 👋</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Monte sua lista e veja onde comprar mais barato.
+          </p>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: TOKENS.spacing[3], alignItems: 'center' }}>
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => router.push('/cliente/perfil')}
-              leftIcon={<span>✨</span>}
-            >
-              Meu Perfil PRECI
-            </Button>
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => router.push('/cliente/mercado-vivo')}
-              leftIcon={<span>🛒</span>}
-            >
-              Modo corredor
-            </Button>
+          <button
+            onClick={goBusca}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-3.5 text-base font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          >
+            <Plus className="h-5 w-5" aria-hidden />
+            Começar compra
+          </button>
+
+          {/* Atalhos secundários (rolagem horizontal no mobile) */}
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <QuickChip icon={Search} label="Buscar" onClick={goBusca} />
             <ScanInteligenteEntry mercadoId={mercadoId} />
-            <Button
-              variant="outline"
-              size="md"
-              onClick={handleGoBusca}
-              leftIcon={<span>🔍</span>}
-            >
-              Buscar produtos
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleCreateList}
-              leftIcon={<span>➕</span>}
-            >Começar compra</Button>
+            <QuickChip
+              icon={ShoppingCart}
+              label="Modo corredor"
+              onClick={() => router.push('/cliente/mercado-vivo')}
+            />
           </div>
         </header>
 
-        {/* Economy Card */}
-        <section style={styles.economySection}>
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700"
+          >
+            {error}
+          </div>
+        )}
+
+        {/* Aviso contextual de permissão (quando aplicável) */}
+        {!isLoading && userId && (
+          <div className="mb-4">
+            <NotificacaoPermissaoBanner />
+          </div>
+        )}
+
+        {/* Onboarding: checklist de primeiro acesso */}
+        {!isLoading && userId && (
+          <div className="mb-4">
+            <OnboardingChecklist />
+          </div>
+        )}
+
+        {/* Economia: o número mais importante, em destaque */}
+        <section className="mb-4">
           <EconomyCard
             totalSavings={data?.economy.totalSavings || 0}
             savingsThisMonth={data?.economy.savingsThisMonth || 0}
@@ -190,89 +204,76 @@ export default function DashboardCliente() {
           />
         </section>
 
-        {/* Quick Stats */}
+        {/* Resumo rápido */}
         {!isLoading && data && (
-          <section style={styles.quickStats}>
-            <StatCard
-              icon="📝"
-              label="Listas"
-              value={data.lists.length.toString()}
-              color={TOKENS.colors.primary[600]}
-            />
-            <StatCard
-              icon="🏆"
-              label="Badges"
-              value={`${data.badges.unlocked}/${data.badges.total}`}
-              color={TOKENS.colors.secondary[600]}
-            />
-            <StatCard
-              icon="📊"
-              label="Este Mês"
-              value={`R$ ${(data.economy.savingsThisMonth / 100).toFixed(0)}`}
-              color={TOKENS.colors.accent[600]}
-            />
+          <section className="mb-4 grid grid-cols-3 gap-3">
+            <StatCard icon="📝" label="Listas" value={data.lists.length.toString()} />
+            <StatCard icon="🏆" label="Conquistas" value={`${data.badges.unlocked}/${data.badges.total}`} />
+            <StatCard icon="📊" label="Este mês" value={`R$ ${(data.economy.savingsThisMonth / 100).toFixed(0)}`} />
           </section>
         )}
 
-        {/* Streak Counter */}
         {!isLoading && (
-          <section style={styles.streakSection}>
+          <section className="mb-4">
             <StreakCounter userId={userId} />
           </section>
         )}
 
-        {/* Cards da nova fase: visíveis com sessão; mercadoId é opcional por card */}
-        {!isLoading && userId && (
-          <section style={{ marginBottom: TOKENS.spacing[6], display: 'flex', flexDirection: 'column' as const, gap: TOKENS.spacing[4] }}>
-            <NotificacaoPermissaoBanner />
-            <RaioFamiliarCard />
-            <MercadoVivoBanner />
-            <CestaProvavelCard mercadoId={mercadoId} />
-            <ModoEmergenciaCard mercadoId={mercadoId} />
-            <InflacaoCestaCard mercadoId={mercadoId} />
-            <PreciIndexBairroCard mercadoId={mercadoId} />
-            <EsperaQueValeCard mercadoId={mercadoId} />
-            <AtacadoVarejoCard mercadoId={mercadoId} />
-            <TrocaHistoricoCard mercadoId={mercadoId} />
-            <ProvaSocialMercadoCard mercadoId={mercadoId} />
-            <EconomiaStreakCard />
-            <ShareEconomiaCard />
-          </section>
-        )}
-
-        {/* Recent Lists */}
-        <section style={styles.listsSection}>
-          <RecentLists
-            lists={data?.lists || []}
-            isLoading={isLoading}
-          />
+        {/* Listas recentes */}
+        <section className="mb-4">
+          <RecentLists lists={data?.lists || []} isLoading={isLoading} />
         </section>
 
-        {/* CTA Section */}
-        {!isLoading && data && data.lists.length === 0 && (
-          <section style={styles.ctaSection}>
-            <div style={styles.ctaCard}>
-              <span style={styles.ctaIcon}>🎯</span>
-              <h3 style={styles.ctaTitle}>Comece a Economizar!</h3>
-              <p style={styles.ctaText}>
-                Crie sua primeira lista e descubra onde comprar mais barato
-              </p>
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={handleCreateList}
-                fullWidth
-              >
-                Criar Primeira Lista
-              </Button>
-            </div>
+        {/* Estado vazio educativo: só quando não há listas */}
+        {!isLoading && data && !hasLists && (
+          <section className="mb-4 rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-8 text-center">
+            <span className="mb-3 block text-5xl">🎯</span>
+            <h3 className="text-lg font-bold text-slate-900">Comece a economizar</h3>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
+              Crie sua primeira lista e descubra onde os mesmos produtos saem mais baratos.
+            </p>
+            <button
+              onClick={goBusca}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-base font-semibold text-white transition-colors hover:bg-primary-700 sm:w-auto"
+            >
+              <Plus className="h-5 w-5" aria-hidden />
+              Criar primeira lista
+            </button>
           </section>
         )}
 
-        {/* Error State */}
-        {error && (
-          <div style={styles.error}>
-            ⚠️ {error}
+        {/* Recursos avançados — escondidos por padrão para evitar excesso */}
+        {!isLoading && userId && (
+          <div className="flex flex-col gap-3">
+            <CollapsibleSection
+              title="Perto de você"
+              description="Mercados, preços do bairro e o que está em alta"
+            >
+              <RaioFamiliarCard />
+              <MercadoVivoBanner />
+              <PreciIndexBairroCard mercadoId={mercadoId} />
+              <ProvaSocialMercadoCard mercadoId={mercadoId} />
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title="Economize mais"
+              description="Cesta provável, melhor hora de comprar e comparações"
+            >
+              <CestaProvavelCard mercadoId={mercadoId} />
+              <EsperaQueValeCard mercadoId={mercadoId} />
+              <AtacadoVarejoCard mercadoId={mercadoId} />
+              <InflacaoCestaCard mercadoId={mercadoId} />
+              <ModoEmergenciaCard mercadoId={mercadoId} />
+              <TrocaHistoricoCard mercadoId={mercadoId} />
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title="Sua jornada"
+              description="Sequência de economia e conquistas para compartilhar"
+            >
+              <EconomiaStreakCard />
+              <ShareEconomiaCard />
+            </CollapsibleSection>
           </div>
         )}
       </div>
@@ -280,151 +281,34 @@ export default function DashboardCliente() {
   );
 }
 
-// Componente auxiliar: StatCard
-function StatCard({
-  icon,
+function QuickChip({
+  icon: Icon,
   label,
-  value,
-  color
+  onClick,
 }: {
-  icon: string;
+  icon: typeof Search;
   label: string;
-  value: string;
-  color: string;
+  onClick: () => void;
 }) {
   return (
-    <div style={styles.statCard}>
-      <span style={{ ...styles.statIcon, color }}>{icon}</span>
-      <div>
-        <p style={styles.statValue}>{value}</p>
-        <p style={styles.statLabel}>{label}</p>
-      </div>
-    </div>
+    <button
+      onClick={onClick}
+      className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+    >
+      <Icon className="h-4 w-4 text-slate-500" aria-hidden />
+      {label}
+    </button>
   );
 }
 
-// Estilos - Mobile-First usando TOKENS
-const styles = {
-  main: {
-    minHeight: '100vh',
-    backgroundColor: TOKENS.colors.surface,
-  },
-
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: TOKENS.spacing[4],
-  },
-
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: TOKENS.spacing[6],
-    flexWrap: 'wrap' as const,
-    gap: TOKENS.spacing[4],
-  },
-
-  greeting: {
-    fontSize: TOKENS.typography.fontSize['3xl'],
-    fontWeight: TOKENS.typography.fontWeight.extrabold,
-    color: TOKENS.colors.text.primary,
-    margin: 0,
-    marginBottom: TOKENS.spacing[1],
-  },
-
-  subtitle: {
-    fontSize: TOKENS.typography.fontSize.base,
-    color: TOKENS.colors.text.secondary,
-    margin: 0,
-  },
-
-  economySection: {
-    marginBottom: TOKENS.spacing[6],
-  },
-
-  quickStats: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-    gap: TOKENS.spacing[4],
-    marginBottom: TOKENS.spacing[6],
-  },
-
-  streakSection: {
-    marginBottom: TOKENS.spacing[6],
-  },
-
-  statCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: TOKENS.spacing[3],
-    padding: TOKENS.spacing[4],
-    backgroundColor: TOKENS.colors.background,
-    borderRadius: TOKENS.borderRadius.lg,
-    border: `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}`,
-  },
-
-  statIcon: {
-    fontSize: '32px',
-  },
-
-  statValue: {
-    fontSize: TOKENS.typography.fontSize.xl,
-    fontWeight: TOKENS.typography.fontWeight.bold,
-    color: TOKENS.colors.text.primary,
-    margin: 0,
-    marginBottom: TOKENS.spacing[1],
-  },
-
-  statLabel: {
-    fontSize: TOKENS.typography.fontSize.sm,
-    color: TOKENS.colors.text.secondary,
-    margin: 0,
-  },
-
-  listsSection: {
-    marginBottom: TOKENS.spacing[6],
-  },
-
-  ctaSection: {
-    marginTop: TOKENS.spacing[8],
-  },
-
-  ctaCard: {
-    textAlign: 'center' as const,
-    padding: TOKENS.spacing[8],
-    backgroundColor: TOKENS.colors.background,
-    borderRadius: TOKENS.borderRadius.xl,
-    border: `${TOKENS.borderWidth[2]} dashed ${TOKENS.colors.border}`,
-  },
-
-  ctaIcon: {
-    fontSize: '64px',
-    display: 'block',
-    marginBottom: TOKENS.spacing[4],
-  },
-
-  ctaTitle: {
-    fontSize: TOKENS.typography.fontSize['2xl'],
-    fontWeight: TOKENS.typography.fontWeight.bold,
-    color: TOKENS.colors.text.primary,
-    marginBottom: TOKENS.spacing[2],
-  },
-
-  ctaText: {
-    fontSize: TOKENS.typography.fontSize.base,
-    color: TOKENS.colors.text.secondary,
-    marginBottom: TOKENS.spacing[6],
-    maxWidth: '400px',
-    margin: `0 auto ${TOKENS.spacing[6]} auto`,
-  },
-
-  error: {
-    padding: TOKENS.spacing[4],
-    backgroundColor: TOKENS.colors.error,
-    color: TOKENS.colors.text.inverse,
-    borderRadius: TOKENS.borderRadius.md,
-    textAlign: 'center' as const,
-    marginTop: TOKENS.spacing[4],
-  },
-};
+function StatCard({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center">
+      <span className="text-xl" aria-hidden>
+        {icon}
+      </span>
+      <p className="mt-1 text-lg font-bold leading-none text-slate-900">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">{label}</p>
+    </div>
+  );
+}

@@ -25,6 +25,24 @@ export function NpsSurveyWidget() {
   const [gatilhoAtual, setGatilhoAtual] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const behaviorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [ocultoPorToast, setOcultoPorToast] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Esconde o pill enquanto o toast de "item adicionado" está na tela. */
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const ce = ev as CustomEvent<{ durationMs?: number }>;
+      const duration = ce.detail?.durationMs ?? 4000;
+      setOcultoPorToast(true);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setOcultoPorToast(false), duration);
+    };
+    window.addEventListener('precivox-lista-toast-show', handler as EventListener);
+    return () => {
+      window.removeEventListener('precivox-lista-toast-show', handler as EventListener);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   const snoozed = useCallback(() => {
     if (typeof window === 'undefined') return true;
@@ -164,11 +182,11 @@ export function NpsSurveyWidget() {
 
   return (
     <>
-      {visible && !open && (
+      {visible && !open && !ocultoPorToast && (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-4 z-[60] flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 md:bottom-8 md:right-8"
+          className="fixed bottom-[var(--cliente-fab-bottom)] left-4 z-[52] flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 md:bottom-8 md:left-8"
           aria-haspopup="dialog"
         >
           <MessageCircleHeart className="h-5 w-5 shrink-0" aria-hidden />

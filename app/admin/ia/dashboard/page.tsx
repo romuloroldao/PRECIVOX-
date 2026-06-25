@@ -16,7 +16,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useSession } from 'next-auth/react';
 import { useApiQuery, useApiMutation } from '@/lib/hooks';
@@ -68,7 +68,14 @@ interface GroocAnswer {
     prioridade: string;
   }>;
   confianca: number;
-  fontes: string[];
+  fontes?: Array<{ tipo: string; descricao: string; periodoDias?: number; amostra?: string }>;
+  fontesTexto?: string[];
+}
+
+interface MercadoOption {
+  id: string;
+  nome: string;
+  ativo: boolean;
 }
 
 export default function IADashboardPage() {
@@ -77,6 +84,39 @@ export default function IADashboardPage() {
   const [selectedMercadoId, setSelectedMercadoId] = useState<string>('');
   const [groocPergunta, setGroocPergunta] = useState<string>('');
   const [groocHistorico, setGroocHistorico] = useState<Array<{ pergunta: string; resposta: GroocAnswer }>>([]);
+  const [mercados, setMercados] = useState<MercadoOption[]>([]);
+  const [mercadosLoading, setMercadosLoading] = useState(true);
+
+  useEffect(() => {
+    const loadMercados = async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/auth-client');
+        const response = await authenticatedFetch('/api/markets');
+        if (response.ok) {
+          const result = await response.json();
+          const list = Array.isArray(result?.data) ? result.data : [];
+          setMercados(
+            list.map((m: { id: string; nome: string; ativo?: boolean }) => ({
+              id: m.id,
+              nome: m.nome,
+              ativo: m.ativo ?? true,
+            })),
+          );
+          if (list.length === 1) {
+            setSelectedMercadoId(list[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar mercados:', error);
+      } finally {
+        setMercadosLoading(false);
+      }
+    };
+
+    if (status === 'authenticated') {
+      loadMercados();
+    }
+  }, [status]);
 
   // Query para health score
   const {
@@ -177,15 +217,26 @@ export default function IADashboardPage() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Selecionar Mercado
           </label>
-          <input
-            type="text"
-            value={selectedMercadoId}
-            onChange={(e) => setSelectedMercadoId(e.target.value)}
-            placeholder="ID do mercado"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-          />
+          {mercadosLoading ? (
+            <p className="text-sm text-gray-500">Carregando mercados...</p>
+          ) : mercados.length === 0 ? (
+            <p className="text-sm text-amber-600">Nenhum mercado disponível. Cadastre um mercado em Mercados.</p>
+          ) : (
+            <select
+              value={selectedMercadoId}
+              onChange={(e) => setSelectedMercadoId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">Selecione um mercado</option>
+              {mercados.map((mercado) => (
+                <option key={mercado.id} value={mercado.id}>
+                  {mercado.nome}{mercado.ativo ? '' : ' (inativo)'}
+                </option>
+              ))}
+            </select>
+          )}
           <p className="text-xs text-gray-500 mt-2">
-            Digite o ID do mercado para ver insights de IA
+            Escolha o mercado para ver insights de IA e conversar com o GROOC
           </p>
         </div>
 
@@ -229,6 +280,21 @@ export default function IADashboardPage() {
                         ))}
                       </div>
                     )}
+                    {(item.resposta.fontesTexto?.length ?? item.resposta.fontes?.length) ? (
+                      <div className="mt-3 pt-3 border-t border-purple-200">
+                        <div className="text-xs font-medium text-purple-900 mb-1">Fontes:</div>
+                        <ul className="text-xs text-purple-700 space-y-0.5">
+                          {(item.resposta.fontesTexto ??
+                            item.resposta.fontes?.map((f) =>
+                              typeof f === 'string' ? f : f.descricao
+                            ) ??
+                            []
+                          ).map((fonte, i) => (
+                            <li key={i}>• {fonte}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))

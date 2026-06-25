@@ -4,7 +4,9 @@ import React, { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, MapPin, Clock, ShoppingCart, Plus, Minus, Share2, Eye, TrendingDown, Package, Heart } from 'lucide-react';
 import { recordProductViewed } from '@/lib/events/frontend-events';
-
+import { useLista } from '@/app/context/ListaContext';
+import { useToast } from '@/components/ToastContainer';
+import { ErrorState } from '@/components/ui';
 interface Product {
   id: string;
   name: string;
@@ -36,6 +38,8 @@ interface ProductDetailsProps {
 const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
   const router = useRouter();
   const { id } = use(params);
+  const { adicionarItem } = useLista();
+  const { listaAdicionado } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -311,34 +315,30 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
 
   const handleAddToList = () => {
     if (!product) return;
-    
-    // Obter lista atual do localStorage
-    const currentList = JSON.parse(localStorage.getItem('shoppingList') || '[]');
-    
-    // Verificar se o produto já está na lista
-    const existingItemIndex = currentList.findIndex((item: any) => item.id === product.id);
-    
-    if (existingItemIndex >= 0) {
-      // Se já existe, atualizar a quantidade
-      currentList[existingItemIndex].quantity = (currentList[existingItemIndex].quantity || 1) + quantity;
-    } else {
-      // Se não existe, adicionar novo item
-      const newItem = {
-        ...product,
-        quantity: quantity,
-        addedAt: new Date().toISOString()
-      };
-      currentList.push(newItem);
-    }
-    
-    // Salvar no localStorage
-    localStorage.setItem('shoppingList', JSON.stringify(currentList));
-    
-    // Mostrar mensagem de sucesso
+
+    adicionarItem({
+      id: product.id,
+      estoqueId: product.id,
+      nome: product.name,
+      preco: product.price,
+      emPromocao: false,
+      quantidade: quantity,
+      imagem: product.image,
+      categoria: product.category,
+      marca: product.brand,
+      unidade: {
+        id: `unidade-${product.id}`,
+        nome: product.store,
+        mercado: {
+          id: `mercado-${product.store}`,
+          nome: product.store,
+        },
+      },
+    });
+
+    listaAdicionado(`${product.name} adicionado à lista`);
     setShowSuccessMessage(true);
     setTimeout(() => setShowSuccessMessage(false), 3000);
-    
-    console.log('Produto adicionado à lista:', product.name, 'quantidade:', quantity);
   };
 
   const handleToggleFavorite = () => {
@@ -360,10 +360,10 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando produto...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" />
+          <p className="text-gray-600">Carregando produto…</p>
         </div>
       </div>
     );
@@ -371,18 +371,13 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Produto não encontrado</h1>
-          <p className="text-gray-600 mb-6">O produto que você está procurando não existe ou foi removido.</p>
-          <button
-            onClick={() => router.back()}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Voltar
-          </button>
-        </div>
+      <div className="mx-auto max-w-md px-4 py-16">
+        <ErrorState
+          title="Produto não encontrado"
+          message="O produto que você procura não existe ou foi removido."
+          onRetry={() => router.back()}
+          retryLabel="Voltar"
+        />
       </div>
     );
   }

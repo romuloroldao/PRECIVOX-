@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { EventCollector } from '@/lib/ai/event-collector';
 import { calcularEconomiaLiquida, type CalcularELInput, type ResultadoEconomiaLiquida } from '@/lib/economia-liquida';
 import { buscarMelhorAlternativa } from '@/lib/melhor-alternativa-preco';
-import { getElCalcularOpts } from '@/lib/el-config-usuario';
+import { getElCalcularOpts } from '@/lib/el-config-usuario-server';
 import {
   jaccardTokensDeNomes,
   normalizeNomeProdutoChaveComSinonimos,
@@ -146,11 +146,30 @@ async function matchPorEan(
 
     let economiaLiquidaEtiqueta: ResultadoEconomiaLiquida | null = null;
     if (precoEtiqueta != null && precoEtiqueta > 0) {
-      economiaLiquidaEtiqueta = calcularEconomiaLiquida({
-        precoOrigem: precoEtiqueta,
-        precoDestino: efetivo,
-        ...ctx?.elOpts,
-      });
+      const precoAlt =
+        melhorAlternativa?.emPromocao && melhorAlternativa.precoPromocional != null
+          ? melhorAlternativa.precoPromocional
+          : melhorAlternativa?.preco;
+      if (
+        melhorAlternativa &&
+        precoAlt != null &&
+        precoAlt < precoEtiqueta - 0.01 &&
+        melhorAlternativa.economiaLiquida.economiaLiquida > 0
+      ) {
+        economiaLiquidaEtiqueta = calcularEconomiaLiquida({
+          precoOrigem: precoEtiqueta,
+          precoDestino: precoAlt,
+          distanciaKm: melhorAlternativa.distanciaKm ?? undefined,
+          ...ctx?.elOpts,
+        });
+      } else {
+        economiaLiquidaEtiqueta = calcularEconomiaLiquida({
+          precoOrigem: precoEtiqueta,
+          precoDestino: efetivo,
+          distanciaKm: 0,
+          ...ctx?.elOpts,
+        });
+      }
     }
 
     out.push({
@@ -260,11 +279,30 @@ async function matchPorEmbedding(
 
     let economiaLiquidaEtiqueta: ResultadoEconomiaLiquida | null = null;
     if (precoEtiqueta != null && precoEtiqueta > 0) {
-      economiaLiquidaEtiqueta = calcularEconomiaLiquida({
-        precoOrigem: precoEtiqueta,
-        precoDestino: efetivo,
-        ...ctx?.elOpts,
-      });
+      const precoAlt =
+        melhorAlternativa?.emPromocao && melhorAlternativa.precoPromocional != null
+          ? melhorAlternativa.precoPromocional
+          : melhorAlternativa?.preco;
+      if (
+        melhorAlternativa &&
+        precoAlt != null &&
+        precoAlt < precoEtiqueta - 0.01 &&
+        melhorAlternativa.economiaLiquida.economiaLiquida > 0
+      ) {
+        economiaLiquidaEtiqueta = calcularEconomiaLiquida({
+          precoOrigem: precoEtiqueta,
+          precoDestino: precoAlt,
+          distanciaKm: melhorAlternativa.distanciaKm ?? undefined,
+          ...ctx?.elOpts,
+        });
+      } else {
+        economiaLiquidaEtiqueta = calcularEconomiaLiquida({
+          precoOrigem: precoEtiqueta,
+          precoDestino: efetivo,
+          distanciaKm: 0,
+          ...ctx?.elOpts,
+        });
+      }
     }
 
     ranked.push({

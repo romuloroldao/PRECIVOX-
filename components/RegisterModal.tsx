@@ -4,9 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterInput } from '@/lib/validations';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { safeCallbackUrl } from '@/lib/safe-callback-url';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -50,7 +48,6 @@ export default function RegisterModal({
     setSuccessMessage('');
 
     try {
-      // Registrar usuário
       const payload = {
         nome: data.nome,
         email: data.email,
@@ -65,41 +62,55 @@ export default function RegisterModal({
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setSuccessMessage('Cadastro realizado! Fazendo login...');
-        
-        // Fazer login automático após registro
-        const signInResult = await signIn('credentials', {
-          email: data.email,
-          senha: data.senha,
-          redirect: false,
-          callbackUrl: safeCallbackUrl(redirectAfterLogin),
-        });
-
-        if (signInResult?.ok) {
-          const next = safeCallbackUrl(redirectAfterLogin);
-          setTimeout(() => {
-            router.push(next);
-          }, 1000);
-        } else {
-          setSuccessMessage('Cadastro realizado! Redirecionando para login...');
-          setTimeout(() => {
-            onClose();
-            const q = redirectAfterLogin
-              ? `?callbackUrl=${encodeURIComponent(redirectAfterLogin)}`
-              : '';
-            router.push(`/login${q}`);
-          }, 1500);
-        }
-      } else {
-        setErrorMessage(result.error || 'Erro ao fazer cadastro');
-        setIsLoading(false);
+      let result: {
+        success?: boolean;
+        error?: string;
+        emailSent?: boolean;
+        warning?: string;
+      };
+      try {
+        result = await response.json();
+      } catch {
+        setErrorMessage('Resposta inválida do servidor. Tente novamente.');
+        return;
       }
+
+      if (!response.ok || !result.success) {
+        setErrorMessage(result.error || 'Erro ao fazer cadastro');
+        return;
+      }
+
+      if (result.emailSent === false) {
+        setSuccessMessage(
+          result.warning ||
+            'Conta criada, mas o e-mail não foi enviado. Na tela de login, use "Reenviar e-mail".'
+        );
+      } else {
+        setSuccessMessage(
+          'Cadastro realizado! Enviamos um link de confirmação para seu e-mail. Confirme para entrar.'
+        );
+      }
+
+      const loginParams = new URLSearchParams({
+        error: 'EmailNotVerified',
+        email: data.email,
+      });
+      if (redirectAfterLogin) {
+        loginParams.set('callbackUrl', redirectAfterLogin);
+      }
+
+      setTimeout(() => {
+        onClose();
+        reset();
+        setErrorMessage('');
+        setSuccessMessage('');
+        router.push(`/login?${loginParams.toString()}`);
+      }, 2200);
     } catch (error) {
       console.error('Erro no cadastro:', error);
+      setSuccessMessage('');
       setErrorMessage('Erro de conexão. Tente novamente.');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -133,8 +144,8 @@ export default function RegisterModal({
           <p className="text-gray-600 mt-2">Comece gratuitamente hoje</p>
         </div>
 
-        {/* Mensagens */}
-        {successMessage && (
+        {/* Mensagens — apenas uma por vez */}
+        {successMessage && !errorMessage && (
           <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
             {successMessage}
           </div>

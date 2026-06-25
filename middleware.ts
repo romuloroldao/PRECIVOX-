@@ -77,6 +77,7 @@ export function middleware(request: NextRequest) {
     '/api/auth/refresh', // Renovar tokens
     '/api/public/', // APIs públicas
     '/api/stats/global', // Stats públicas
+    '/api/marketing/', // Leads comerciais (demo)
   ];
 
   if (publicApiRoutes.some(route => pathname.startsWith(route))) {

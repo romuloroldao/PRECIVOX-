@@ -98,8 +98,14 @@ function ConfirmarEmailContent() {
             <h1 className="text-xl font-bold text-gray-900 mb-2">Não foi possível confirmar</h1>
             <p className="text-gray-600 mb-6">{message}</p>
             <Link
+              href="/login?error=EmailNotVerified"
+              className="inline-block w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold mb-3"
+            >
+              Solicitar novo link
+            </Link>
+            <Link
               href="/login"
-              className="inline-block w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+              className="inline-block w-full py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
             >
               Voltar ao login
             </Link>

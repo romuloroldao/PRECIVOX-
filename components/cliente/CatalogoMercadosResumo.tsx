@@ -68,35 +68,26 @@ export function CatalogoMercadosResumo({ mercadoFiltro, modoComparativo, classNa
             <p className="text-indigo-950">
               <strong>{mercadoAtual.nome}</strong>:{' '}
               <strong>{mercadoAtual.produtosComEstoque.toLocaleString('pt-BR')}</strong> produtos ·{' '}
-              <strong>{mercadoAtual.ofertas.toLocaleString('pt-BR')}</strong> ofertas (estoque).
+              <strong>{mercadoAtual.ofertas.toLocaleString('pt-BR')}</strong> ofertas.
             </p>
           ) : (
             <p className="text-indigo-950">
-              <strong>{resumo.totais.mercadosAtivos} mercados</strong> ativos —{' '}
-              <strong>{resumo.totais.produtosUnicosGlobal.toLocaleString('pt-BR')}</strong> produtos na
-              busca (legado + isolados) ·{' '}
-              <strong>{resumo.totais.ofertasTotal.toLocaleString('pt-BR')}</strong> ofertas.
-              {resumo.totais.produtosCatalogoIsolado > 0 && (
-                <>
-                  {' '}
-                  Catálogo isolado (v3):{' '}
-                  <strong>{resumo.totais.produtosCatalogoIsolado.toLocaleString('pt-BR')}</strong> SKUs
-                  com dono por mercado.
-                </>
-              )}
+              <strong>{resumo.totais.mercadosAtivos} mercados</strong> com{' '}
+              <strong>{resumo.totais.produtosUnicosGlobal.toLocaleString('pt-BR')}</strong> produtos e{' '}
+              <strong>{resumo.totais.ofertasTotal.toLocaleString('pt-BR')}</strong> ofertas disponíveis.
             </p>
           )}
           <p className="mt-1 text-xs leading-relaxed text-indigo-900/85">
             {modoComparativo
-              ? 'Modo comparativo: cada linha é uma oferta em um mercado (até '
-              : 'Modo lista: cada produto aparece uma vez, com o melhor preço entre mercados (até '}
+              ? 'Cada linha mostra o preço em um mercado diferente (até '
+              : 'Cada produto aparece uma vez, com o melhor preço (até '}
             <strong>{totalExibivel.toLocaleString('pt-BR')}</strong>
             {modoComparativo ? ' ofertas).' : ' produtos).'}
             {!modoComparativo && !mercadoFiltro && (
               <>
                 {' '}
-                Para ver o mesmo item em <strong>todos os mercados</strong>, ative{' '}
-                <strong>Comparar ofertas por mercado</strong>.
+                Para comparar o mesmo item em vários mercados, use{' '}
+                <strong>Comparar preços</strong> nos filtros.
               </>
             )}
           </p>

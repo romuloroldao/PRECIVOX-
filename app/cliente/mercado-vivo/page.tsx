@@ -303,6 +303,9 @@ export default function MercadoVivoPage() {
             <div className="py-12 text-center">
               <ShoppingCart className="mx-auto h-12 w-12 text-gray-600" />
               <p className="mt-3 text-sm text-gray-400">Sua lista está vazia.</p>
+              <p className="mx-auto mt-1 max-w-[240px] text-xs text-gray-500">
+                Adicione produtos à sua lista para usá-los aqui no corredor do mercado.
+              </p>
               <Link
                 href="/cliente/busca"
                 className="mt-4 inline-block text-sm font-semibold text-emerald-400"
@@ -310,6 +313,12 @@ export default function MercadoVivoPage() {
                 Adicionar produtos →
               </Link>
             </div>
+          )}
+          {!loading && corredor.length > 0 && (
+            <p className="mb-3 flex items-start gap-2 rounded-lg bg-emerald-950/40 px-3 py-2 text-xs leading-snug text-emerald-100">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+              Toque em cada item conforme coloca no carrinho. Ao terminar, use o botão Finalizar.
+            </p>
           )}
           <ul className="space-y-2">
             {corredor.map((item) => {

@@ -2,7 +2,7 @@
 
 MVP jun/2026.
 
-> **Estado comercial:** produto ainda **não lançado** — nenhum parceiro âncora designado em prod. A infra (campo, APIs, UI, regras) está pronta; a designação das 3–5 redes por região piloto acontece **no go-live**, quando houver contratos Tier 2+ fechados.
+> **Estado comercial:** **5 parceiros âncora designados** em prod (18/06/2026) — região piloto CEP5 (Empório Select como referência). Script: `npm run db:setup:go-live`.
 
 ## Objetivo
 

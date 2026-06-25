@@ -1,0 +1,87 @@
+{
+  "marker": "precivox-analytics-seed-v2",
+  "runId": "2026-05-29T17-46-42-106Z",
+  "geradoEm": "2026-05-29T17:57:52.924Z",
+  "duracaoSegundos": "670.8",
+  "config": {
+    "totalMercados": 12,
+    "mercadosFlagship": 3,
+    "produtosPorUnidadeFlagship": 5000,
+    "produtosPorUnidadeLeve": 200,
+    "gestores": 4,
+    "consumidores": 20,
+    "diasHistoricoVendas": 180,
+    "vendasPorDia": {
+      "min": 80,
+      "max": 350
+    },
+    "batchSize": 500,
+    "senhaPadrao": "senha123",
+    "taxaAbandonoCarrinho": 0.12,
+    "maxProdutosRelacionados": 5,
+    "diasMetricasDashboard": 90
+  },
+  "contagens": {
+    "mercados": {
+      "total": 15,
+      "seed": 12
+    },
+    "unidades": {
+      "total": 18,
+      "seed": 14
+    },
+    "produtos": {
+      "total": 5574,
+      "seed": 5500
+    },
+    "estoques": {
+      "total": 26884,
+      "seed": 26800
+    },
+    "vendas": {
+      "total": 994489,
+      "seed": 994125
+    },
+    "movimentacoes_estoque": {
+      "total": 4444,
+      "seed": 3947
+    },
+    "usuarios": {
+      "total": 33,
+      "seed": 24
+    },
+    "planos_de_pagamento": {
+      "total": 7,
+      "seed": 4
+    },
+    "user_events": {
+      "total": 1269,
+      "seed": 1266
+    },
+    "metricas_dashboard": {
+      "total": 1096,
+      "seed": 1092
+    },
+    "produtos_relacionados": {
+      "total": 500,
+      "seed": 500
+    },
+    "analises_ia": {
+      "total": 90,
+      "seed": 90
+    },
+    "alertas_ia": {
+      "total": 35,
+      "seed": 35
+    },
+    "nps_responses": {
+      "total": 67,
+      "seed": 67
+    }
+  },
+  "integridade": {
+    "estoquesOrfaos": 0,
+    "vendasOrfas": 0,
+    "ok": true
+  }
+}

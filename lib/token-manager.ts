@@ -12,7 +12,7 @@
 
 import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getToken, decode } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { generateToken, verifyToken, extractTokenFromHeader } from '@/lib/jwt';
 import crypto from 'crypto';
@@ -279,18 +279,42 @@ export class TokenManager {
       // 3. Fallback: NextAuth JWT (strategy: jwt — cookie não está em prisma.sessions)
       if (request && process.env.NEXTAUTH_SECRET) {
         try {
-          const jwt = await getToken({
+          const sessionCookieName =
+            process.env.NODE_ENV === 'production'
+              ? '__Secure-next-auth.session-token'
+              : 'next-auth.session-token';
+
+          let jwt = await getToken({
             req: request as NextRequest,
             secret: process.env.NEXTAUTH_SECRET,
           });
+
+          if (!jwt && request.cookies) {
+            const sessionToken = request.cookies.get(sessionCookieName)?.value;
+            if (sessionToken) {
+              jwt = await decode({ token: sessionToken, secret: process.env.NEXTAUTH_SECRET });
+            }
+          }
+
           const userId = (jwt?.id ?? jwt?.sub) as string | undefined;
-          if (userId) {
-            return {
-              id: userId,
-              email: (jwt?.email as string) ?? '',
-              role: ((jwt as { role?: string })?.role as SessionUser['role']) ?? 'CLIENTE',
-              nome: (jwt?.name as string) ?? null,
-            };
+          const email = jwt?.email as string | undefined;
+
+          if (userId || email) {
+            const dbUser = await prisma.user.findFirst({
+              where: email
+                ? { email: { equals: email, mode: 'insensitive' } }
+                : { id: userId },
+              select: { id: true, email: true, role: true, nome: true },
+            });
+
+            if (dbUser) {
+              return {
+                id: dbUser.id,
+                email: dbUser.email,
+                role: dbUser.role as SessionUser['role'],
+                nome: dbUser.nome || null,
+              };
+            }
           }
         } catch (jwtError) {
           console.error('[TokenManager] Falha ao decodificar sessão NextAuth JWT:', jwtError);

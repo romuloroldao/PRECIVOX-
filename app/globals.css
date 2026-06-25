@@ -3,14 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --precivox-blue: #0066cc;
-  --precivox-green: #00cc66;
-  --precivox-dark: #1a1a2e;
-  --precivox-light: #f5f7fa;
-  --color-precivox-blue: #0066cc;
-  --color-precivox-green: #00cc66;
-  --color-precivox-dark: #1a1a2e;
-  --color-precivox-light: #f5f7fa;
+  --precivox-blue: #2563EB;
+  --precivox-green: #16A34A;
+  --precivox-dark: #1E293B;
+  --precivox-light: #F8FAFC;
+  --color-precivox-blue: #2563EB;
+  --color-precivox-green: #16A34A;
+  --color-precivox-dark: #1E293B;
+  --color-precivox-light: #F8FAFC;
+  /* BottomNav mobile: 56px + safe-area iOS */
+  --cliente-bottom-nav-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  --cliente-fab-bottom: calc(var(--cliente-bottom-nav-height) + 0.75rem);
+  --cliente-toast-lista-bottom: calc(var(--cliente-fab-bottom) + 3.5rem + 0.5rem);
 }
 
 body {
@@ -76,41 +80,5 @@ body {
   }
 }
 
-/* Shopping List Buttons and Sidebar Styles */
-#shopping-list-float-btn {
-  position: fixed !important;
-  right: 24px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  z-index: 99999 !important;
-  padding: 16px !important;
-  width: 56px !important;
-  height: 56px !important;
-  border-radius: 50% !important;
-  background: #0056ff !important;
-  color: #fff !important;
-  cursor: pointer !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15) !important;
-  transition: all 0.2s ease-in-out !important;
-  border: none !important;
-}
-
-#shopping-list-float-btn:hover {
-  transform: translateY(-50%) scale(1.05) !important;
-}
-
-
-
-@media (max-width: 768px) {
-  #shopping-list-float-btn {
-    right: 16px !important;
-    bottom: 24px !important;
-    top: auto !important;
-    transform: none !important;
-  }
-
-  #shopping-list-float-btn:hover {
-    transform: scale(1.05) !important;
-  }
-}
+/* Shopping list FAB — gerenciado por ListaLateral.tsx */
 

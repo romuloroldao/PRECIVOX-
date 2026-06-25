@@ -10,15 +10,17 @@ import { Button, Card } from '@/components/ui';
 type ProductCompareGroupProps = {
   produtos: Produto[];
   onAdicionar?: () => void;
+  /** Callback para abrir a lista lateral — usado no toast "Ver lista". */
+  onAbrirLista?: () => void;
 };
 
 function precoOferta(p: Produto): number {
   return p.emPromocao && p.precoPromocional ? p.precoPromocional : p.preco;
 }
 
-export function ProductCompareGroup({ produtos, onAdicionar }: ProductCompareGroupProps) {
+export function ProductCompareGroup({ produtos, onAdicionar, onAbrirLista }: ProductCompareGroupProps) {
   const { adicionarItem } = useLista();
-  const { success } = useToast();
+  const { listaAdicionado } = useToast();
 
   const grupos = useMemo(() => {
     const map = new Map<string, Produto[]>();
@@ -49,7 +51,11 @@ export function ProductCompareGroup({ produtos, onAdicionar }: ProductCompareGro
       marca: produto.marca,
       unidade: produto.unidade,
     });
-    success(`${produto.nome} (${produto.unidade.mercado.nome}) adicionado à lista!`);
+    const nomeCurto = produto.nome.length > 40 ? produto.nome.slice(0, 38) + '…' : produto.nome;
+    listaAdicionado(
+      `${nomeCurto} adicionado`,
+      onAbrirLista ? { label: 'Ver lista', onClick: onAbrirLista } : undefined
+    );
     onAdicionar?.();
   };
 

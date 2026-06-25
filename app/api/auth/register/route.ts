@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { autoUnlockBadgesServer } from '@/lib/gamification-server';
 import { invalidate } from '@/lib/redis';
-import { sendVerificationEmail } from '@/lib/email';
+import { sendVerificationEmail, getBaseUrl } from '@/lib/email';
 
 const registerSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -60,6 +60,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Opt-in de newsletter no cadastro (best-effort, não bloqueia o registro)
+    if (validatedData.aceiteNewsletter) {
+      try {
+        await prisma.newsletterSubscriber.upsert({
+          where: { email: newUser.email },
+          create: {
+            email: newUser.email,
+            nome: newUser.nome,
+            origem: 'signup',
+            status: 'active',
+          },
+          update: { status: 'active', unsubscribedAt: null },
+        });
+      } catch (err) {
+        console.error('[register] falha ao inscrever na newsletter:', err);
+      }
+    }
+
     // Processar referral se código fornecido
     let referralReward = null;
     if (validatedData.referralCode) {
@@ -105,24 +123,32 @@ export async function POST(request: NextRequest) {
     const verifyIdentifier = `${verifyPrefix}${newUser.email}`;
     const verifyToken = crypto.randomBytes(32).toString('hex');
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const baseUrl =
-      process.env.NEXTAUTH_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const confirmLink = `${baseUrl}/confirmar-email?token=${encodeURIComponent(verifyToken)}`;
+    const confirmLink = `${getBaseUrl()}/confirmar-email?token=${encodeURIComponent(verifyToken)}`;
 
     await prisma.verification_tokens.deleteMany({ where: { identifier: verifyIdentifier } });
     await prisma.verification_tokens.create({
       data: { identifier: verifyIdentifier, token: verifyToken, expires: verifyExpires },
     });
 
-    sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
       nome: newUser.nome || '',
       email: newUser.email,
       confirmLink,
-    }).catch((err) => console.error('Erro ao enviar e-mail de confirmação:', err));
+    });
+
+    if (!emailResult.ok) {
+      console.error('[register] Falha ao enviar e-mail de confirmação:', emailResult);
+    }
 
     return NextResponse.json({
       success: true,
+      emailSent: emailResult.ok,
+      ...(emailResult.ok
+        ? {}
+        : {
+            warning:
+              'Conta criada, mas não conseguimos enviar o e-mail agora. Use "Reenviar e-mail" na tela de login.',
+          }),
       data: {
         usuario: newUser,
         redirectUrl: '/cliente/home',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import LoginForm from '@/components/LoginForm';
@@ -14,11 +14,18 @@ function LoginContent() {
   const refCode = searchParams.get('ref');
   const confirmed = searchParams.get('confirmed') === '1';
   const emailNotVerified = searchParams.get('error') === 'EmailNotVerified';
+  const emailFromQuery = searchParams.get('email')?.trim() ?? '';
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [resendStatus, setResendStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [resendMessage, setResendMessage] = useState('');
   const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (emailFromQuery) {
+      setResendEmail(emailFromQuery);
+    }
+  }, [emailFromQuery]);
 
   const handleResendVerification = async (e: React.FormEvent) => {
     e.preventDefault();

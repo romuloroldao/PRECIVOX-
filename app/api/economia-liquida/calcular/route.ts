@@ -5,7 +5,7 @@ import {
   distanciaKmEntreCoords,
 } from '@/lib/economia-liquida';
 import { TokenManager } from '@/lib/token-manager';
-import { getElCalcularOpts } from '@/lib/el-config-usuario';
+import { getElCalcularOpts } from '@/lib/el-config-usuario-server';
 
 /**
  * POST /api/economia-liquida/calcular

@@ -3,8 +3,13 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'PRECIVOX - Buscar Produtos',
-  description: 'Plataforma inteligente de comparação e gestão de preços',
+  metadataBase: new URL('https://precivox.com.br'),
+  title: {
+    default: 'PRECIVOX — Inteligência de consumo alimentar',
+    template: '%s | PRECIVOX',
+  },
+  description:
+    'Plataforma de inteligência de consumo alimentar para consumidores, mercados e indústria. Economia Líquida™, radar de demanda e IA explicável.',
   icons: {
     icon: '/logo-precivox.svg',
     apple: '/logo-precivox.svg',

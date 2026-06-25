@@ -2,9 +2,9 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2020",
-    "lib": ["ES2020"],
+    "lib": ["ES2020", "dom"],
     "outDir": "./dist/ai",
-    "rootDir": "./core/ai",
+    "rootDir": ".",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -16,10 +16,31 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "noEmit": false
+    "noEmit": false,
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
   "include": [
-    "core/ai/**/*"
+    "core/ai/**/*",
+    "lib/sync-agendado.ts",
+    "lib/push-retencao.ts",
+    "lib/prisma.ts",
+    "lib/upload-handler.ts",
+    "lib/parceiro-sla.ts",
+    "lib/push-delivery.ts",
+    "lib/cesta-provavel.ts",
+    "lib/fcm.ts",
+    "lib/push-web.ts",
+    "lib/estoque-truth.ts",
+    "lib/estoque-truth-labels.ts",
+    "lib/produtos-chaves.ts",
+    "lib/produtos-nome-normalize.ts",
+    "lib/sku-nacional/compute.ts",
+    "lib/ai/behavior-engine.ts",
+    "lib/ai/event-collector.ts",
+    "lib/ai/intent-score-engine.ts",
+    "lib/ai/types.ts"
   ],
   "exclude": [
     "node_modules",

@@ -9,21 +9,25 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/shared';
 import { TOKENS } from '@/styles/tokens';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { Plus, Search, X } from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { ClientePage } from '@/components/cliente/ClientePage';
+import { Button, EmptyState, Chip } from '@/components/ui';
+import { useLista } from '@/app/context/ListaContext';
+import {
+  isListaLocal,
+  listasSalvasToSummaries,
+  mergeListSummaries,
+  type ListSummary,
+} from '@/lib/listas-merge';
+import { useToast } from '@/components/ToastContainer';
 
 type FilterType = 'all' | 'active' | 'archived';
 
-interface List {
-  id: string;
-  name: string;
-  itemsCount: number;
-  totalSavings: number; // centavos
-  updatedAt: string;
-  archived: boolean;
-}
+type List = ListSummary;
 
 export default function ListasPage() {
   const [lists, setLists] = useState<List[]>([]);
@@ -32,35 +36,49 @@ export default function ListasPage() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { success, error } = useToast();
   const userId = (session?.user as any)?.id ?? null;
+  const { listasSalvas, selecionarLista } = useLista();
+
+  const localLists = useMemo(
+    () => listasSalvasToSummaries(listasSalvas),
+    [listasSalvas]
+  );
 
   useEffect(() => {
     if (status === 'loading') return;
-    if (!userId) {
-      setLists([]);
-      setIsLoading(false);
-      return;
-    }
-
     async function fetchLists() {
       try {
         setIsLoading(true);
+
+        if (!userId) {
+          setLists(localLists);
+          return;
+        }
+
         const response = await fetch(`/api/lists?userId=${userId}`);
         const data = await response.json();
-
-        if (data.success) {
-          setLists(data.data.lists || []);
-        }
+        const apiLists: List[] = data.success ? data.data.lists || [] : [];
+        setLists(mergeListSummaries(apiLists, localLists));
       } catch (error) {
         console.error('Error fetching lists:', error);
-        setLists([]);
+        setLists(localLists);
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchLists();
-  }, [userId, status]);
+  }, [userId, status, localLists]);
+
+  const handleOpenList = (list: List) => {
+    if (isListaLocal(list.id)) {
+      selecionarLista(list.id);
+      router.push('/cliente/busca');
+      return;
+    }
+    router.push(`/cliente/listas/${list.id}`);
+  };
 
   // Filtrar e buscar
   const filteredLists = useMemo(() => {
@@ -112,125 +130,140 @@ export default function ListasPage() {
     }
   };
 
+  const handleSendSummary = async (list: List) => {
+    if (isListaLocal(list.id)) {
+      error('Salve a lista na sua conta para enviar o resumo por e-mail.');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/lists/${list.id}/send-summary`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        success(data.message || 'Resumo enviado para o seu e-mail.');
+      } else {
+        error(data.error || 'Não foi possível enviar o resumo agora.');
+      }
+    } catch {
+      error('Erro de conexão. Tente novamente.');
+    }
+  };
+
   return (
-    <main style={styles.main}>
-      <div style={styles.container}>
-        {/* Header */}
-        <header style={styles.header}>
-          <div>
-            <h1 style={styles.title}>Minhas Listas</h1>
-            <p style={styles.subtitle}>
-              Gerencie suas listas de compras
-            </p>
-          </div>
-
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleCreateList}
-            leftIcon={<span>➕</span>}
-          >Começar compra</Button>
-        </header>
-
-        {/* Filters */}
-        <div style={styles.filters}>
-          <button
-            onClick={() => setFilter('all')}
-            style={{
-              ...styles.filterButton,
-              ...(filter === 'all' ? styles.filterButtonActive : {}),
-            }}
-          >
-            Todas ({counts.all})
-          </button>
-          <button
-            onClick={() => setFilter('active')}
-            style={{
-              ...styles.filterButton,
-              ...(filter === 'active' ? styles.filterButtonActive : {}),
-            }}
-          >
-            Ativas ({counts.active})
-          </button>
-          <button
-            onClick={() => setFilter('archived')}
-            style={{
-              ...styles.filterButton,
-              ...(filter === 'archived' ? styles.filterButtonActive : {}),
-            }}
-          >
-            Arquivadas ({counts.archived})
-          </button>
+    <DashboardLayout role="CLIENTE">
+      <ClientePage
+        title="Minhas listas"
+        description="Gerencie suas listas de compras"
+        actions={
+          <Button variant="primary" size="sm" icon={Plus} onClick={handleCreateList}>
+            Começar compra
+          </Button>
+        }
+      >
+        {/* Filtros */}
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Chip selected={filter === 'all'} count={counts.all} onClick={() => setFilter('all')}>
+            Todas
+          </Chip>
+          <Chip selected={filter === 'active'} count={counts.active} onClick={() => setFilter('active')}>
+            Ativas
+          </Chip>
+          <Chip selected={filter === 'archived'} count={counts.archived} onClick={() => setFilter('archived')}>
+            Arquivadas
+          </Chip>
         </div>
 
-        {/* Search */}
-        <div style={styles.searchContainer}>
-          <span style={styles.searchIcon}>🔍</span>
+        {/* Busca */}
+        <div className="relative mb-4">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar lista..."
+            placeholder="Buscar lista…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-10 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              style={styles.clearButton}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+              aria-label="Limpar busca"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
         {/* Grid */}
         {isLoading ? (
-          <div style={styles.loading}>Carregando listas...</div>
+          <div style={styles.grid}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-32 animate-pulse rounded-xl bg-slate-200/70" />
+            ))}
+          </div>
         ) : filteredLists.length > 0 ? (
           <div style={styles.grid}>
             {filteredLists.map((list) => (
               <ListCard
                 key={list.id}
                 list={list}
+                canSendSummary={!!userId && !isListaLocal(list.id)}
+                onOpen={() => handleOpenList(list)}
                 onDuplicate={() => handleDuplicate(list)}
                 onArchive={() => handleArchive(list)}
                 onDelete={() => handleDelete(list)}
+                onSendSummary={() => handleSendSummary(list)}
               />
             ))}
           </div>
         ) : (
-          <div style={styles.empty}>
-            <span style={styles.emptyIcon}>📝</span>
-            <p style={styles.emptyText}>
-              {searchQuery
+          <EmptyState
+            title={
+              searchQuery
                 ? 'Nenhuma lista encontrada'
                 : filter === 'archived'
                 ? 'Nenhuma lista arquivada'
-                : 'Você ainda não tem listas'}
-            </p>
-            {!searchQuery && filter === 'all' && (
-              <Button variant="primary" onClick={handleCreateList}>Buscar produtos</Button>
-            )}
-          </div>
+                : 'Você ainda não tem listas'
+            }
+            message={
+              searchQuery
+                ? 'Tente outro nome.'
+                : 'Crie sua primeira lista adicionando produtos pela busca.'
+            }
+            action={
+              !searchQuery && filter !== 'archived'
+                ? { label: 'Buscar produtos', onClick: handleCreateList }
+                : undefined
+            }
+          />
         )}
-      </div>
-    </main>
+      </ClientePage>
+    </DashboardLayout>
   );
 }
 
 // Componente ListCard
 function ListCard({
   list,
+  canSendSummary,
+  onOpen,
   onDuplicate,
   onArchive,
   onDelete,
+  onSendSummary,
 }: {
   list: List;
+  canSendSummary: boolean;
+  onOpen: () => void;
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onSendSummary: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [sendingSummary, setSendingSummary] = useState(false);
   const router = useRouter();
 
   const savingsInReais = (list.totalSavings / 100).toFixed(2);
@@ -241,12 +274,8 @@ function ListCard({
     year: 'numeric',
   });
 
-  const handleCardClick = () => {
-    router.push(`/cliente/listas/${list.id}`);
-  };
-
   return (
-    <div style={styles.card} onClick={handleCardClick}>
+    <div style={styles.card} onClick={onOpen}>
       {/* Header */}
       <div style={styles.cardHeader}>
         <h3 style={styles.cardTitle}>{list.name}</h3>
@@ -284,6 +313,26 @@ function ListCard({
             >
               📋 Duplicar
             </button>
+            {canSendSummary && (
+              <button
+                disabled={sendingSummary}
+                onClick={async () => {
+                  setSendingSummary(true);
+                  try {
+                    await onSendSummary();
+                  } finally {
+                    setSendingSummary(false);
+                    setShowMenu(false);
+                  }
+                }}
+                style={{
+                  ...styles.menuItem,
+                  opacity: sendingSummary ? 0.6 : 1,
+                }}
+              >
+                {sendingSummary ? '⏳ Enviando...' : '📧 Enviar resumo por e-mail'}
+              </button>
+            )}
             <button
               onClick={() => {
                 onArchive();

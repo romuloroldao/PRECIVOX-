@@ -1,21 +1,24 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import Toast, { ToastType } from './Toast';
+import Toast, { type ToastType, type ToastAction } from './Toast';
 
 interface ToastData {
   id: string;
   message: string;
   type: ToastType;
   duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastContextType {
-  showToast: (message: string, type: ToastType, duration?: number) => void;
+  showToast: (message: string, type: ToastType, duration?: number, action?: ToastAction) => void;
   success: (message: string, duration?: number) => void;
   error: (message: string, duration?: number) => void;
   warning: (message: string, duration?: number) => void;
   info: (message: string, duration?: number) => void;
+  /** Toast especial para confirmar que item foi adicionado à lista — aparece na base. */
+  listaAdicionado: (message: string, action?: ToastAction, duration?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -24,45 +27,95 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showToast = useCallback((message: string, type: ToastType, duration = 3000) => {
-    const id = Math.random().toString(36).substring(7);
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: ToastType, duration = 3000, action?: ToastAction) => {
+      const id = Math.random().toString(36).substring(7);
+      setToasts((prev) => {
+        // Limita a 3 toasts simultâneos para não poluir a tela
+        const next = prev.length >= 3 ? prev.slice(1) : prev;
+        return [...next, { id, message, type, duration, action }];
+      });
+    },
+    []
+  );
 
-  const success = useCallback((message: string, duration?: number) => {
-    showToast(message, 'success', duration);
-  }, [showToast]);
+  const success = useCallback(
+    (message: string, duration?: number) => showToast(message, 'success', duration),
+    [showToast]
+  );
+  const error = useCallback(
+    (message: string, duration?: number) => showToast(message, 'error', duration),
+    [showToast]
+  );
+  const warning = useCallback(
+    (message: string, duration?: number) => showToast(message, 'warning', duration),
+    [showToast]
+  );
+  const info = useCallback(
+    (message: string, duration?: number) => showToast(message, 'info', duration),
+    [showToast]
+  );
+  const listaAdicionado = useCallback(
+    (message: string, action?: ToastAction, duration = 3500) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('precivox-lista-toast-show', { detail: { durationMs: duration + 300 } })
+        );
+      }
+      showToast(message, 'lista', duration, action);
+    },
+    [showToast]
+  );
 
-  const error = useCallback((message: string, duration?: number) => {
-    showToast(message, 'error', duration);
-  }, [showToast]);
-
-  const warning = useCallback((message: string, duration?: number) => {
-    showToast(message, 'warning', duration);
-  }, [showToast]);
-
-  const info = useCallback((message: string, duration?: number) => {
-    showToast(message, 'info', duration);
-  }, [showToast]);
+  const listaToasts = toasts.filter((t) => t.type === 'lista');
+  const regularToasts = toasts.filter((t) => t.type !== 'lista');
 
   return (
-    <ToastContext.Provider value={{ showToast, success, error, warning, info }}>
+    <ToastContext.Provider value={{ showToast, success, error, warning, info, listaAdicionado }}>
       {children}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full">
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            id={toast.id}
-            message={toast.message}
-            type={toast.type}
-            duration={toast.duration}
-            onClose={removeToast}
-          />
-        ))}
-      </div>
+
+      {/* Toasts regulares — topo direito no desktop, topo no mobile */}
+      {regularToasts.length > 0 && (
+        <div
+          aria-live="polite"
+          className="fixed right-4 top-4 z-50 flex w-full max-w-sm flex-col gap-2 sm:max-w-xs"
+        >
+          {regularToasts.map((t) => (
+            <Toast
+              key={t.id}
+              id={t.id}
+              message={t.message}
+              type={t.type}
+              duration={t.duration}
+              action={t.action}
+              onClose={removeToast}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Toast de lista — sempre centralizado na base (evita conflito com FAB/NPS à direita) */}
+      {listaToasts.length > 0 && (
+        <div
+          aria-live="polite"
+          className="fixed bottom-[var(--cliente-toast-lista-bottom)] left-1/2 z-[55] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 md:bottom-6 lg:bottom-8"
+        >
+          {listaToasts.map((t) => (
+            <Toast
+              key={t.id}
+              id={t.id}
+              message={t.message}
+              type={t.type}
+              duration={t.duration}
+              action={t.action}
+              onClose={removeToast}
+            />
+          ))}
+        </div>
+      )}
     </ToastContext.Provider>
   );
 }
@@ -74,4 +127,3 @@ export function useToast() {
   }
   return context;
 }
-

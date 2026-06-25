@@ -11,6 +11,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/shared';
 import { TOKENS } from '@/styles/tokens';
+import DashboardLayout from '@/components/DashboardLayout';
+import { ClientePage } from '@/components/cliente/ClientePage';
+import { EmptyState } from '@/components/ui';
 
 interface Product {
   id: string;
@@ -132,48 +135,45 @@ export default function ComparacaoPage() {
 
   if (isLoading) {
     return (
-      <main style={styles.main}>
-        <div style={styles.container}>
-          <div style={styles.loading}>Carregando comparação...</div>
-        </div>
-      </main>
+      <DashboardLayout role="CLIENTE">
+        <ClientePage title="Comparar preços" description="Compare preços e encontre as melhores ofertas">
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-200/70" />
+            ))}
+          </div>
+        </ClientePage>
+      </DashboardLayout>
     );
   }
 
   if (!data || data.products.length === 0) {
     return (
-      <main style={styles.main}>
-        <div style={styles.container}>
-          <div style={styles.empty}>
-            <span style={styles.emptyIcon}>🔍</span>
-            <p style={styles.emptyText}>Nenhum produto para comparar</p>
-          </div>
-        </div>
-      </main>
+      <DashboardLayout role="CLIENTE">
+        <ClientePage title="Comparar preços" description="Compare preços e encontre as melhores ofertas">
+          <EmptyState
+            title="Nenhum produto para comparar"
+            message="Adicione produtos à sua lista para comparar preços entre mercados."
+          />
+        </ClientePage>
+      </DashboardLayout>
     );
   }
 
   return (
-    <main style={styles.main}>
-      <div style={styles.container}>
-        {/* Header */}
-        <header style={styles.header}>
-          <div>
-            <h1 style={styles.title}>Comparação de Preços</h1>
-            <p style={styles.subtitle}>
-              Compare preços e encontre as melhores ofertas
-            </p>
-          </div>
-
-          {/* Total Savings */}
+    <DashboardLayout role="CLIENTE">
+      <ClientePage
+        title="Comparar preços"
+        description="Compare preços e encontre as melhores ofertas"
+        actions={
           <div style={styles.savingsCard}>
-            <span style={styles.savingsLabel}>Economia Total</span>
+            <span style={styles.savingsLabel}>Economia total</span>
             <span style={styles.savingsValue}>
               R$ {(data.totalSavings / 100).toFixed(2)}
             </span>
           </div>
-        </header>
-
+        }
+      >
         {/* Filters */}
         <div style={styles.filters}>
           {/* Markets Filter */}
@@ -302,8 +302,8 @@ export default function ComparacaoPage() {
             📄 Exportar PDF
           </Button>
         </div>
-      </div>
-    </main>
+      </ClientePage>
+    </DashboardLayout>
   );
 }
 

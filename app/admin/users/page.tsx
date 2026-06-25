@@ -31,7 +31,8 @@ export default function UsersPage() {
       const response = await authenticatedFetch('/api/admin/users');
       if (response.ok) {
         const data = await response.json();
-        setUsers(data);
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        setUsers(Array.isArray(list) ? list : []);
       }
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);

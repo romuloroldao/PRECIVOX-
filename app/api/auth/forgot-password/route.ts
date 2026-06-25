@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { sendPasswordResetEmail } from '@/lib/email';
+import { sendPasswordResetEmail, getBaseUrl } from '@/lib/email';
 import crypto from 'crypto';
 
 const PREFIX = 'precivox_reset:';
@@ -41,16 +41,24 @@ export async function POST(request: NextRequest) {
       data: { identifier, token, expires },
     });
 
-    const baseUrl =
-      process.env.NEXTAUTH_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const resetLink = `${baseUrl}/resetar-senha?token=${encodeURIComponent(token)}`;
+    const resetLink = `${getBaseUrl()}/resetar-senha?token=${encodeURIComponent(token)}`;
 
-    await sendPasswordResetEmail({
+    const emailResult = await sendPasswordResetEmail({
       email: user.email,
       nome: user.nome,
       resetLink,
     });
+
+    if (!emailResult.ok) {
+      console.error('[forgot-password] Falha ao enviar:', emailResult);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Não foi possível enviar o e-mail agora. Tente novamente em alguns minutos.',
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json({ success: true, message: successMessage });
   } catch (error) {

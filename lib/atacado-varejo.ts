@@ -9,7 +9,7 @@ import {
   distanciaKmEntreCoords,
   type ResultadoEconomiaLiquida,
 } from '@/lib/economia-liquida';
-import { getElCalcularOpts } from '@/lib/el-config-usuario';
+import { getElCalcularOpts } from '@/lib/el-config-usuario-server';
 
 export type RecomendacaoFormato = 'atacado' | 'varejo' | 'indiferente';
 

@@ -2,7 +2,7 @@
 
 MVP jun/2026.
 
-> **Estado comercial:** produto ainda **não lançado** — planos SaaS e cobrança recorrente não estão ativos em prod. A infra (tiers, feature gates, promos, insights CPG) está pronta para o go-live.
+> **Estado comercial:** planos **Essencial / Pro / Enterprise** criados e mercados piloto vinculados (18/06/2026). Cobrança recorrente e gateway **pendentes** (fora do sistema).
 
 ## Objetivo
 

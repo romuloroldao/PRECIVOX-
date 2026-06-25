@@ -54,7 +54,6 @@ export default function AdminDashboardPage() {
     enabled: status === 'authenticated' && user?.role === 'ADMIN',
     retries: 2,
     timeout: 10000,
-    skipInterceptors: true,
   });
 
   // ✅ Query para usuários recentes - Hook gerencia loading, error, data
@@ -69,7 +68,6 @@ export default function AdminDashboardPage() {
     enabled: status === 'authenticated' && user?.role === 'ADMIN',
     retries: 2,
     timeout: 10000,
-    skipInterceptors: true,
   });
 
   // Verificar se está carregando ou não autenticado
@@ -244,13 +242,13 @@ export default function AdminDashboardPage() {
               </button>
               
               <button 
-                onClick={() => window.location.href = '/admin/users/permissions'}
+                onClick={() => window.location.href = '/admin/users'}
                 className="text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium text-gray-900 block">Alterar permissões</span>
-                    <span className="text-sm text-gray-500">Gerenciar roles e acesso</span>
+                    <span className="text-sm text-gray-500">Gerenciar roles na lista de usuários</span>
                   </div>
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

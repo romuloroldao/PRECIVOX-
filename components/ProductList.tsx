@@ -9,11 +9,13 @@ import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
 
 interface ProductListProps {
   produtos: Produto[];
+  /** Callback para abrir a lista lateral — usado no toast "Ver lista". */
+  onAbrirLista?: () => void;
 }
 
-export function ProductList({ produtos }: ProductListProps) {
+export function ProductList({ produtos, onAbrirLista }: ProductListProps) {
   const { adicionarItem } = useLista();
-  const { success } = useToast();
+  const { listaAdicionado } = useToast();
 
   const handleAdicionar = (produto: Produto) => {
     adicionarItem({
@@ -30,7 +32,11 @@ export function ProductList({ produtos }: ProductListProps) {
       marca: produto.marca,
       unidade: produto.unidade,
     });
-    success(`${produto.nome} adicionado à lista!`);
+    const nomeCurto = produto.nome.length > 40 ? produto.nome.slice(0, 38) + '…' : produto.nome;
+    listaAdicionado(
+      `${nomeCurto} adicionado`,
+      onAbrirLista ? { label: 'Ver lista', onClick: onAbrirLista } : undefined
+    );
   };
 
   if (produtos.length === 0) {

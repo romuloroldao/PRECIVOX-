@@ -14,6 +14,9 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { TOKENS } from '@/styles/tokens';
+import DashboardLayout from '@/components/DashboardLayout';
+import { ClientePage } from '@/components/cliente/ClientePage';
+import { ErrorState } from '@/components/ui';
 
 interface ReferralStats {
     code: string;
@@ -131,35 +134,38 @@ export default function ReferralPage() {
 
     if (loading) {
         return (
-            <main style={styles.main}>
-                <div style={styles.container}>
-                    <div style={styles.loading}>Carregando...</div>
-                </div>
-            </main>
+            <DashboardLayout role="CLIENTE">
+                <ClientePage title="Indique e ganhe" description="Convide amigos e ganhe recompensas a cada indicação">
+                    <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-200/70" />
+                        ))}
+                    </div>
+                </ClientePage>
+            </DashboardLayout>
         );
     }
 
     if (!stats) {
         return (
-            <main style={styles.main}>
-                <div style={styles.container}>
-                    <div style={styles.error}>Erro ao carregar dados</div>
-                </div>
-            </main>
+            <DashboardLayout role="CLIENTE">
+                <ClientePage title="Indique e ganhe" description="Convide amigos e ganhe recompensas a cada indicação">
+                    <ErrorState
+                        title="Não foi possível carregar"
+                        message="Tente novamente em alguns instantes."
+                        onRetry={() => userId && fetchReferralStats(userId)}
+                    />
+                </ClientePage>
+            </DashboardLayout>
         );
     }
 
     return (
-        <main style={styles.main}>
-            <div style={styles.container}>
-                {/* Header */}
-                <header style={styles.header}>
-                    <h1 style={styles.title}>🎁 Indique e Ganhe</h1>
-                    <p style={styles.subtitle}>
-                        Convide seus amigos e ganhe recompensas a cada indicação!
-                    </p>
-                </header>
-
+        <DashboardLayout role="CLIENTE">
+            <ClientePage
+                title="Indique e ganhe"
+                description="Convide amigos e ganhe recompensas a cada indicação"
+            >
                 {/* Código de Convite */}
                 <section style={styles.codeCard}>
                     <h2 style={styles.sectionTitle}>Seu Código de Convite</h2>
@@ -297,8 +303,8 @@ export default function ReferralPage() {
                         </div>
                     )}
                 </section>
-            </div>
-        </main>
+            </ClientePage>
+        </DashboardLayout>
     );
 }
 

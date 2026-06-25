@@ -1,43 +1,38 @@
 /**
- * Card Component - Container Base
- * 
- * Uso:
- * <Card padding="md" shadow="md">
- *   <h2>Título</h2>
- *   <p>Conteúdo</p>
- * </Card>
- * 
- * @squad-a @squad-b
+ * @deprecated Use `@/components/ui/Card` em vez deste.
+ * Este arquivo existe apenas para manter compatibilidade durante a migração.
  */
 
+'use client';
+
 import React from 'react';
-import { TOKENS } from '@/styles/tokens';
+import { Card as UICard } from '@/components/ui/Card';
+import { cn } from '@/lib/utils';
 
 export interface CardProps {
-  /** Conteúdo do card */
   children: React.ReactNode;
-  
-  /** Padding interno */
   padding?: 'none' | 'sm' | 'md' | 'lg';
-  
-  /** Sombra */
   shadow?: 'none' | 'sm' | 'md' | 'lg';
-  
-  /** Borda */
   border?: boolean;
-  
-  /** Hover effect */
   hoverable?: boolean;
-  
-  /** Callback ao clicar */
   onClick?: () => void;
-  
-  /** Classes CSS adicionais */
   className?: string;
-  
-  /** Estilos inline adicionais */
   style?: React.CSSProperties;
 }
+
+const PADDING_MAP: Record<string, string> = {
+  none: 'p-0',
+  sm: 'p-3',
+  md: 'p-4',
+  lg: 'p-6',
+};
+
+const SHADOW_MAP: Record<string, string> = {
+  none: 'shadow-none',
+  sm: 'shadow-sm',
+  md: 'shadow-md',
+  lg: 'shadow-lg',
+};
 
 export function Card({
   children,
@@ -49,44 +44,15 @@ export function Card({
   className = '',
   style = {},
 }: CardProps) {
-  const paddingMap = {
-    none: '0',
-    sm: TOKENS.spacing[3],
-    md: TOKENS.spacing[4],
-    lg: TOKENS.spacing[6],
-  };
-
-  const shadowMap = {
-    none: 'none',
-    sm: TOKENS.shadows.sm,
-    md: TOKENS.shadows.md,
-    lg: TOKENS.shadows.lg,
-  };
-
-  const baseStyles = {
-    backgroundColor: TOKENS.colors.background,
-    borderRadius: TOKENS.borderRadius.lg,
-    padding: paddingMap[padding],
-    boxShadow: shadowMap[shadow],
-    border: border ? `${TOKENS.borderWidth[1]} solid ${TOKENS.colors.border}` : 'none',
-    transition: TOKENS.transitions.base,
-    cursor: onClick ? 'pointer' : 'default',
-  };
-
-  const hoverStyles = hoverable ? {
-    ':hover': {
-      boxShadow: TOKENS.shadows.lg,
-      transform: 'translateY(-2px)',
-    },
-  } : {};
-
   return (
-    <div
+    <UICard
+      variant={border ? 'default' : 'elevated'}
+      hover={hoverable}
+      className={cn(PADDING_MAP[padding], SHADOW_MAP[shadow], className)}
       onClick={onClick}
-      className={className}
-      style={{ ...baseStyles, ...style }}
+      style={style}
     >
       {children}
-    </div>
+    </UICard>
   );
 }

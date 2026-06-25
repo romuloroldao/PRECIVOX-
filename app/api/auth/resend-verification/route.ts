@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import crypto from 'crypto';
-import { sendVerificationEmail } from '@/lib/email';
+import { sendVerificationEmail, getBaseUrl } from '@/lib/email';
 
 const PREFIX = 'precivox_verify:';
 const EXPIRES_HOURS = 24;
@@ -52,16 +52,25 @@ export async function POST(request: NextRequest) {
       data: { identifier, token, expires },
     });
 
-    const baseUrl =
-      process.env.NEXTAUTH_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const confirmLink = `${baseUrl}/confirmar-email?token=${encodeURIComponent(token)}`;
+    const confirmLink = `${getBaseUrl()}/confirmar-email?token=${encodeURIComponent(token)}`;
 
-    await sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
       nome: user.nome || '',
       email: user.email,
       confirmLink,
     });
+
+    if (!emailResult.ok) {
+      console.error('[resend-verification] Falha ao enviar:', emailResult);
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Não foi possível enviar o e-mail agora. Tente novamente em alguns minutos ou contate o suporte.',
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

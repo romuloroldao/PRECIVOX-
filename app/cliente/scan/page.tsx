@@ -40,6 +40,18 @@ type ScanMatch = {
     explicacao: string;
     recomendacao: string;
   } | null;
+  melhorAlternativa: {
+    preco: number;
+    precoPromocional: number | null;
+    emPromocao: boolean;
+    distanciaKm: number | null;
+    unidade: { nome: string; mercado: { nome: string } };
+    economiaLiquida: {
+      economiaLiquida: number;
+      explicacao: string;
+      recomendacao: string;
+    };
+  } | null;
 };
 
 export default function ScanInteligentePage() {
@@ -190,18 +202,18 @@ export default function ScanInteligentePage() {
           <div>
             <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
               <ScanLine className="h-6 w-6 text-violet-700" />
-              Scan inteligente
+              Escanear etiqueta
             </h1>
             <p className="text-sm text-gray-600">
-              OCR no celular · match por código ou embedding no catálogo
+              Fotografe a etiqueta e encontre o produto com o melhor preço
             </p>
           </div>
         </div>
 
         <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-4">
           <p className="text-sm text-violet-900">
-            Aponte para a etiqueta de prateleira. O texto é processado no seu aparelho; só o
-            resultado vai ao servidor para encontrar o produto e a Economia Líquida™.
+            Aponte para a etiqueta na prateleira. A leitura acontece no seu aparelho — só o
+            resultado é usado para encontrar o produto e a Economia Líquida™.
           </p>
         </div>
 
@@ -317,9 +329,32 @@ export default function ScanInteligentePage() {
                         : 'text-amber-800'
                     }`}
                   >
-                    {m.economiaLiquidaEtiqueta.explicacao}
+                    Etiqueta · EL™: {m.economiaLiquidaEtiqueta.explicacao}
                   </p>
                 )}
+                {m.melhorAlternativa &&
+                  m.melhorAlternativa.economiaLiquida.economiaLiquida > 0 && (
+                    <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                      <p className="text-xs font-semibold text-emerald-900">
+                        Melhor preço na região
+                      </p>
+                      <p className="text-xs text-emerald-800">
+                        {m.melhorAlternativa.unidade.mercado.nome} ·{' '}
+                        {m.melhorAlternativa.unidade.nome}
+                        {m.melhorAlternativa.distanciaKm != null &&
+                          ` · ${m.melhorAlternativa.distanciaKm.toFixed(1)} km`}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-emerald-900">
+                        R${' '}
+                        {(m.melhorAlternativa.emPromocao &&
+                        m.melhorAlternativa.precoPromocional != null
+                          ? m.melhorAlternativa.precoPromocional
+                          : m.melhorAlternativa.preco
+                        ).toFixed(2)}{' '}
+                        — {m.melhorAlternativa.economiaLiquida.explicacao}
+                      </p>
+                    </div>
+                  )}
                 <p className="mt-1 text-[11px] text-gray-500">
                   {m.mercadoNome} · {m.unidadeNome}
                 </p>

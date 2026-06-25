@@ -138,6 +138,27 @@ const config: Config = {
         'height': 'height',
         'spacing': 'margin, padding',
       },
+      keyframes: {
+        'toast-up': {
+          '0%': { opacity: '0', transform: 'translateY(12px) scale(0.96)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'pulse-ring': {
+          '0%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.18)', opacity: '0.7' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'badge-pop': {
+          '0%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.4)' },
+          '100%': { transform: 'scale(1)' },
+        },
+      },
+      animation: {
+        'toast-up': 'toast-up 0.22s ease-out both',
+        'pulse-ring': 'pulse-ring 0.5s ease-in-out',
+        'badge-pop': 'badge-pop 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+      },
     },
   },
   plugins: [],

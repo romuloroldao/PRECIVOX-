@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { EventCollector } from '@/lib/ai/event-collector';
 import { MarketBehaviorEngine } from '@/lib/ai/behavior-engine';
-import { montarCestaProvavel, inferirDiaMercado } from '@/lib/cesta-provavel';
+import { montarCestaProvavel, inferirDiaMercado, inferirHorasAteCompraProvavel } from '@/lib/cesta-provavel';
 import { calcularIntentScore } from '@/lib/ai/intent-score-engine';
 import { deliverPushToToken, isPushDeliveryAvailable } from '@/lib/push-delivery';
 
@@ -23,6 +23,9 @@ const MIN_INTENT_CESTA = 48;
 const MIN_ITENS_CESTA = 3;
 const COOLDOWN_CESTA_H = 48;
 const COOLDOWN_DIA_MERCADO_D = 6;
+/** Janela explícita de push cesta provável (roadmap 2.3) */
+const JANELA_PUSH_MIN_H = 48;
+const JANELA_PUSH_MAX_H = 72;
 
 function isoWeekKey(d: Date): string {
   const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -71,6 +74,32 @@ async function persistPushRetencaoState(
 }
 
 export async function resolverMercadoPreferido(userId: string): Promise<string | null> {
+  const desde = new Date();
+  desde.setDate(desde.getDate() - 90);
+
+  const eventos = await prisma.userEvent.findMany({
+    where: { userId, timestamp: { gte: desde }, mercadoId: { not: null } },
+    select: { mercadoId: true },
+    take: 500,
+  });
+
+  const contagem = new Map<string, number>();
+  for (const ev of eventos) {
+    if (!ev.mercadoId) continue;
+    contagem.set(ev.mercadoId, (contagem.get(ev.mercadoId) ?? 0) + 1);
+  }
+
+  let best: string | null = null;
+  let max = 0;
+  contagem.forEach((n, id) => {
+    if (n > max) {
+      max = n;
+      best = id;
+    }
+  });
+
+  if (best) return best;
+
   const ev = await prisma.userEvent.findFirst({
     where: { userId },
     orderBy: { timestamp: 'desc' },
@@ -106,8 +135,13 @@ export async function avaliarPushCestaProvavel(
 
   const eventos = await EventCollector.getUserEvents(userId, mercadoId, inicio, fim);
   const intent = calcularIntentScore(eventos, 72);
+  const janela = inferirHorasAteCompraProvavel(eventos);
 
-  if (intent.score < MIN_INTENT_CESTA) {
+  if (janela.horasAteCompra != null && janela.confianca >= 25) {
+    if (janela.horasAteCompra < JANELA_PUSH_MIN_H || janela.horasAteCompra > JANELA_PUSH_MAX_H) {
+      return { enviar: false, motivo: 'fora_janela_48_72h' };
+    }
+  } else if (intent.score < MIN_INTENT_CESTA) {
     return { enviar: false, motivo: 'intent_baixo' };
   }
 
@@ -126,15 +160,21 @@ export async function avaliarPushCestaProvavel(
   }
 
   const top = cesta.itens.slice(0, 3).map((i) => i.nome);
+  const janelaLabel =
+    janela.horasAteCompra != null
+      ? `Compra provável em ~${Math.round(janela.horasAteCompra)}h. `
+      : '';
   const corpo =
     top.length >= 2
-      ? `${top.slice(0, 2).join(', ')} e mais ${Math.max(0, cesta.itens.length - 2)} itens — monte em 1 toque.`
-      : cesta.mensagem;
+      ? `${janelaLabel}${top.slice(0, 2).join(', ')} e mais ${Math.max(0, cesta.itens.length - 2)} itens — monte em 1 toque.`
+      : `${janelaLabel}${cesta.mensagem}`;
 
   return {
     enviar: true,
     tipo: 'cesta_provavel',
-    titulo: '🛒 Sua cesta provável está pronta',
+    titulo: janela.horasAteCompra != null
+      ? '🛒 Sua cesta para os próximos dias'
+      : '🛒 Sua cesta provável está pronta',
     corpo,
     link: '/cliente/home',
     mercadoId,

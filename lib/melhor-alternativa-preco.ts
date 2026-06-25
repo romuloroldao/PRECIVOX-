@@ -38,7 +38,7 @@ export async function buscarMelhorAlternativa(
 ): Promise<MelhorAlternativa | null> {
   if (precoOrigemEfetivo <= 0) return null;
 
-  const { getElCalcularOpts } = await import('@/lib/el-config-usuario');
+  const { getElCalcularOpts } = await import('@/lib/el-config-usuario-server');
   const elOpts = await getElCalcularOpts(userId);
 
   const origem = await prisma.unidades.findUnique({

@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { TOKENS } from '@/styles/tokens';
 import Link from 'next/link';
+import DashboardLayout from '@/components/DashboardLayout';
+import { ClientePage } from '@/components/cliente/ClientePage';
+import { Button } from '@/components/ui';
 
 export default function NovaListaPage() {
   const router = useRouter();
@@ -32,11 +34,7 @@ export default function NovaListaPage() {
       const res = await fetch('/api/lists/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          name: trimmed,
-          products: [],
-        }),
+        body: JSON.stringify({ userId, name: trimmed, products: [] }),
       });
       const data = await res.json();
       if (data.success && data.data?.listId) {
@@ -53,49 +51,53 @@ export default function NovaListaPage() {
 
   if (status === 'loading') {
     return (
-      <main style={styles.main}>
-        <div style={styles.center}>
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600" />
-          <p style={styles.loadingText}>Carregando...</p>
+      <DashboardLayout role="CLIENTE">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" />
+          <p className="text-sm text-text-secondary">Carregando…</p>
         </div>
-      </main>
+      </DashboardLayout>
     );
   }
 
   if (!userId) {
     return (
-      <main style={styles.main}>
-        <div style={styles.container}>
-          <p style={styles.redirect}>Redirecionando para o login...</p>
-          <Link href="/login" style={styles.link}>
-            Fazer login
-          </Link>
-        </div>
-      </main>
+      <DashboardLayout role="CLIENTE">
+        <ClientePage title="Nova lista" mobileDescription="Faça login para continuar">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-center">
+            <p className="text-sm text-text-secondary">Redirecionando para o login…</p>
+            <Link
+              href="/login"
+              className="mt-3 inline-block font-semibold text-primary-600 hover:underline"
+            >
+              Fazer login
+            </Link>
+          </div>
+        </ClientePage>
+      </DashboardLayout>
     );
   }
 
   return (
-    <main style={styles.main}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <Link href="/cliente/listas" style={styles.backLink}>
-            ← Voltar
-          </Link>
-          <h1 style={styles.title}>Nova lista de compras</h1>
-          <p style={styles.subtitle}>
-            Dê um nome à sua lista. Depois você pode adicionar produtos.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} style={styles.form}>
+    <DashboardLayout role="CLIENTE">
+      <ClientePage
+        title="Nova lista de compras"
+        description="Dê um nome à sua lista. Depois você pode adicionar produtos."
+      >
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-xl border border-slate-200 bg-white p-5 md:p-6"
+        >
           {error && (
-            <div style={styles.error} role="alert">
+            <div
+              className="mb-4 rounded-lg bg-error-50 px-3 py-2 text-sm text-error-700"
+              role="alert"
+            >
               {error}
             </div>
           )}
-          <div style={styles.field}>
-            <label htmlFor="list-name" style={styles.label}>
+          <div className="mb-6">
+            <label htmlFor="list-name" className="mb-2 block text-sm font-semibold text-text-primary">
               Nome da lista
             </label>
             <input
@@ -103,131 +105,25 @@ export default function NovaListaPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Compras do mês, Churrasco..."
-              style={styles.input}
+              placeholder="Ex: Compras do mês, Churrasco…"
               maxLength={100}
               autoFocus
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             />
           </div>
-          <div style={styles.actions}>
-            <Link href="/cliente/listas" style={styles.cancelButton}>
+          <div className="flex flex-wrap justify-end gap-3">
+            <Link
+              href="/cliente/listas"
+              className="rounded-lg px-4 py-2.5 text-sm font-semibold text-text-secondary hover:bg-slate-50"
+            >
               Cancelar
             </Link>
-            <button type="submit" disabled={loading} style={styles.submitButton}>
-              {loading ? 'Criando...' : 'Criar lista'}
-            </button>
+            <Button type="submit" variant="primary" size="md" isLoading={loading}>
+              {loading ? 'Criando…' : 'Criar lista'}
+            </Button>
           </div>
         </form>
-      </div>
-    </main>
+      </ClientePage>
+    </DashboardLayout>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  main: {
-    minHeight: '100vh',
-    backgroundColor: TOKENS.colors.surface,
-  },
-  center: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    gap: TOKENS.spacing[4],
-  },
-  loadingText: {
-    color: TOKENS.colors.text.secondary,
-    margin: 0,
-  },
-  container: {
-    maxWidth: '600px',
-    margin: '0 auto',
-    padding: TOKENS.spacing[6],
-  },
-  redirect: {
-    color: TOKENS.colors.text.secondary,
-    marginBottom: TOKENS.spacing[4],
-  },
-  link: {
-    color: TOKENS.colors.primary[600],
-    fontWeight: 600,
-  },
-  header: {
-    marginBottom: TOKENS.spacing[8],
-  },
-  backLink: {
-    display: 'inline-block',
-    color: TOKENS.colors.primary[600],
-    fontSize: TOKENS.typography.fontSize.sm,
-    marginBottom: TOKENS.spacing[4],
-    textDecoration: 'none',
-  },
-  title: {
-    fontSize: TOKENS.typography.fontSize['3xl'],
-    fontWeight: TOKENS.typography.fontWeight.bold,
-    color: TOKENS.colors.text.primary,
-    margin: 0,
-    marginBottom: TOKENS.spacing[2],
-  },
-  subtitle: {
-    fontSize: TOKENS.typography.fontSize.base,
-    color: TOKENS.colors.text.secondary,
-    margin: 0,
-  },
-  form: {
-    backgroundColor: TOKENS.colors.background,
-    border: `1px solid ${TOKENS.colors.border}`,
-    borderRadius: TOKENS.borderRadius.lg,
-    padding: TOKENS.spacing[6],
-  },
-  field: {
-    marginBottom: TOKENS.spacing[6],
-  },
-  label: {
-    display: 'block',
-    fontSize: TOKENS.typography.fontSize.sm,
-    fontWeight: 600,
-    color: TOKENS.colors.text.primary,
-    marginBottom: TOKENS.spacing[2],
-  },
-  input: {
-    width: '100%',
-    padding: `${TOKENS.spacing[3]} ${TOKENS.spacing[4]}`,
-    fontSize: TOKENS.typography.fontSize.base,
-    border: `1px solid ${TOKENS.colors.border}`,
-    borderRadius: TOKENS.borderRadius.md,
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
-  error: {
-    padding: TOKENS.spacing[3],
-    backgroundColor: '#FEE2E2',
-    color: '#B91C1C',
-    borderRadius: TOKENS.borderRadius.md,
-    marginBottom: TOKENS.spacing[4],
-    fontSize: TOKENS.typography.fontSize.sm,
-  },
-  actions: {
-    display: 'flex',
-    gap: TOKENS.spacing[4],
-    justifyContent: 'flex-end',
-    flexWrap: 'wrap',
-  },
-  cancelButton: {
-    padding: `${TOKENS.spacing[2]} ${TOKENS.spacing[4]}`,
-    color: TOKENS.colors.text.secondary,
-    textDecoration: 'none',
-    borderRadius: TOKENS.borderRadius.md,
-    fontWeight: 600,
-  },
-  submitButton: {
-    padding: `${TOKENS.spacing[2]} ${TOKENS.spacing[6]}`,
-    backgroundColor: TOKENS.colors.primary[600],
-    color: TOKENS.colors.text.inverse,
-    border: 'none',
-    borderRadius: TOKENS.borderRadius.md,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-};

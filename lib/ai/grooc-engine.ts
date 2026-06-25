@@ -16,6 +16,12 @@ import { MarketHealthEngine } from './health-engine';
 import { PromotionEngine } from './promotion-engine';
 import { MarketBehaviorEngine } from './behavior-engine';
 import { ReportGenerator } from './report-generator';
+import {
+  type GroocFonte,
+  fontesGrooc,
+  fonteGrooc,
+  fontesGroocComoTexto,
+} from './grooc-fontes';
 
 export interface GroocQuestion {
   id: string;
@@ -41,7 +47,9 @@ export interface GroocAnswer {
     valor: any;
   };
   confianca: number;
-  fontes: string[];
+  fontes: GroocFonte[];
+  /** Rótulos legíveis — compat UI legada */
+  fontesTexto: string[];
 }
 
 export class GroocEngine {
@@ -77,11 +85,15 @@ export class GroocEngine {
     }
 
     // Resposta padrão para perguntas não reconhecidas
+    const fontes = fontesGrooc(
+      fonteGrooc({ tipo: 'metricas', descricao: 'Base de conhecimento GROOC', amostra: 'sem dados consultados' })
+    );
     return {
       resposta: 'Não entendi completamente sua pergunta. Pode reformular?',
       explicacao: 'Tente fazer perguntas sobre saúde do mercado, promoções, comportamento dos clientes ou produtos específicos.',
       confianca: 30,
-      fontes: [],
+      fontes,
+      fontesTexto: fontesGroocComoTexto(fontes),
     };
   }
 
@@ -168,6 +180,19 @@ export class GroocEngine {
         prioridade: r.prioridade as 'alta' | 'media' | 'baixa',
       }));
 
+    const fontes = fontesGrooc(
+      fonteGrooc({
+        tipo: 'metricas',
+        descricao: 'Health Score do mercado',
+        periodoDias: 30,
+        amostra: `score ${score}/100`,
+      }),
+      fonteGrooc({
+        tipo: 'eventos',
+        descricao: 'Eventos comportamentais agregados',
+        periodoDias: 30,
+      })
+    );
     return {
       resposta,
       explicacao: healthScore.explicacao,
@@ -177,7 +202,8 @@ export class GroocEngine {
         valor: healthScore.data,
       },
       confianca: healthScore.confianca,
-      fontes: ['Análise de métricas do mercado', 'Eventos dos últimos 30 dias'],
+      fontes,
+      fontesTexto: fontesGroocComoTexto(fontes),
     };
   }
 
@@ -191,11 +217,15 @@ export class GroocEngine {
     const promocoes = await PromotionEngine.generatePromotionSuggestions(mercadoId, 5);
 
     if (promocoes.data.length === 0) {
+      const fontes = fontesGrooc(
+        fonteGrooc({ tipo: 'catalogo', descricao: 'Análise de giro e estoque', periodoDias: 30 })
+      );
       return {
         resposta: 'No momento, não há oportunidades claras de promoção identificadas.',
         explicacao: 'Todos os produtos estão com giro adequado e estoque equilibrado. Continue monitorando.',
         confianca: 70,
-        fontes: ['Análise de giro e estoque'],
+        fontes,
+        fontesTexto: fontesGroocComoTexto(fontes),
       };
     }
 
@@ -212,6 +242,15 @@ export class GroocEngine {
       prioridade: 'media' as const,
     }));
 
+    const fontes = fontesGrooc(
+      fonteGrooc({
+        tipo: 'promocao',
+        descricao: 'Motor de sugestões de promoção',
+        periodoDias: 30,
+        amostra: `${promocoes.data.length} oportunidades`,
+      }),
+      fonteGrooc({ tipo: 'catalogo', descricao: 'Giro e estoque por produto', periodoDias: 30 })
+    );
     return {
       resposta,
       explicacao: promocoes.explicacao,
@@ -221,7 +260,8 @@ export class GroocEngine {
         valor: promocoes.data,
       },
       confianca: promocoes.confianca,
-      fontes: ['Análise de ciclo de vida dos produtos', 'Giro e estoque'],
+      fontes,
+      fontesTexto: fontesGroocComoTexto(fontes),
     };
   }
 
@@ -234,11 +274,15 @@ export class GroocEngine {
     userId?: string
   ): Promise<GroocAnswer> {
     if (!userId) {
+      const fontes = fontesGrooc(
+        fonteGrooc({ tipo: 'comportamento', descricao: 'Análise requer userId', amostra: 'não informado' })
+      );
       return {
         resposta: 'Para analisar comportamento, preciso saber qual cliente você está perguntando.',
         explicacao: 'Forneça o ID do usuário ou faça uma pergunta mais específica.',
         confianca: 0,
-        fontes: [],
+        fontes,
+        fontesTexto: fontesGroocComoTexto(fontes),
       };
     }
 
@@ -254,6 +298,19 @@ export class GroocEngine {
       `Intenção de compra atual: ${intencao.score}/100. ` +
       `Isso significa que ${this.explainPurchaseIntent(intencao.score)}`;
 
+    const fontes = fontesGrooc(
+      fonteGrooc({
+        tipo: 'eventos',
+        descricao: 'Eventos do usuário no mercado',
+        periodoDias: 30,
+        amostra: `intent ${intencao.score}/100`,
+      }),
+      fonteGrooc({
+        tipo: 'comportamento',
+        descricao: 'Padrões de horário e categoria',
+        periodoDias: 30,
+      })
+    );
     return {
       resposta,
       explicacao: comportamento.explicacao,
@@ -262,7 +319,8 @@ export class GroocEngine {
         valor: comportamento.data,
       },
       confianca: comportamento.confianca,
-      fontes: ['Análise de eventos do usuário', 'Padrões de compra'],
+      fontes,
+      fontesTexto: fontesGroocComoTexto(fontes),
     };
   }
 
@@ -278,11 +336,15 @@ export class GroocEngine {
     const produtoId = produtoIdMatch ? produtoIdMatch[1] : null;
 
     if (!produtoId) {
+      const fontes = fontesGrooc(
+        fonteGrooc({ tipo: 'catalogo', descricao: 'Produto não identificado na pergunta' })
+      );
       return {
         resposta: 'Para analisar um produto específico, mencione o ID do produto na pergunta.',
         explicacao: 'Exemplo: "Como está o produto PROD-123?"',
         confianca: 0,
-        fontes: [],
+        fontes,
+        fontesTexto: fontesGroocComoTexto(fontes),
       };
     }
 
@@ -313,6 +375,15 @@ export class GroocEngine {
       });
     }
 
+    const fontes = fontesGrooc(
+      fonteGrooc({
+        tipo: 'catalogo',
+        descricao: `Ciclo de vida produto ${produtoId}`,
+        periodoDias: 180,
+        amostra: `fase ${lifecycle.data.fase}`,
+      }),
+      fonteGrooc({ tipo: 'metricas', descricao: 'Histórico de giro', periodoDias: 180 })
+    );
     return {
       resposta,
       explicacao: lifecycle.explicacao,
@@ -322,7 +393,8 @@ export class GroocEngine {
         valor: lifecycle.data,
       },
       confianca: lifecycle.confianca,
-      fontes: ['Análise de ciclo de vida', 'Histórico de vendas'],
+      fontes,
+      fontesTexto: fontesGroocComoTexto(fontes),
     };
   }
 
@@ -342,6 +414,14 @@ export class GroocEngine {
       `e insights de comportamento. ` +
       `O que você gostaria de saber especificamente?`;
 
+    const fontes = fontesGrooc(
+      fonteGrooc({
+        tipo: 'relatorio',
+        descricao: 'Relatório semanal do mercado',
+        periodoDias: 7,
+        amostra: `score ${report.data.resumo.score}/100`,
+      })
+    );
     return {
       resposta,
       explicacao: 'Posso responder perguntas sobre saúde do mercado, promoções, comportamento dos clientes ou produtos específicos.',
@@ -364,7 +444,8 @@ export class GroocEngine {
         valor: report.data,
       },
       confianca: 60,
-      fontes: ['Relatório semanal do mercado'],
+      fontes,
+      fontesTexto: fontesGroocComoTexto(fontes),
     };
   }
 

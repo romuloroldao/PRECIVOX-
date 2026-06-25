@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendWelcomeEmail } from '@/lib/email';
 
 const PREFIX = 'precivox_verify:';
 
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const alreadyVerified = user.emailVerified != null;
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: user.id },
@@ -51,6 +54,13 @@ export async function POST(request: NextRequest) {
       }),
       prisma.verification_tokens.delete({ where: { token } }),
     ]);
+
+    // E-mail de boas-vindas apenas na primeira confirmação. Não bloqueia a resposta.
+    if (!alreadyVerified) {
+      sendWelcomeEmail({ nome: user.nome || '', email: user.email }).catch((err) => {
+        console.error('[confirm-email] Falha ao enviar boas-vindas:', err);
+      });
+    }
 
     return NextResponse.json({
       success: true,

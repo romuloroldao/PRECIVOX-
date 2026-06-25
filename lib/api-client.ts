@@ -10,14 +10,15 @@
 export function getApiUrl(): string {
   // Em cliente (browser), sempre usa relativo ou variável pública
   if (typeof window !== 'undefined') {
-    // Se NEXT_PUBLIC_API_URL estiver definida, usa ela
     const publicApiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (publicApiUrl) {
-      // Garante que não tenha /api duplicado
+    const isLocalhost =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    // Ignora localhost embutido no build quando o app roda em produção
+    if (publicApiUrl && (isLocalhost || !publicApiUrl.includes('localhost'))) {
       return publicApiUrl.replace(/\/api\/?$/, '');
     }
-    
-    // Fallback: usa relativo (será proxied pelo Next.js)
+
     return '';
   }
   

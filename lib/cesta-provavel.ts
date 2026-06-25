@@ -88,6 +88,47 @@ export async function montarCestaProvavel(
   return { itens, intentScore: intent.score, mensagem };
 }
 
+/** Estima horas até próxima compra com base no intervalo histórico (48–72h push). */
+export function inferirHorasAteCompraProvavel(
+  eventos: Array<{ type: string; timestamp: Date | string }>
+): {
+  horasAteCompra: number | null;
+  confianca: number;
+  intervaloMedioDias: number | null;
+} {
+  const compras = eventos
+    .filter((e) => ['compra_confirmada', 'compra_realizada'].includes(e.type))
+    .map((e) => new Date(e.timestamp).getTime())
+    .filter((t) => !Number.isNaN(t))
+    .sort((a, b) => a - b);
+
+  if (compras.length < 2) {
+    return { horasAteCompra: null, confianca: 0, intervaloMedioDias: null };
+  }
+
+  const intervalos: number[] = [];
+  for (let i = 1; i < compras.length; i++) {
+    const dias = (compras[i]! - compras[i - 1]!) / 86400000;
+    if (dias > 0 && dias <= 45) intervalos.push(dias);
+  }
+
+  if (intervalos.length === 0) {
+    return { horasAteCompra: null, confianca: 0, intervaloMedioDias: null };
+  }
+
+  intervalos.sort((a, b) => a - b);
+  const mediana = intervalos[Math.floor(intervalos.length / 2)]!;
+  const ultimaCompra = compras[compras.length - 1]!;
+  const proximaMs = ultimaCompra + mediana * 86400000;
+  const horasAteCompra = (proximaMs - Date.now()) / (1000 * 60 * 60);
+
+  return {
+    horasAteCompra,
+    confianca: Math.min(100, intervalos.length * 25),
+    intervaloMedioDias: Math.round(mediana * 10) / 10,
+  };
+}
+
 export function inferirDiaMercado(
   horariosPico: { diaSemana: number; hora: number; frequencia: number }[]
 ): { diaSemana: number; label: string } | null {

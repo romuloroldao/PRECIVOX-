@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
+import { ClientePage } from '@/components/cliente/ClientePage';
 
 interface Comparison {
   id: string;
@@ -94,22 +95,19 @@ export default function RelatoriosPage() {
 
   return (
     <DashboardLayout role="CLIENTE">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Relatórios</h1>
-            <p className="text-gray-600 mt-2">Visualize suas economias e histórico de comparações</p>
-          </div>
-          <Link 
+      <ClientePage
+        title="Relatórios"
+        description="Visualize suas economias e histórico de comparações"
+        actions={
+          <Link
             href="/cliente/home"
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            ← Voltar ao Dashboard
+            Voltar
           </Link>
-        </div>
-
-        {/* Filters */}
+        }
+      >
+      <div className="space-y-6">
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex items-center gap-4">
             <div>
@@ -393,6 +391,7 @@ export default function RelatoriosPage() {
           </div>
         )}
       </div>
+      </ClientePage>
     </DashboardLayout>
   );
 }

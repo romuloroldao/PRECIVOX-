@@ -153,8 +153,7 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
                 name="email"
                 autoComplete="email"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                placeholder="admin@precivox.com"
-                defaultValue="admin@precivox.com"
+                placeholder="seu@email.com"
               />
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
@@ -182,8 +181,7 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
                   name="senha"
                   autoComplete="current-password"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all pr-12"
-                  placeholder="senha123"
-                  defaultValue="senha123"
+                  placeholder="Sua senha"
                 />
                 <button
                   type="button"

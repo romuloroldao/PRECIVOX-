@@ -39,6 +39,8 @@ interface ListaContextType {
   listaAtivaId: string | null;
   listasSalvas: ListaSalva[];
   adicionarItem: (item: ItemLista) => void;
+  /** Restaura item removido (ex.: desfazer) sem incrementar quantidade. */
+  restaurarItem: (item: ItemLista) => void;
   removerItem: (id: string) => void;
   /** Troca vários itens de uma vez (ex.: consolidar rota) sem incrementar quantidade por id existente. */
   aplicarTrocaRota: (removerIds: string[], novosItens: ItemLista[]) => void;
@@ -52,6 +54,9 @@ interface ListaContextType {
   deletarLista: (listaId: string) => void;
   total: number;
   totalItens: number;
+  /** Último item adicionado — usado para feedback visual no FAB e toast rico. */
+  ultimoItemAdicionado: ItemLista | null;
+  limparUltimoItem: () => void;
 }
 
 const ListaContext = createContext<ListaContextType | undefined>(undefined);
@@ -63,6 +68,9 @@ export function ListaProvider({ children }: { children: ReactNode }) {
   const [itens, setItens] = useState<ItemLista[]>([]);
   const [listaAtivaId, setListaAtivaId] = useState<string | null>(null);
   const [listasSalvas, setListasSalvas] = useState<ListaSalva[]>([]);
+  const [ultimoItemAdicionado, setUltimoItemAdicionado] = useState<ItemLista | null>(null);
+
+  const limparUltimoItem = useCallback(() => setUltimoItemAdicionado(null), []);
 
   const criarNovaLista = useCallback((nome: string): string => {
     const novaLista: ListaSalva = {
@@ -214,20 +222,17 @@ export function ListaProvider({ children }: { children: ReactNode }) {
   };
 
   const adicionarItem = useCallback((item: ItemLista) => {
+    const qtd = item.quantidade && item.quantidade > 0 ? item.quantidade : 1;
     setItens((prevItens) => {
-      // Verificar se o item já existe
       const itemExistente = prevItens.find((i) => i.id === item.id);
       if (itemExistente) {
-        // Aumentar quantidade
         return prevItens.map((i) =>
-          i.id === item.id
-            ? { ...i, quantidade: i.quantidade + 1 }
-            : i
+          i.id === item.id ? { ...i, quantidade: i.quantidade + qtd } : i
         );
       }
-      // Adicionar novo item
-      return [...prevItens, { ...item, quantidade: 1 }];
+      return [...prevItens, { ...item, quantidade: qtd }];
     });
+    setUltimoItemAdicionado({ ...item, quantidade: qtd });
 
     // Registrar evento para IA (não bloqueante)
     if (typeof window !== 'undefined' && listaAtivaId) {
@@ -258,6 +263,17 @@ export function ListaProvider({ children }: { children: ReactNode }) {
 
   const restaurarItens = useCallback((snapshot: ItemLista[]) => {
     setItens(snapshot.map((i) => ({ ...i })));
+  }, []);
+
+  const restaurarItem = useCallback((item: ItemLista) => {
+    setItens((prevItens) => {
+      if (prevItens.some((i) => i.id === item.id)) {
+        return prevItens.map((i) =>
+          i.id === item.id ? { ...item, quantidade: item.quantidade } : i
+        );
+      }
+      return [...prevItens, { ...item }];
+    });
   }, []);
 
   const removerItem = useCallback((id: string) => {
@@ -315,6 +331,7 @@ export function ListaProvider({ children }: { children: ReactNode }) {
         listaAtivaId,
         listasSalvas,
         adicionarItem,
+        restaurarItem,
         removerItem,
         aplicarTrocaRota,
         restaurarItens,
@@ -326,6 +343,8 @@ export function ListaProvider({ children }: { children: ReactNode }) {
         deletarLista,
         total,
         totalItens,
+        ultimoItemAdicionado,
+        limparUltimoItem,
       }}
     >
       {children}

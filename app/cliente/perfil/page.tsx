@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
+import Link from 'next/link';
+import { ClientePage } from '@/components/cliente/ClientePage';
 import { ContribuidorBadge } from '@/components/cliente/ContribuidorBadge';
 import { RelatorioSemanaCard } from '@/components/cliente/RelatorioSemanaCard';
 import { MlLeveClienteCard } from '@/components/cliente/MlLeveClienteCard';
 import type { EixoPreci, PerfilPreciScores } from '@/lib/perfil-preci';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
-import { Sparkles, ArrowLeft, Clock } from 'lucide-react';
+import { Sparkles, Clock } from 'lucide-react';
 import { EL_CONFIG_LIMITS, labelFaixaValorHora, type ElConfigUsuario } from '@/lib/el-config-usuario';
 
 type PerfilData = {
@@ -109,23 +110,12 @@ export default function PerfilPreciPage() {
 
   return (
     <DashboardLayout role="CLIENTE">
-      <div className="mx-auto max-w-2xl space-y-6 p-4 md:p-6">
-        <Link
-          href="/cliente/home"
-          className="inline-flex items-center gap-1 text-sm font-medium text-precivox-blue hover:underline"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </Link>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Seu Perfil PRECI</h1>
-          <ContribuidorBadge />
-        </div>
-        <p className="text-sm text-gray-600">
-          Espelho do seu jeito de comprar — calculado pelo app, ajustável por você. Nada invasivo: só
-          o que você faz no PRECIVOX.
-        </p>
+      <ClientePage
+        title="Seu Perfil PRECI"
+        description="Espelho do seu jeito de comprar — calculado pelo app, ajustável por você."
+        actions={<ContribuidorBadge />}
+      >
+      <div className="space-y-6">
         <Link
           href="/cliente/familia"
           className="inline-flex text-sm font-semibold text-indigo-700 hover:underline"
@@ -261,6 +251,7 @@ export default function PerfilPreciPage() {
           </div>
         )}
       </div>
+      </ClientePage>
     </DashboardLayout>
   );
 }
