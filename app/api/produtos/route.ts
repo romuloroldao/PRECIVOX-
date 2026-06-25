@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
@@ -9,25 +8,11 @@ export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireApiSession(request, { roles: ['ADMIN', 'GESTOR'] });
+    if (isAuthResponse(auth)) return auth;
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
-
-    // Apenas ADMIN e GESTOR têm acesso
-    if (userRole !== 'ADMIN' && userRole !== 'GESTOR') {
-      return NextResponse.json(
-        { success: false, error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
+    const userRole = auth.role;
+    const userId = auth.id;
 
     const { searchParams } = new URL(request.url);
     const busca = searchParams.get('busca') || '';
@@ -149,6 +134,8 @@ export async function GET(request: NextRequest) {
         marca: produto.marca,
         unidadeMedida: produto.unidadeMedida,
         imagem: produto.imagem,
+        imagemThumb: produto.imagemThumb,
+        imagemStatus: produto.imagemStatus,
         ativo: produto.ativo,
         precoMedio: precoMedio.toFixed(2),
         quantidadeTotal,

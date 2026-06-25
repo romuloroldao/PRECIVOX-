@@ -3,11 +3,6 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { getJwtSecret } from '@/lib/jwt-secret';
 
-function resolveSecrets(): { jwtSecret: string; nextAuthSecret: string } {
-  const secret = getJwtSecret();
-  return { jwtSecret: secret, nextAuthSecret: secret };
-}
-
 export interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -17,38 +12,20 @@ export interface AuthRequest extends Request {
   };
 }
 
-/**
- * Tenta decodificar token JWT do NextAuth a partir dos cookies
- */
-async function tryNextAuthCookie(req: Request): Promise<any | null> {
-  try {
-    // NextAuth armazena o token no cookie next-auth.session-token
-    const cookieName = process.env.NODE_ENV === 'production' 
-      ? '__Secure-next-auth.session-token'
-      : 'next-auth.session-token';
-    
-    const sessionToken = req.cookies?.[cookieName];
-    
-    if (!sessionToken) {
-      return null;
-    }
+function accessTokenCookieName(): string {
+  return process.env.NODE_ENV === 'production'
+    ? '__Secure-precivox-access-token'
+    : 'precivox-access-token';
+}
 
-    // Tentar decodificar o token do NextAuth
-    try {
-      const { nextAuthSecret } = resolveSecrets();
-      const decoded = jwt.verify(sessionToken, nextAuthSecret) as any;
-      return decoded;
-    } catch (e) {
-      return null;
-    }
-  } catch (error) {
-    return null;
-  }
+function tryAccessTokenCookie(req: Request): string | null {
+  const cookieName = accessTokenCookieName();
+  const token = req.cookies?.[cookieName];
+  return typeof token === 'string' && token.length > 0 ? token : null;
 }
 
 /**
- * Middleware que verifica o token JWT
- * Suporta tanto Authorization header quanto cookies do NextAuth
+ * Middleware que verifica o token JWT (Authorization header ou cookie precivox-access-token)
  */
 export const authenticate = async (
   req: AuthRequest,
@@ -57,31 +34,29 @@ export const authenticate = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
-    let decoded: any | null = null;
+    let decoded: jwt.JwtPayload | null = null;
+    const jwtSecret = getJwtSecret();
 
-    // Tentar autenticação via header Authorization primeiro
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
+      try {
+        decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
+      } catch {
+        decoded = null;
+      }
+    }
 
-      // Tenta validar com JWT_SECRET (backend) e, em fallback, com NEXTAUTH_SECRET
-      const { jwtSecret, nextAuthSecret } = resolveSecrets();
-      const secretsToTry = [jwtSecret, nextAuthSecret];
-      for (const secret of secretsToTry) {
+    if (!decoded) {
+      const cookieToken = tryAccessTokenCookie(req);
+      if (cookieToken) {
         try {
-          decoded = jwt.verify(token, secret) as any;
-          break;
-        } catch (e) {
+          decoded = jwt.verify(cookieToken, jwtSecret) as jwt.JwtPayload;
+        } catch {
           decoded = null;
         }
       }
     }
 
-    // Se não conseguiu via header, tentar via cookies do NextAuth
-    if (!decoded) {
-      decoded = await tryNextAuthCookie(req);
-    }
-
-    // Se ainda não conseguiu autenticar, retornar erro
     if (!decoded) {
       return res.status(401).json({
         error: 'Token não fornecido',
@@ -89,14 +64,13 @@ export const authenticate = async (
       });
     }
 
-    // Normaliza campos esperados
     req.user = {
-      id: decoded.id || decoded.sub,
-      email: decoded.email,
-      role: decoded.role || 'CLIENTE',
-      nome: decoded.nome || decoded.name || '',
+      id: (decoded.id as string) || (decoded.sub as string),
+      email: decoded.email as string,
+      role: (decoded.role as 'ADMIN' | 'GESTOR' | 'CLIENTE') || 'CLIENTE',
+      nome: (decoded.nome as string) || (decoded.name as string) || '',
     };
-    
+
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {

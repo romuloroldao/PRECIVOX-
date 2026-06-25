@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 import { generateToken } from '@/lib/jwt';
 import { getJwtSecret } from '@/lib/jwt-secret';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-export async function GET(_req: NextRequest) {
+/** GET /api/auth/jwt — JWT curto para chamadas ao backend (legado upload-smart etc.). */
+export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email || !(session.user as { id?: string }).id) {
-      return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
-    }
+    const auth = await requireApiSession(req);
+    if (isAuthResponse(auth)) return auth;
 
     try {
       getJwtSecret();
@@ -24,13 +22,13 @@ export async function GET(_req: NextRequest) {
       );
     }
 
-    const user = session.user as { id: string; email: string; role?: string; name?: string | null };
     const token = await generateToken(
       {
-        id: user.id,
-        email: user.email,
-        role: (user.role as 'ADMIN' | 'GESTOR' | 'CLIENTE') || 'CLIENTE',
-        nome: user.name || '',
+        id: auth.id,
+        email: auth.email,
+        role: auth.role,
+        nome: auth.nome ?? '',
+        tokenVersion: auth.tokenVersion ?? 0,
       },
       '1h',
     );

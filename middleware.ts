@@ -72,12 +72,14 @@ export function middleware(request: NextRequest) {
   // ============================================
   
   const publicApiRoutes = [
-    '/api/auth/[...nextauth]', // NextAuth
-    '/api/auth/token', // Emitir tokens (requer NextAuth session)
-    '/api/auth/refresh', // Renovar tokens
-    '/api/public/', // APIs públicas
-    '/api/stats/global', // Stats públicas
-    '/api/marketing/', // Leads comerciais (demo)
+    '/api/auth/login',
+    '/api/auth/refresh',
+    '/api/auth/logout',
+    '/api/auth/social/',
+    '/api/auth/otp/',
+    '/api/public/',
+    '/api/stats/global',
+    '/api/marketing/',
   ];
 
   if (publicApiRoutes.some(route => pathname.startsWith(route))) {

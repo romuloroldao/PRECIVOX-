@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
+import { getBaseUrl } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ async function fetchReferralStats(userId: string) {
     activeCode: activeCode
       ? {
           code: activeCode.code,
-          url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/signup?ref=${activeCode.code}`,
+          url: `${getBaseUrl()}/signup?ref=${activeCode.code}`,
           createdAt: activeCode.createdAt.toISOString(),
         }
       : null,

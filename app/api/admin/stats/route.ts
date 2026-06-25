@@ -7,7 +7,6 @@ export const fetchCache = 'force-no-store';
 
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/api/admin-auth';
-import { TokenManager } from '@/lib/token-manager';
 
 // Rate limiting simples em memória
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -33,31 +32,19 @@ function checkRateLimit(identifier: string): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    const accessCookie = request.cookies.get('__Secure-precivox-access-token') ? 'present' : 'missing';
-    const sessionCookie = request.cookies.get('__Secure-next-auth.session-token') ? 'present' : 'missing';
-    console.log('[admin/stats] cookies', { accessCookie, sessionCookie });
+    const adminResult = await requireAdmin(request);
 
-    // Auth: 1) TokenManager (cookie/header), 2) fallback NextAuth (getToken + Prisma)
-    let user = await TokenManager.validateRole('ADMIN', {
-      headers: request.headers,
-      cookies: request.cookies,
-    });
-    if (!user) {
-      const adminResult = await requireAdmin(request);
-      console.log('[admin/stats] requireAdmin result', { hasSession: adminResult.hasSession, userEmail: adminResult.user?.email });
-      const adminUser = adminResult.user;
-      user = adminUser
-        ? { id: adminUser.id, email: adminUser.email, role: adminUser.role, nome: adminUser.nome ?? undefined }
-        : null;
-    }
-
-    if (!user) {
-      console.warn('[admin/stats] unauthorized after TokenManager + requireAdmin');
+    if (!adminResult.user) {
       return NextResponse.json(
-        { error: 'Não autenticado', code: 'UNAUTHORIZED' },
-        { status: 401 },
+        {
+          error: adminResult.hasSession ? 'Acesso negado' : 'Não autenticado',
+          code: adminResult.hasSession ? 'FORBIDDEN' : 'UNAUTHORIZED',
+        },
+        { status: adminResult.hasSession ? 403 : 401 },
       );
     }
+
+    const user = adminResult.user;
     // Rate limiting por usuário
     const userId = user.id || user.email;
     if (!checkRateLimit(userId || 'anonymous')) {

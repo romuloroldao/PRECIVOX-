@@ -23,6 +23,6 @@ describe('jwt-secret', () => {
     process.env.JWT_SECRET = 'fallback-secret-change-in-production';
     delete process.env.NEXTAUTH_SECRET;
 
-    expect(() => getJwtSecret()).toThrow(/JWT_SECRET|NEXTAUTH_SECRET/);
+    expect(() => getJwtSecret()).toThrow(/JWT_SECRET/);
   });
 });

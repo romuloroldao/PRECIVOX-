@@ -1,57 +1,46 @@
-// Helpers para autenticação com NextAuth
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from './auth';
+/**
+ * Helpers de autenticação server-side (RSC, layouts, redirects).
+ * Autoridade: TokenManager (cookies precivox-*), sem NextAuth.
+ */
 import { redirect } from 'next/navigation';
 import { getDashboardUrl } from './redirect';
+import { getServerSessionUser } from './api-auth';
+import type { SessionUser } from '@/lib/token-manager';
 
 /**
- * Obtém a sessão do servidor
+ * Obtém usuário autenticado no servidor (null se não logado).
  */
-export async function getSession() {
-  return await getServerSession(authOptions);
+export async function getSession(): Promise<SessionUser | null> {
+  return getServerSessionUser();
 }
 
 /**
- * Verifica se o usuário está autenticado (server-side)
+ * Exige autenticação; redireciona para /login se ausente.
  */
-export async function requireAuth() {
-  const session = await getSession();
-  
-  if (!session || !session.user) {
-    redirect('/login');
-  }
-  
-  return session;
+export async function requireAuth(): Promise<SessionUser> {
+  const user = await getServerSessionUser();
+  if (!user) redirect('/login');
+  return user;
 }
 
 /**
- * Verifica se o usuário tem uma role específica
+ * Exige uma ou mais roles; redireciona para dashboard apropriado se negado.
  */
-export async function requireRole(role: string | string[]) {
-  const session = await requireAuth();
-  const userRole = (session.user as any).role;
-  
+export async function requireRole(role: string | string[]): Promise<SessionUser> {
+  const user = await requireAuth();
   const allowedRoles = Array.isArray(role) ? role : [role];
-  
-  if (!allowedRoles.includes(userRole)) {
-    // Redirecionar para o dashboard apropriado
-    redirect(getDashboardUrl(userRole));
+
+  if (!allowedRoles.includes(user.role)) {
+    redirect(getDashboardUrl(user.role));
   }
-  
-  return session;
+
+  return user;
 }
 
-/**
- * Verifica se o usuário é admin
- */
-export async function requireAdmin() {
-  return await requireRole('ADMIN');
+export async function requireAdmin(): Promise<SessionUser> {
+  return requireRole('ADMIN');
 }
 
-/**
- * Verifica se o usuário é gestor ou admin
- */
-export async function requireGestor() {
-  return await requireRole(['ADMIN', 'GESTOR']);
+export async function requireGestor(): Promise<SessionUser> {
+  return requireRole(['ADMIN', 'GESTOR']);
 }
-

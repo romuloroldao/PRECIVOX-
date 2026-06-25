@@ -6,7 +6,15 @@
  * Rotas públicas (login/register) passam sem checagem.
  */
 
-const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/users/login', '/users/register'];
+const PUBLIC_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/users/login',
+  '/users/register',
+  '/auth/social/callback',
+  '/auth/otp/request',
+  '/auth/otp/verify',
+];
 
 /**
  * @param {import('express').Request} req - req.jwtPayload (validateJWT), req.db (dbMiddleware)

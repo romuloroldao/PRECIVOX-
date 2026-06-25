@@ -94,11 +94,10 @@
 
 - Responsável por **validar access tokens** e aplicar o kill switch.
 - Fluxo:
-  1. Tenta ler `Authorization: Bearer <token>`:
-     - Tenta validar com `JWT_SECRET`, depois com `NEXTAUTH_SECRET` (compatibilidade NextAuth).
-  2. Se falhar, tenta cookie de sessão do NextAuth (modo legado).
-  3. Se ainda assim falhar → `401 "Token não fornecido"`.
-  4. Se JWT válido:
+  1. Tenta ler `Authorization: Bearer <token>` ou cookie `precivox-access-token`:
+     - Valida com `JWT_SECRET` (TokenManager / cookies `precivox-*`).
+  2. Se falhar → `401 "Token não fornecido"`.
+  3. Se JWT válido:
      - Extrai `userId = decoded.id || decoded.sub`.
      - Extrai `tokenVersion = decoded.tokenVersion ?? 0`.
      - Busca `dbUser` via Prisma:

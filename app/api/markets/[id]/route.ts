@@ -1,12 +1,7 @@
 // API Route: Detalhes, atualizar e deletar mercado específico
-import { getServerSession } from 'next-auth';
-
-
-import { authOptions } from '@/lib/auth';
-
+import { NextRequest, NextResponse } from 'next/server';
+import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
-
-import { NextResponse } from 'next/server';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
@@ -14,22 +9,16 @@ export const fetchCache = 'force-no-store';
 
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireApiSession(request);
+    if (isAuthResponse(auth)) return auth;
 
     const mercadoId = params.id;
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
+    const userRole = auth.role;
+    const userId = auth.id;
 
     const mercado = await prisma.mercados.findUnique({
       where: { id: mercadoId },
@@ -86,22 +75,16 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireApiSession(request);
+    if (isAuthResponse(auth)) return auth;
 
     const mercadoId = params.id;
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
+    const userRole = auth.role;
+    const userId = auth.id;
 
     const mercado = await prisma.mercados.findUnique({
       where: { id: mercadoId }
@@ -218,29 +201,14 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireApiSession(request, { roles: ['ADMIN'] });
+    if (isAuthResponse(auth)) return auth;
 
     const mercadoId = params.id;
-    const userRole = (session.user as any).role;
-
-    // Apenas ADMIN pode deletar mercados
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json(
-        { success: false, error: 'Apenas administradores podem deletar mercados' },
-        { status: 403 }
-      );
-    }
 
     const mercado = await prisma.mercados.findUnique({
       where: { id: mercadoId }

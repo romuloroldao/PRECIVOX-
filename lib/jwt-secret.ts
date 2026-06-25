@@ -1,6 +1,6 @@
 /**
  * Resolução centralizada do segredo JWT.
- * Em produção não há fallback inseguro — falha se JWT_SECRET/NEXTAUTH_SECRET ausentes.
+ * Em produção não há fallback inseguro — falha se JWT_SECRET ausente.
  */
 
 import { getJwtSecret as getJwtSecretCjs } from './jwt-secret.cjs';

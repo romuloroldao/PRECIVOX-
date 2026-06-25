@@ -171,7 +171,26 @@ class AuthClient {
   }
 
   /**
-   * Emite tokens após login (chamado após NextAuth login)
+   * Persiste tokens após login nativo (e-mail/senha, social ou OTP).
+   * Cookies httpOnly são setados pelo BFF; sessionStorage alimenta authenticatedFetch.
+   */
+  persistLoginTokens(tokens: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt?: string;
+  }): void {
+    const expiresAt =
+      tokens.expiresAt ??
+      new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    this.saveTokens({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt,
+    });
+  }
+
+  /**
+   * Re-emite par de tokens quando já autenticado (POST /api/auth/token).
    */
   async issueTokens(): Promise<TokenPair | null> {
     try {
@@ -239,7 +258,7 @@ export async function authenticatedFetch(
   
   return fetch(url, {
     ...options,
-    credentials: 'include', // Sempre incluir cookies (NextAuth fallback)
+    credentials: 'include',
     headers: {
       ...headers,
       ...options?.headers,
@@ -251,6 +270,14 @@ export async function authenticatedFetch(
  * Hook para usar autenticação no React
  */
 export function useAuth() {
+  const persistLoginTokens = (tokens: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt?: string;
+  }) => {
+    authClient.persistLoginTokens(tokens);
+  };
+
   const issueTokens = async () => {
     return await authClient.issueTokens();
   };
@@ -264,6 +291,7 @@ export function useAuth() {
   };
 
   return {
+    persistLoginTokens,
     issueTokens,
     logout,
     getAccessToken,

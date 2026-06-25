@@ -41,16 +41,6 @@ export async function POST(request: NextRequest) {
       message: 'Logout realizado com sucesso',
     });
 
-    // NextAuth — mesmos nomes que lib/auth.ts (httpOnly no session token)
-    expireCookie(response, `${cookiePrefix}next-auth.session-token`, { httpOnly: true });
-    expireCookie(response, 'next-auth.session-token', { httpOnly: true });
-    expireCookie(response, '__Secure-next-auth.session-token', { httpOnly: true });
-
-    expireCookie(response, 'next-auth.csrf-token');
-    expireCookie(response, '__Host-next-auth.csrf-token');
-    expireCookie(response, 'next-auth.callback-url');
-    expireCookie(response, '__Secure-next-auth.callback-url');
-
     expireCookie(response, `${cookiePrefix}precivox-access-token`, { httpOnly: true });
     expireCookie(response, 'precivox-access-token', { httpOnly: true });
     expireCookie(response, '__Secure-precivox-access-token', { httpOnly: true });

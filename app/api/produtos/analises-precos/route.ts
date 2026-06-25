@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getOptionalApiSession } from '@/lib/api-auth';
 import {
   calcularRota,
   calcularScoreCustoBeneficio,
@@ -60,16 +59,16 @@ export async function GET(request: NextRequest) {
     console.log(`[${requestId}] GET /api/produtos/analises-precos - Iniciando`);
 
     // Verificar autenticação - permitir acesso público com dados limitados
-    const session = await getServerSession(authOptions);
+    const user = await getOptionalApiSession(request);
 
     let userRole: string | null = null;
     let userId: string | null = null;
     let isAuthenticated = false;
 
-    if (session && session.user) {
+    if (user) {
       isAuthenticated = true;
-      userRole = (session.user as any).role;
-      userId = (session.user as any).id;
+      userRole = user.role;
+      userId = user.id;
 
       // Permite acesso para ADMIN, GESTOR e CLIENTE
       const allowedRoles = ['ADMIN', 'GESTOR', 'CLIENTE'];

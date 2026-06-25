@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getBaseUrl } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           code: existingReferral.code,
-          url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/signup?ref=${existingReferral.code}`,
+          url: `${getBaseUrl()}/signup?ref=${existingReferral.code}`,
           createdAt: existingReferral.createdAt.toISOString(),
         },
       });
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         code: referral.code,
-        url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/signup?ref=${referral.code}`,
+        url: `${getBaseUrl()}/signup?ref=${referral.code}`,
         createdAt: referral.createdAt.toISOString(),
       },
     });

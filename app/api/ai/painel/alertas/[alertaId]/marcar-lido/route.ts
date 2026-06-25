@@ -1,35 +1,22 @@
 // API Route: Marcar alerta como lido
-import { getServerSession } from 'next-auth';
-
-
-import { authOptions } from '@/lib/auth';
-
+import { NextRequest, NextResponse } from 'next/server';
+import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 
-import { NextResponse } from 'next/server';
-
-// Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { alertaId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireApiSession(request);
+    if (isAuthResponse(auth)) return auth;
 
     const alertaId = params.alertaId;
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
+    const userRole = auth.role;
+    const userId = auth.id;
 
     // Buscar alerta
     const alerta = await prisma.alertas_ia.findUnique({

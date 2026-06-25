@@ -7,24 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model accounts {
-  id                  String  @id
-  userId              String  @map("user_id")
-  type                String
-  provider            String
-  provider_account_id String
-  refresh_token       String?
-  access_token        String?
-  expires_at          Int?
-  token_type          String?
-  scope               String?
-  id_token            String?
-  session_state       String?
-  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, provider_account_id])
-}
-
 model acoes_gestor {
   id                String       @id
   mercadoId         String
@@ -268,6 +250,8 @@ model produtos {
   marca                                                                      String?
   unidadeMedida                                                              String?
   imagem                                                                     String?
+  imagemThumb                                                                String?                 @map("imagem_thumb")
+  imagemStatus                                                               ImagemStatus?           @map("imagem_status")
   ativo                                                                      Boolean                 @default(true)
   dataCriacao                                                                DateTime                @default(now())
   dataAtualizacao                                                            DateTime
@@ -295,10 +279,37 @@ model produtos {
   vendas                                                                     vendas[]
   itens_lista                                                                itens_lista[]
   savingsHistory                                                             SavingsHistory[]
+  produtoImagem                                                              produto_imagens?
 
   @@index([nomeChave])
   @@index([chaveInsight])
   @@index([skuNacional])
+  @@index([imagemStatus])
+}
+
+model produto_imagens {
+  id             String       @id @default(uuid())
+  produtoId      String       @unique @map("produto_id")
+  status         ImagemStatus @default(PENDENTE)
+  autoUrl        String?      @map("auto_url")
+  autoThumbUrl   String?      @map("auto_thumb_url")
+  autoHash       String?      @map("auto_hash")
+  autoOrigem     String?      @map("auto_origem")
+  autoFonteUrl   String?      @map("auto_fonte_url")
+  autoEan        String?      @map("auto_ean")
+  manualUrl      String?      @map("manual_url")
+  manualThumbUrl String?      @map("manual_thumb_url")
+  manualHash     String?      @map("manual_hash")
+  manualOrigem   String?      @map("manual_origem")
+  tentativas     Int          @default(0)
+  ultimoErro     String?      @map("ultimo_erro")
+  criadoEm       DateTime     @default(now()) @map("criado_em")
+  atualizadoEm   DateTime     @updatedAt @map("atualizado_em")
+
+  produtos produtos @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("produto_imagens")
 }
 
 model produtos_relacionados {
@@ -317,13 +328,9 @@ model produtos_relacionados {
   @@index([produtoId, confianca])
 }
 
-model sessions {
-  id           String   @id
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
+// ============================================
+// Login Social + OTP (Auth Hardening v7.0)
+// ============================================
 
 model RefreshToken {
   id        String    @id @default(uuid())
@@ -356,6 +363,70 @@ model AuthAuditLog {
   @@index([event, createdAt])
   @@index([createdAt])
   @@map("auth_audit_logs")
+}
+
+// ============================================
+// Login Social + OTP (Auth Hardening v7.0)
+// ============================================
+
+enum AuthProvider {
+  GOOGLE
+  FACEBOOK
+  APPLE
+  PHONE
+}
+
+enum OtpChannel {
+  SMS
+  WHATSAPP
+}
+
+/// Single Source of Truth para identidades externas atreladas a um User.
+/// A chave forte é (provider, providerSub) — NUNCA o e-mail, pois o Apple
+/// Private Relay (Hide My Email) altera o e-mail mas mantém o `sub` estável.
+model SocialIdentity {
+  id                   String       @id @default(uuid())
+  userId               String       @map("user_id")
+  provider             AuthProvider
+  providerSub          String       @map("provider_sub") // claim `sub` (OIDC) ou telefone E.164 (PHONE)
+  email                String? // pode ser relay (Apple) ou null
+  emailVerified        Boolean      @default(false) @map("email_verified")
+  isPrivateRelay       Boolean      @default(false) @map("is_private_relay") // Apple Hide My Email
+  displayName          String?      @map("display_name")
+  avatarUrl            String?      @map("avatar_url")
+  // Tokens DO PROVEDOR (não confundir com nossos JWT) — úteis p/ integrações futuras
+  providerAccessToken  String?      @map("provider_access_token") @db.Text
+  providerRefreshToken String?      @map("provider_refresh_token") @db.Text
+  providerTokenExpires DateTime?    @map("provider_token_expires")
+  rawProfile           Json?        @map("raw_profile")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSub])
+  @@index([userId])
+  @@index([email])
+  @@map("social_identities")
+}
+
+/// Desafio OTP por telefone. O código é guardado apenas como hash (SHA-256).
+model PhoneOtpChallenge {
+  id          String     @id @default(uuid())
+  phone       String // formato E.164 (+5511...)
+  codeHash    String     @map("code_hash") // sha256(code) — nunca em claro
+  channel     OtpChannel @default(SMS)
+  attempts    Int        @default(0)
+  maxAttempts Int        @default(5) @map("max_attempts")
+  consumedAt  DateTime?  @map("consumed_at")
+  expiresAt   DateTime   @map("expires_at") // ex.: now + 5 min
+  ip          String?
+  userAgent   String?    @map("user_agent")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  @@index([phone, expiresAt])
+  @@index([expiresAt])
+  @@map("phone_otp_challenges")
 }
 
 model unidades {
@@ -392,13 +463,14 @@ model User {
   senhaHash                 String?                    @map("senha_hash")
   role                      Role                       @default(CLIENTE)
   tokenVersion              Int                        @default(0) @map("token_version")
+  phone                     String?                    @unique @map("telefone")
+  phoneVerified             DateTime?                  @map("phone_verified")
   dataCriacao               DateTime                   @default(now()) @map("data_criacao")
   dataAtualizacao           DateTime                   @map("data_atualizacao")
   ultimoLogin               DateTime?                  @map("ultimo_login")
-  accounts                  accounts[]
+  socialIdentities          SocialIdentity[]
   acoes_gestor              acoes_gestor[]
   mercados                  mercados[]
-  sessions                  sessions[]
   refreshTokens             RefreshToken[]
   userStreak                UserStreak?
   savingsHistory            SavingsHistory[]
@@ -430,6 +502,13 @@ enum StatusImportacao {
   CONCLUIDO
   FALHA
   PARCIAL
+}
+
+enum ImagemStatus {
+  PENDENTE
+  AUTOMATICA
+  MANUAL
+  INVALIDA
 }
 
 /// Origem do preço no estoque (truth layer)

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { getRotaMultiMercadoStats } from '@/lib/rota-multi-mercado-stats';
 
@@ -8,14 +7,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user as { id?: string; role?: string } | undefined;
-    if (!user?.id) {
-      return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
-    }
-    if (user.role !== 'GESTOR' && user.role !== 'ADMIN') {
-      return NextResponse.json({ success: false, error: 'Sem permissão' }, { status: 403 });
-    }
+    const auth = await requireApiSession(req, { roles: ['ADMIN', 'GESTOR'] });
+    if (isAuthResponse(auth)) return auth;
+    const user = auth;
 
     let mercadoId = req.nextUrl.searchParams.get('mercadoId');
     if (user.role === 'GESTOR') {

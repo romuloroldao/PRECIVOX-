@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
         categoria: true,
         marca: true,
         imagem: true,
+        imagemThumb: true,
+        imagemStatus: true,
       },
       take: 10,
       orderBy: {
@@ -66,6 +68,8 @@ export async function GET(request: NextRequest) {
       category: produto.categoria || '',
       marca: produto.marca || '',
       imagem: produto.imagem,
+      imagemThumb: produto.imagemThumb,
+      imagemStatus: produto.imagemStatus,
     }));
 
     return NextResponse.json({

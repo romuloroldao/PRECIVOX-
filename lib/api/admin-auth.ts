@@ -1,11 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getToken, decode } from 'next-auth/jwt';
-import { prisma } from '@/lib/prisma';
-
-const SESSION_COOKIE =
-  process.env.NODE_ENV === 'production'
-    ? '__Secure-next-auth.session-token'
-    : 'next-auth.session-token';
+import { TokenManager } from '@/lib/token-manager';
 
 export type AdminUser = {
   id: string;
@@ -16,120 +10,66 @@ export type AdminUser = {
 
 export type AdminAuthResult = {
   user: AdminUser | null;
-  /**
-   * true  -> havia alguma sessão NextAuth (email presente), mas não é ADMIN
-   * false -> nenhuma sessão válida (não autenticado)
-   */
+  /** true se havia sessão válida, mesmo sem role ADMIN */
   hasSession: boolean;
 };
 
-/**
- * Helper centralizado para autenticação/autorização ADMIN.
- *
- * Fluxo:
- * 1) Tenta validar via TokenManager (Auth V2) com role ADMIN.
- * 2) Fallback: usa sessão NextAuth (JWT) apenas para identificar email.
- * 3) Busca usuário no banco (case-insensitive) e valida role === ADMIN.
- *
- * Retorna:
- * - { user: AdminUser, hasSession: true }  -> autorizado como ADMIN
- * - { user: null, hasSession: false }      -> não autenticado
- * - { user: null, hasSession: true }       -> autenticado, mas sem permissão (não ADMIN)
- */
+function toAdminUser(user: {
+  id: string;
+  email: string;
+  role: 'ADMIN' | 'GESTOR' | 'CLIENTE';
+  nome?: string | null;
+}): AdminUser {
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    nome: user.nome ?? null,
+  };
+}
+
+async function sessionFromRequest(request: NextRequest) {
+  return TokenManager.validateSession({
+    headers: request.headers,
+    cookies: request.cookies,
+  });
+}
+
+/** Autenticação/autorização ADMIN via TokenManager (cookies precivox-*). */
 export async function requireAdmin(request: NextRequest): Promise<AdminAuthResult> {
   try {
-    const secret = process.env.NEXTAUTH_SECRET;
-    // getToken() falha em Route Handlers porque next-auth espera req.cookies como Map/getAll;
-    // NextRequest.cookies é ReadonlyRequestCookies com apenas .get(name).
-    let token = await getToken({
-      req: request as any,
-      secret,
-    });
-    if (!token) {
-      const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
-      if (sessionToken && secret) {
-        token = await decode({ token: sessionToken, secret });
-      }
-    }
-
-    if (!token?.email) {
-      return { user: null, hasSession: false };
-    }
-
-    const email = token.email as string;
-
-    // Banco é autoridade para role (case-insensitive por segurança)
-    const dbUser = await prisma.user.findFirst({
-      where: {
-        email: {
-          equals: email,
-          mode: 'insensitive',
-        },
-      },
-      select: { id: true, email: true, role: true, nome: true },
+    const admin = await TokenManager.validateRole('ADMIN', {
+      headers: request.headers,
+      cookies: request.cookies,
     });
 
-    if (!dbUser || dbUser.role !== 'ADMIN') {
+    if (admin) {
+      return { user: toAdminUser(admin), hasSession: true };
+    }
+
+    const session = await sessionFromRequest(request);
+    if (session) {
       return { user: null, hasSession: true };
     }
 
-    return {
-      user: {
-        id: dbUser.id,
-        email: dbUser.email,
-        role: dbUser.role as 'ADMIN' | 'GESTOR' | 'CLIENTE',
-        nome: dbUser.nome,
-      },
-      hasSession: true,
-    };
+    return { user: null, hasSession: false };
   } catch (error) {
     console.error('[requireAdmin] auth error:', error);
     return { user: null, hasSession: false };
   }
 }
 
-/**
- * Helper que autentica qualquer usuário logado (ADMIN, GESTOR ou CLIENTE).
- * Use quando a rota precisa de autenticação mas a verificação de role é feita depois.
- */
+/** Qualquer usuário autenticado (ADMIN, GESTOR ou CLIENTE). */
 export async function requireAuth(request: NextRequest): Promise<AdminAuthResult> {
   try {
-    const secret = process.env.NEXTAUTH_SECRET;
-    let token = await getToken({ req: request as any, secret });
-    if (!token) {
-      const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
-      if (sessionToken && secret) {
-        token = await decode({ token: sessionToken, secret });
-      }
-    }
-
-    if (!token?.email) {
+    const session = await sessionFromRequest(request);
+    if (!session) {
       return { user: null, hasSession: false };
     }
 
-    const email = token.email as string;
-
-    const dbUser = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
-      select: { id: true, email: true, role: true, nome: true },
-    });
-
-    if (!dbUser) {
-      return { user: null, hasSession: true };
-    }
-
-    return {
-      user: {
-        id: dbUser.id,
-        email: dbUser.email,
-        role: dbUser.role as 'ADMIN' | 'GESTOR' | 'CLIENTE',
-        nome: dbUser.nome,
-      },
-      hasSession: true,
-    };
+    return { user: toAdminUser(session), hasSession: true };
   } catch (error) {
     console.error('[requireAuth] auth error:', error);
     return { user: null, hasSession: false };
   }
 }
-

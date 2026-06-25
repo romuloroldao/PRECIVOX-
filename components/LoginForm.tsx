@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginInput } from '@/lib/validations';
-import { getSession, signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/Logo';
 import { safeCallbackUrl } from '@/lib/safe-callback-url';
 import { getDashboardUrl } from '@/lib/redirect';
+import SocialLoginButtons from '@/components/auth/SocialLoginButtons';
+import PhoneOtpLogin from '@/components/auth/PhoneOtpLogin';
+import { authClient } from '@/lib/auth-client';
 
 export default function LoginForm({ onShowRegister }: { onShowRegister: () => void }) {
   const router = useRouter();
@@ -16,6 +18,7 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
   const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'));
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [usePhone, setUsePhone] = useState(false);
 
   const {
     register,
@@ -30,60 +33,53 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
     setErrorMessage('');
 
     try {
-      const result = await signIn('credentials', {
-        email: data.email,
-        senha: data.senha,
-        callbackUrl,
-        redirect: false,
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: data.email, senha: data.senha }),
       });
 
-      if (result?.ok) {
-        await router.refresh();
-        const session = await getSession();
-        const role = (session?.user as { role?: string })?.role;
+      const json = await res.json().catch(() => ({}));
 
-        // Evita enviar gestor/admin para callback padrão (/cliente/busca)
-        if (role === 'GESTOR' || role === 'ADMIN') {
-          router.push(getDashboardUrl(role));
-          return;
-        }
-
-        const next = typeof result.url === 'string' && result.url ? result.url : callbackUrl;
-        router.push(next);
-        return;
-      }
-
-      if (result?.error) {
-        const url = typeof result.url === 'string' ? result.url : '';
-        const isEmailNotVerified = url.includes('EmailNotVerified');
-
-        if (isEmailNotVerified) {
-          setErrorMessage('E-mail ainda não confirmado. Redirecionando para você poder reenviar o link de confirmação...');
-          router.push('/login?error=EmailNotVerified');
-          setIsLoading(false);
-          return;
-        }
-
-        if (result.error === 'CredentialsSignin') {
-          setErrorMessage('E-mail ou senha incorretos. Verifique os dados e tente novamente.');
-        } else {
-          setErrorMessage('Não foi possível entrar. Tente novamente ou use "Esqueci minha senha" se precisar redefinir.');
-        }
+      if (res.status === 403 && json.code === 'EMAIL_NOT_VERIFIED') {
+        setErrorMessage(
+          'E-mail ainda não confirmado. Redirecionando para você poder reenviar o link de confirmação...'
+        );
+        const emailParam = encodeURIComponent(json.email || data.email);
+        router.push(`/login?error=EmailNotVerified&email=${emailParam}`);
         setIsLoading(false);
         return;
       }
 
-      if (result?.url) {
-        router.push(result.url);
+      if (!res.ok || !json.success) {
+        setErrorMessage(
+          json.error || 'Não foi possível entrar. Tente novamente ou use "Esqueci minha senha".'
+        );
+        setIsLoading(false);
+        return;
       }
+
+      if (json.accessToken && json.refreshToken) {
+        authClient.persistLoginTokens({
+          accessToken: json.accessToken,
+          refreshToken: json.refreshToken,
+          expiresAt: json.expiresAt,
+        });
+      }
+
+      await router.refresh();
+
+      const role = json.user?.role as string | undefined;
+      if (role === 'GESTOR' || role === 'ADMIN') {
+        router.push(getDashboardUrl(role));
+        return;
+      }
+
+      router.push(callbackUrl);
     } catch (error) {
       console.error('Erro no login:', error);
-      const mensagem = error instanceof Error ? error.message : '';
-      if (mensagem && /EmailNotVerified/i.test(mensagem)) {
-        setErrorMessage('E-mail ainda não confirmado. Confira sua caixa de entrada.');
-      } else {
-        setErrorMessage('Não foi possível concluir o login agora. Tente novamente em instantes.');
-      }
+      setErrorMessage('Não foi possível concluir o login agora. Tente novamente em instantes.');
       setIsLoading(false);
     }
   };
@@ -111,36 +107,46 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
           )}
 
           {/* Botões de Login Social */}
-          <div className="space-y-3 mb-6">
-            <button 
+          <div className="mb-6">
+            <SocialLoginButtons callbackUrl={callbackUrl} disabled={isLoading} />
+          </div>
+
+          {/* Divisor */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-3 bg-white text-gray-500">ou</span>
+            </div>
+          </div>
+
+          {/* Alternância e-mail / telefone */}
+          <div className="flex gap-2 mb-4 text-sm">
+            <button
               type="button"
-              onClick={() => signIn('google', { callbackUrl })}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+              onClick={() => setUsePhone(false)}
+              className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                !usePhone ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-500 hover:bg-gray-50'
+              }`}
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              Login com Google
+              E-mail e senha
             </button>
-            <button 
+            <button
               type="button"
-              onClick={() => signIn('facebook', { callbackUrl })}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+              onClick={() => setUsePhone(true)}
+              className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                usePhone ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-500 hover:bg-gray-50'
+              }`}
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              Login com Facebook
+              Telefone (SMS)
             </button>
           </div>
 
+          {usePhone && <PhoneOtpLogin callbackUrl={callbackUrl} />}
+
           {/* Formulário de Login */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className={`space-y-4 ${usePhone ? 'hidden' : ''}`}>
             {/* Campo Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">

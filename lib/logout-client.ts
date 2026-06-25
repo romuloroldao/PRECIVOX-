@@ -1,10 +1,8 @@
 /**
- * Logout completo: limpa tokens locais, chama API que invalida cookies (domain/path corretos),
- * encerra sessão NextAuth e força navegação completa para evitar estado "autenticado" em cache no React.
+ * Logout completo: limpa tokens locais, chama API que invalida cookies (domain/path corretos)
+ * e força navegação completa para evitar estado "autenticado" em cache no React.
  */
 'use client';
-
-import { signOut } from 'next-auth/react';
 
 export async function fullLogout(redirectTo: string = '/login'): Promise<void> {
   try {
@@ -26,12 +24,6 @@ export async function fullLogout(redirectTo: string = '/login'): Promise<void> {
       method: 'POST',
       credentials: 'include',
     });
-  } catch {
-    /* noop */
-  }
-
-  try {
-    await signOut({ redirect: false });
   } catch {
     /* noop */
   }

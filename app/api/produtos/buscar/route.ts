@@ -14,6 +14,7 @@ import {
   buildEstoqueWhereComparativo,
   formatarOfertaComparativa,
 } from '@/lib/produtos-busca-comparativo';
+import { marcarPendentesEmLote } from '@/lib/imagens/produto-imagem-service';
 import {
   CAP_RANKING,
   ordenarPorRankingHibrido,
@@ -180,6 +181,14 @@ export async function GET(request: NextRequest) {
         dataOut = [...enriched, ...tail];
       }
 
+      const semImagemIdsComp = dataOut
+        .filter((row) => !row.imagem && row.produto?.id)
+        .map((row) => row.produto.id)
+        .slice(0, 50);
+      if (semImagemIdsComp.length) {
+        void marcarPendentesEmLote(semImagemIdsComp);
+      }
+
       return NextResponse.json(
         {
           success: true,
@@ -245,6 +254,8 @@ export async function GET(request: NextRequest) {
         categoria: produto.categoria,
         marca: produto.marca,
         imagem: produto.imagem,
+        imagemThumb: produto.imagemThumb,
+        imagemStatus: produto.imagemStatus,
         truth: estoque
           ? {
               fonte: estoque.fonte ?? 'UPLOAD_GESTOR',
@@ -372,6 +383,14 @@ export async function GET(request: NextRequest) {
         return prova ? { ...row, provaSocial: prova } : row;
       });
       dataOut = [...enriched, ...tail];
+    }
+
+    const semImagemIds = dataOut
+      .filter((row) => !row.imagem && (row.produto as { id?: string })?.id)
+      .map((row) => (row.produto as { id: string }).id)
+      .slice(0, 50);
+    if (semImagemIds.length) {
+      void marcarPendentesEmLote(semImagemIds);
     }
 
     return NextResponse.json(

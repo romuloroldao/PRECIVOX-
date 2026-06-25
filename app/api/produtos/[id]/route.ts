@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { computeCamposChaveProduto } from '@/lib/produtos-chaves';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 import { z } from 'zod';
 
 // Forçar renderização dinâmica
@@ -32,25 +31,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireApiSession(request, { roles: ['ADMIN', 'GESTOR'] });
+    if (isAuthResponse(auth)) return auth;
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
-
-    // Apenas ADMIN e GESTOR têm acesso
-    if (userRole !== 'ADMIN' && userRole !== 'GESTOR') {
-      return NextResponse.json(
-        { success: false, error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
+    const userRole = auth.role;
+    const userId = auth.id;
 
     const produto = await prisma.produtos.findUnique({
       where: { id: params.id },
@@ -113,25 +98,11 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireApiSession(request, { roles: ['ADMIN', 'GESTOR'] });
+    if (isAuthResponse(auth)) return auth;
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
-
-    // Apenas ADMIN e GESTOR têm acesso
-    if (userRole !== 'ADMIN' && userRole !== 'GESTOR') {
-      return NextResponse.json(
-        { success: false, error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
+    const userRole = auth.role;
+    const userId = auth.id;
 
     // Verificar se produto existe
     const produtoExistente = await prisma.produtos.findUnique({
@@ -330,25 +301,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireApiSession(request, { roles: ['ADMIN', 'GESTOR'] });
+    if (isAuthResponse(auth)) return auth;
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      );
-    }
-
-    const userRole = (session.user as any).role;
-    const userId = (session.user as any).id;
+    const userRole = auth.role;
+    const userId = auth.id;
 
     // ADMIN e GESTOR podem excluir (com permissões)
-    if (userRole !== 'ADMIN' && userRole !== 'GESTOR') {
-      return NextResponse.json(
-        { success: false, error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
 
     // Verificar se produto existe
     const produto = await prisma.produtos.findUnique({

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
 import RegisterModal from '@/components/RegisterModal';
 import { safeCallbackUrl } from '@/lib/safe-callback-url';
 

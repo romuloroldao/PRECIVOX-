@@ -12,7 +12,16 @@
 import jwt from 'jsonwebtoken';
 import { getJwtSecret } from '../lib/jwt-secret-loader.js';
 
-const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/users/login', '/users/register'];
+const PUBLIC_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/users/login',
+  '/users/register',
+  // Login social / OTP: pré-autenticação (a validação ocorre no provedor/OTP)
+  '/auth/social/callback',
+  '/auth/otp/request',
+  '/auth/otp/verify',
+];
 
 /**
  * @param {import('express').Request} req

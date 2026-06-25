@@ -13,6 +13,7 @@ import { checkTokenVersion } from './middleware/checkTokenVersion.js';
 
 // Importar rotas
 import userRoutes from './routes/users.js';
+import authSocialRoutes from './routes/auth-social.js';
 import marketRoutes from './routes/markets.js';
 import productRoutes from './routes/products.js';
 import aiRoutes from './routes/ai.js';
@@ -168,6 +169,8 @@ app.use('/api/v1', validateJWT);
 app.use('/api/v1', checkTokenVersion);
 app.use('/api/v1', v1Limiter);
 app.use('/api/v1/users', userRoutes);
+// Login social + OTP (deve vir ANTES de userRoutes no mesmo prefixo /api/v1/auth)
+app.use('/api/v1/auth', authSocialRoutes);
 app.use('/api/v1/auth', userRoutes);
 app.use('/api/v1/markets', marketRoutes);
 app.use('/api/v1/products', productRoutes);
