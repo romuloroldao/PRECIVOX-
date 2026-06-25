@@ -75,7 +75,16 @@ export function buildProdutoWhereFromBuscaParams(params: BuscaQueryParams): {
   }
 
   if (categoria) {
-    andClauses.push({ categoria });
+    // Aceita grafias equivalentes mescladas no filtro de categorias (separadas por vírgula).
+    const valores = categoria
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+    if (valores.length > 1) {
+      andClauses.push({ categoria: { in: valores } });
+    } else if (valores.length === 1) {
+      andClauses.push({ categoria: valores[0] });
+    }
   }
 
   if (marca && !busca) {

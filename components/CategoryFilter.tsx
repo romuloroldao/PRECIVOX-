@@ -1,25 +1,41 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useCategories } from '@/app/hooks/useCategories';
-import { X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Chip } from '@/components/ui';
 
 interface CategoryFilterProps {
   categoriaSelecionada: string;
   onCategoriaChange: (categoria: string) => void;
 }
 
+/** Quantidade de categorias exibidas antes de "Ver mais". */
+const VISIVEIS_PADRAO = 8;
+
 export function CategoryFilter({ categoriaSelecionada, onCategoriaChange }: CategoryFilterProps) {
   const { categorias, loading } = useCategories();
+  const [expandido, setExpandido] = useState(false);
+
+  // Mantém a categoria selecionada sempre visível, mesmo fora do top inicial.
+  const ordenadas = useMemo(() => {
+    if (!categoriaSelecionada) return categorias;
+    const idx = categorias.findIndex((c) => c.valor === categoriaSelecionada);
+    if (idx < 0 || idx < VISIVEIS_PADRAO) return categorias;
+    const copia = [...categorias];
+    const [sel] = copia.splice(idx, 1);
+    copia.unshift(sel);
+    return copia;
+  }, [categorias, categoriaSelecionada]);
 
   if (loading) {
     return (
       <div className="mb-6">
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="h-10 w-32 bg-gray-200 rounded-lg animate-pulse flex-shrink-0"
+              className="h-10 w-28 flex-shrink-0 animate-pulse rounded-full bg-slate-200"
             />
           ))}
         </div>
@@ -27,81 +43,62 @@ export function CategoryFilter({ categoriaSelecionada, onCategoriaChange }: Cate
     );
   }
 
+  if (categorias.length === 0) return null;
+
+  const visiveis = expandido ? ordenadas : ordenadas.slice(0, VISIVEIS_PADRAO);
+  const restantes = ordenadas.length - VISIVEIS_PADRAO;
+
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900">Categorias</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">Categorias</h2>
         {categoriaSelecionada && (
           <button
             onClick={() => onCategoriaChange('')}
-            className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+            className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
             Limpar
           </button>
         )}
       </div>
 
-      {/* Desktop: Grid horizontal fixo */}
-      <div className="hidden md:flex flex-wrap gap-2">
-        <button
-          onClick={() => onCategoriaChange('')}
-          className={cn(
-            'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-            !categoriaSelecionada
-              ? 'bg-precivox-blue text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          )}
-        >
+      <div className="flex flex-wrap gap-2">
+        <Chip selected={!categoriaSelecionada} onClick={() => onCategoriaChange('')}>
           Todas
-        </button>
-        {categorias.map((categoria) => (
-          <button
-            key={categoria.nome}
-            onClick={() => onCategoriaChange(categoria.nome)}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              categoriaSelecionada === categoria.nome
-                ? 'bg-precivox-blue text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            )}
+        </Chip>
+
+        {visiveis.map((categoria) => (
+          <Chip
+            key={categoria.valor}
+            selected={categoriaSelecionada === categoria.valor}
+            count={categoria.count}
+            onClick={() => onCategoriaChange(categoria.valor)}
           >
             {categoria.nome}
-            <span className="ml-2 text-xs opacity-75">({categoria.count})</span>
-          </button>
+          </Chip>
         ))}
-      </div>
 
-      {/* Mobile: Scroll horizontal */}
-      <div className="md:hidden">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {restantes > 0 && (
           <button
-            onClick={() => onCategoriaChange('')}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0 whitespace-nowrap',
-              !categoriaSelecionada
-                ? 'bg-precivox-blue text-white'
-                : 'bg-gray-100 text-gray-700'
-            )}
+            type="button"
+            onClick={() => setExpandido((v) => !v)}
+            className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-full border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 md:min-h-0"
+            aria-expanded={expandido}
           >
-            Todas
+            {expandido ? (
+              <>
+                Ver menos
+                <ChevronUp className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Ver mais ({restantes})
+                <ChevronDown className="h-4 w-4" />
+              </>
+            )}
           </button>
-          {categorias.map((categoria) => (
-            <button
-              key={categoria.nome}
-              onClick={() => onCategoriaChange(categoria.nome)}
-              className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0 whitespace-nowrap',
-                categoriaSelecionada === categoria.nome
-                  ? 'bg-precivox-blue text-white'
-                  : 'bg-gray-100 text-gray-700'
-              )}
-            >
-              {categoria.nome}
-              <span className="ml-2 text-xs opacity-75">({categoria.count})</span>
-            </button>
-          ))}
-        </div>
+        )}
       </div>
     </div>
   );

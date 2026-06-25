@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 
 export interface Categoria {
   nome: string;
+  /** Grafias reais (separadas por vírgula) usadas no filtro de busca. */
+  valor: string;
   count: number;
 }
 

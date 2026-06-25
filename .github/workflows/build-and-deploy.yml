@@ -5,6 +5,8 @@ name: Build PRECIVOX
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       deploy_to_vps:
@@ -75,10 +77,18 @@ jobs:
           ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
 
       - name: Rsync artifact to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_DEPLOY_SRC: ${{ secrets.VPS_DEPLOY_SRC }}
         run: |
-          RSYNC_HOST="${{ secrets.VPS_HOST }}"
-          RSYNC_USER="${{ secrets.VPS_USER:-root }}"
-          SRC="${{ secrets.VPS_DEPLOY_SRC:-/root }}"
+          RSYNC_HOST="${VPS_HOST}"
+          RSYNC_USER="${VPS_USER:-root}"
+          SRC="${VPS_DEPLOY_SRC:-/root}"
+          if [[ -z "${RSYNC_HOST}" ]]; then
+            echo "❌ Secret VPS_HOST não configurado."
+            exit 1
+          fi
           ssh -o StrictHostKeyChecking=no "${RSYNC_USER}@${RSYNC_HOST}" "mkdir -p ${SRC}/.next"
           rsync -az .next/ "${RSYNC_USER}@${RSYNC_HOST}:${SRC}/.next/"
           ssh -o StrictHostKeyChecking=no "${RSYNC_USER}@${RSYNC_HOST}" \
