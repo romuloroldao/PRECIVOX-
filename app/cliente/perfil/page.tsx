@@ -52,8 +52,8 @@ export default function PerfilPreciPage() {
   const [msgErroEl, setMsgErroEl] = useState(false);
   const [mercadoId, setMercadoId] = useState<string | null>(null);
 
-  const carregar = useCallback(async () => {
-    setLoading(true);
+  const carregar = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [pRes, iRes] = await Promise.all([
         fetch('/api/cliente/perfil-preci', { credentials: 'include', cache: 'no-store' }),
@@ -68,7 +68,7 @@ export default function PerfilPreciPage() {
       } else if (pRes.status === 401) {
         setMsgErroPerfil(true);
         setMsgPerfil('Faça login para ver e editar seu perfil.');
-      } else {
+      } else if (!opts?.silent) {
         setMsgErroPerfil(true);
         setMsgPerfil(pJson.error || 'Não foi possível carregar seu perfil.');
       }
@@ -86,13 +86,15 @@ export default function PerfilPreciPage() {
         /* ignore */
       }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
+  const userId = session?.user?.id;
+
   useEffect(() => {
-    if (session?.user) void carregar();
-  }, [session, carregar]);
+    if (userId) void carregar();
+  }, [userId, carregar]);
 
   const salvarAjustesPerfil = async () => {
     if (!perfil) return;
@@ -130,7 +132,7 @@ export default function PerfilPreciPage() {
       }
       setMsgErroPerfil(false);
       setMsgPerfil('Preferências salvas!');
-      await carregar();
+      await carregar({ silent: true });
     } catch (e) {
       setMsgErroPerfil(true);
       setMsgPerfil(e instanceof Error ? e.message : 'Erro ao salvar');
@@ -160,7 +162,7 @@ export default function PerfilPreciPage() {
       }
       setMsgErroEl(false);
       setMsgEl('Preferências de EL salvas!');
-      await carregar();
+      await carregar({ silent: true });
     } catch (e) {
       setMsgErroEl(true);
       setMsgEl(e instanceof Error ? e.message : 'Erro ao salvar');
@@ -191,7 +193,7 @@ export default function PerfilPreciPage() {
           Raio familiar — listas e preferências da casa →
         </Link>
 
-        {loading && <p className="text-gray-500">Carregando…</p>}
+        {loading && !perfil && <p className="text-gray-500">Carregando…</p>}
 
         {!loading && !perfil && msgPerfil && (
           <p className={`text-sm ${msgErroPerfil ? 'text-red-600' : 'text-gray-600'}`}>{msgPerfil}</p>

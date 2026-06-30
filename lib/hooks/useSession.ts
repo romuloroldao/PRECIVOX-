@@ -4,7 +4,7 @@
  * Sessão via TokenManager (/api/auth/me). Substitui next-auth/react após PR-3.
  * Estado compartilhado entre hooks — evita múltiplos fetches e flashes de loading.
  */
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -113,6 +113,12 @@ function getServerSnapshot(): SessionState {
 export function useSession() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
+  /** Referência estável — evita useEffect([session]) em loop nas páginas. */
+  const data = useMemo(
+    () => (state.user ? { user: state.user, expires: '' } : null),
+    [state.user]
+  );
+
   const refresh = useCallback(async () => {
     clientSessionOverride = null;
     setSharedState({ status: 'loading', user: null });
@@ -136,7 +142,7 @@ export function useSession() {
   }, []);
 
   return {
-    data: state.user ? { user: state.user, expires: '' } : null,
+    data,
     status: state.status,
     update: refresh,
   };
