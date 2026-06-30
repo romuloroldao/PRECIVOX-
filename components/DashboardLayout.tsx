@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { getRoleLabel } from '@/lib/redirect';
-import { fullLogout } from '@/lib/logout-client';
+import { fullLogout, LOGOUT_REDIRECT } from '@/lib/logout-client';
 import Logo from '@/components/Logo';
 import { GestorNav } from '@/components/gestor/GestorNav';
 
@@ -38,12 +38,17 @@ export default function DashboardLayout({ children, role, fullWidth = false }: D
 
   const handleLogout = async () => {
     try {
-      await fullLogout('/login');
+      await fullLogout(LOGOUT_REDIRECT);
     } catch (error) {
       console.error('[DashboardLayout] Erro ao fazer logout:', error);
-      window.location.href = '/login';
+      window.location.replace(LOGOUT_REDIRECT);
     }
   };
+
+  /** Área cliente: auth e shell vêm do `app/cliente/layout.tsx` (RouteGuard + AppBar). */
+  if (role === 'CLIENTE') {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
@@ -54,11 +59,6 @@ export default function DashboardLayout({ children, role, fullWidth = false }: D
         </div>
       </div>
     );
-  }
-
-  /** Área cliente: shell (header + nav) vem do `app/cliente/layout.tsx`. */
-  if (role === 'CLIENTE') {
-    return <>{children}</>;
   }
 
   // Estado não autenticado: não redireciona automaticamente para evitar loops.

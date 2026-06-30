@@ -51,7 +51,7 @@ deploy_require_next_static() {
 }
 
 deploy_sync_to_dest() {
-  local src dest
+  local src dest backup_path
   src="$(deploy_resolve_path "$DEPLOY_SRC")"
   dest="$(deploy_resolve_path "$DEPLOY_DEST")"
 
@@ -61,6 +61,21 @@ deploy_sync_to_dest() {
   fi
 
   deploy_require_next_static "$src"
+
+  # Pausa frontend durante sync de chunks — evita 404 mid-request (race condition).
+  if pm2 describe precivox-frontend >/dev/null 2>&1; then
+    echo "⏸️  Pausando precivox-frontend durante sync..."
+    pm2 stop precivox-frontend >/dev/null 2>&1 || true
+  fi
+
+  # Backup para rollback manual se smoke falhar após reload.
+  if [[ -d "$dest/.next" ]]; then
+    backup_path="${dest}/.next.backup.$(date +%Y%m%d%H%M%S)"
+    echo "💾 Backup .next → $(basename "$backup_path")"
+    cp -a "$dest/.next" "$backup_path"
+    echo "$backup_path" > "${dest}/.next.last-backup"
+    ls -dt "${dest}"/.next.backup.* 2>/dev/null | tail -n +4 | xargs -r rm -rf
+  fi
 
   echo "📤 Sincronizando código: $src → $dest"
   rsync -a --delete \
@@ -77,6 +92,52 @@ deploy_sync_to_dest() {
 
   deploy_require_next_static "$dest"
   echo "✅ BUILD_ID em produção: $(cat "$dest/.next/BUILD_ID")"
+}
+
+deploy_pm2_reload_apps() {
+  echo ">>> PM2 reload (fallback restart)..."
+  pm2 reload precivox-backend --update-env 2>/dev/null \
+    || pm2 restart precivox-backend
+  pm2 reload precivox-frontend --update-env 2>/dev/null \
+    || pm2 restart precivox-frontend
+  pm2 reload precivox-ai-scheduler --update-env 2>/dev/null \
+    || pm2 restart precivox-ai-scheduler
+  pm2 save
+}
+
+deploy_smoke_apps() {
+  local front_base="${1:-http://127.0.0.1:3000}"
+  local back_base="${2:-http://127.0.0.1:3001}"
+  local code build_id health_build
+
+  if ! deploy_smoke_static_assets "$front_base"; then
+    return 1
+  fi
+
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$front_base/")"
+  echo "  homepage → HTTP $code"
+  if [[ "$code" != "200" && "$code" != "307" && "$code" != "308" ]]; then
+    echo "❌ Homepage Next retornou $code"
+    return 1
+  fi
+
+  health_build="$(curl -s --max-time 10 "$front_base/api/health" 2>/dev/null | grep -o '"buildId":"[^"]*"' | cut -d'"' -f4 || true)"
+  build_id="$(cat "$(deploy_resolve_path "$DEPLOY_DEST")/.next/BUILD_ID" 2>/dev/null || true)"
+  echo "  /api/health buildId → ${health_build:-n/a} (esperado: ${build_id:-?})"
+  if [[ -n "$build_id" && -n "$health_build" && "$health_build" != "$build_id" ]]; then
+    echo "❌ BUILD_ID divergente entre disco e /api/health"
+    return 1
+  fi
+
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$back_base/api/health")"
+  echo "  backend /api/health → HTTP $code"
+  if [[ "$code" != "200" ]]; then
+    echo "❌ Backend health retornou $code"
+    return 1
+  fi
+
+  echo "✅ Smoke apps OK"
+  return 0
 }
 
 deploy_verify_pm2_alignment() {
@@ -147,6 +208,17 @@ deploy_smoke_static_assets() {
     echo "  css $css → HTTP $code"
     if [[ "$code" != "200" ]]; then
       echo "❌ CSS estático retornou $code (esperado 200)."
+      return 1
+    fi
+  fi
+
+  local perfil_chunk
+  perfil_chunk="$(ls "$(deploy_resolve_path "$DEPLOY_DEST")/.next/static/chunks/app/cliente/perfil/"page-*.js 2>/dev/null | head -1 | xargs basename 2>/dev/null || true)"
+  if [[ -n "$perfil_chunk" ]]; then
+    code="$(curl -s -o /dev/null -w '%{http_code}' "$base/_next/static/chunks/app/cliente/perfil/$perfil_chunk")"
+    echo "  perfil $perfil_chunk → HTTP $code"
+    if [[ "$code" != "200" ]]; then
+      echo "❌ Chunk /cliente/perfil retornou $code (esperado 200)."
       return 1
     fi
   fi

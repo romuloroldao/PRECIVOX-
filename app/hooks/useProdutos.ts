@@ -140,11 +140,12 @@ export function useProdutos(params: UseProdutosParams = {}) {
   // Debounce na busca
   const buscaDebounced = useDebounce(busca, debounceDelay);
 
-  const buscarProdutos = useCallback(async (targetPage = 1, append = false) => {
+  const buscarProdutos = useCallback(async (targetPage = 1, append = false, silent = false) => {
     try {
+      // `silent`: revalidação em segundo plano não deve trocar a UI por skeleton.
       if (append) {
         setLoadingMore(true);
-      } else {
+      } else if (!silent) {
         setLoading(true);
       }
       setError(null);
@@ -243,13 +244,17 @@ export function useProdutos(params: UseProdutosParams = {}) {
       setError(null); // Limpa erro em caso de sucesso
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao buscar produtos';
-      setError(errorMessage);
-      if (!append) setProdutos([]);
+      // Em revalidação silenciosa, preservar resultados atuais e não exibir erro
+      // (a tela continua funcional; o próximo ciclo tenta de novo).
+      if (!silent) {
+        setError(errorMessage);
+        if (!append) setProdutos([]);
+      }
       console.error('Erro ao buscar produtos:', err);
     } finally {
       if (append) {
         setLoadingMore(false);
-      } else {
+      } else if (!silent) {
         setLoading(false);
       }
     }
@@ -275,11 +280,12 @@ export function useProdutos(params: UseProdutosParams = {}) {
     buscarProdutos(1, false);
   }, [buscarProdutos]);
 
-  // Revalidação automática a cada 30 segundos quando não há busca ativa
+  // Revalidação automática a cada 30 segundos quando não há busca ativa.
+  // Usa modo silencioso para NÃO piscar a tela (skeleton) durante a demo.
   useEffect(() => {
     if (!buscaDebounced && !loading) {
       const interval = setInterval(() => {
-        buscarProdutos(1, false);
+        buscarProdutos(1, false, true);
       }, 30000); // 30 segundos
 
       return () => clearInterval(interval);

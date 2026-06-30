@@ -6,36 +6,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { TokenManager } from '@/lib/token-manager';
 import { GroocEngine } from '@/lib/ai/grooc-engine';
+import { isGestorAuthResponse, requireGestorApiAccess } from '@/lib/gestor-api-mercado';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    // Validar autenticação
-    const user = await TokenManager.validateSession({
-      headers: req.headers,
-      cookies: req.cookies,
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Não autenticado', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
-
-    // Apenas ADMIN e GESTOR podem usar GROOC
-    if (user.role !== 'ADMIN' && user.role !== 'GESTOR') {
-      return NextResponse.json(
-        { error: 'Acesso negado', code: 'FORBIDDEN' },
-        { status: 403 }
-      );
-    }
-
     const body = await req.json();
-    const { pergunta, mercadoId, userId } = body;
+    const { pergunta, mercadoId } = body;
 
     if (!pergunta || !mercadoId) {
       return NextResponse.json(
@@ -44,11 +23,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Processar pergunta com GROOC
+    const auth = await requireGestorApiAccess(req, mercadoId);
+    if (isGestorAuthResponse(auth)) return auth.response;
+
     const resposta = await GroocEngine.answerQuestion(
       pergunta,
-      mercadoId,
-      userId || user.id
+      auth.mercadoId,
+      auth.user.id
     );
 
     return NextResponse.json({

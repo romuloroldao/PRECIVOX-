@@ -197,6 +197,23 @@ export class TokenManager {
   }
 
   /**
+   * Revoga um refresh token específico (logout individual).
+   */
+  static async revokeRefreshToken(refreshToken: string): Promise<void> {
+    const tokenHash = this.hashToken(refreshToken);
+    await prisma.refreshToken.updateMany({
+      where: {
+        tokenHash,
+        revoked: false,
+      },
+      data: {
+        revoked: true,
+        revokedAt: new Date(),
+      },
+    });
+  }
+
+  /**
    * Revoga todos os refresh tokens de um usuário
    */
   static async revokeUserTokens(userId: string): Promise<void> {

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import Toast, { type ToastType, type ToastAction } from './Toast';
 
 interface ToastData {
@@ -73,8 +73,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const listaToasts = toasts.filter((t) => t.type === 'lista');
   const regularToasts = toasts.filter((t) => t.type !== 'lista');
 
+  // Memoizar o value evita recriar o objeto a cada render (que dispararia
+  // re-execução de useEffect/useCallback dos consumidores que dependem de `toast`).
+  const contextValue = useMemo(
+    () => ({ showToast, success, error, warning, info, listaAdicionado }),
+    [showToast, success, error, warning, info, listaAdicionado]
+  );
+
   return (
-    <ToastContext.Provider value={{ showToast, success, error, warning, info, listaAdicionado }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
 
       {/* Toasts regulares — topo direito no desktop, topo no mobile */}

@@ -212,12 +212,15 @@ export default function GestorProdutosPage() {
   };
 
   // Verificar permissões
-  if (!session || (session.user as any).role !== 'GESTOR') {
+  const role = (session?.user as { role?: string })?.role;
+  if (!session || (role !== 'GESTOR' && role !== 'ADMIN')) {
     return null;
   }
 
+  const layoutRole = role === 'ADMIN' ? 'ADMIN' : 'GESTOR';
+
   return (
-    <DashboardLayout role="GESTOR">
+    <DashboardLayout role={layoutRole}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

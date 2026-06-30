@@ -18,7 +18,7 @@ export function ContribuidorBadge({ className = '' }: ContribuidorBadgeProps) {
       try {
         const res = await fetch('/api/cliente/perfil-preci', { cache: 'no-store', credentials: 'include' });
         const json = await res.json();
-        if (json.success?.data?.reputacaoCrowd) {
+        if (json.success && json.data?.reputacaoCrowd) {
           setNivel(json.data.reputacaoCrowd.nivel);
           setConfirmacoes(json.data.reputacaoCrowd.confirmacoes);
         }

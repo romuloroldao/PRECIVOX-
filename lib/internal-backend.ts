@@ -96,11 +96,17 @@ function assertNoReservedHeaders(headers?: HeadersInit): void {
  * @param path - Caminho da rota Express, ex: '/api/v1/products/upload-smart/123'
  * @param options - Opções do fetch + jwtToken opcional
  */
+const DEFAULT_INTERNAL_TIMEOUT_MS = 15000;
+
 export async function internalFetch(
     path: string,
-    options: RequestInit & { jwtToken?: string; skipContentType?: boolean } = {}
+    options: RequestInit & {
+        jwtToken?: string;
+        skipContentType?: boolean;
+        timeoutMs?: number;
+    } = {}
 ): Promise<Response> {
-    const { jwtToken, skipContentType = false, ...fetchOpts } = options;
+    const { jwtToken, skipContentType = false, timeoutMs = DEFAULT_INTERNAL_TIMEOUT_MS, ...fetchOpts } = options;
 
     assertNoReservedHeaders(fetchOpts.headers);
 
@@ -123,8 +129,33 @@ export async function internalFetch(
         ...baseHeaders,
     };
 
-    return fetch(url, {
-        ...fetchOpts,
-        headers: mergedHeaders,
-    });
+    // Timeout via AbortController — evita requisições server-side penduradas
+    // indefinidamente quando o Express não responde. Respeita um signal externo,
+    // se fornecido, combinando-o com o timeout interno.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    const externalSignal = fetchOpts.signal;
+    if (externalSignal) {
+        if (externalSignal.aborted) {
+            controller.abort();
+        } else {
+            externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+        }
+    }
+
+    try {
+        return await fetch(url, {
+            ...fetchOpts,
+            headers: mergedHeaders,
+            signal: controller.signal,
+        });
+    } catch (error) {
+        if (controller.signal.aborted && !externalSignal?.aborted) {
+            throw new Error(`[BFF] Timeout (${timeoutMs}ms) ao chamar ${path} no backend interno.`);
+        }
+        throw error;
+    } finally {
+        clearTimeout(timer);
+    }
 }

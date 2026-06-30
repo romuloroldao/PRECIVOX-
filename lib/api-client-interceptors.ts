@@ -28,6 +28,7 @@ export const unauthorizedInterceptor: ApiInterceptor = {
       // Limpar tokens de sessão do AuthClient (tokens próprios da Auth V2)
       try {
         const { authClient } = await import('@/lib/auth-client');
+        if (authClient.isLoggingOut()) return;
         authClient.clearTokens();
       } catch (e) {
         console.error('Erro ao limpar tokens:', e);
@@ -89,6 +90,7 @@ export const authInterceptor: ApiInterceptor = {
     if (typeof window !== 'undefined') {
       try {
         const { authClient } = await import('@/lib/auth-client');
+        if (authClient.isLoggingOut()) return null;
         const token = await authClient.getAccessToken();
         
         if (token && options.headers) {

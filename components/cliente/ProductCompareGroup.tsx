@@ -45,7 +45,8 @@ export function ProductCompareGroup({ produtos, onAdicionar, onAbrirLista }: Pro
       preco: produto.preco,
       precoPromocional: produto.precoPromocional,
       emPromocao: produto.emPromocao,
-      quantidade: produto.quantidade,
+      // produto.quantidade é o estoque disponível; ao adicionar à lista começa em 1.
+      quantidade: 1,
       imagem: produto.imagem,
       categoria: produto.categoria,
       marca: produto.marca,

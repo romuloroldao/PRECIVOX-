@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
 import { getBaseUrl } from '@/lib/email';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,37 +76,12 @@ async function fetchReferralStats(userId: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const userId = session.id;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Bad Request',
-          message: 'userId é obrigatório',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: 'Usuário não encontrado',
-        },
-        { status: 404 }
-      );
-    }
-
     // Buscar do cache Redis (5 minutos) ou do banco
     const cacheKey = `referral:stats:${userId}`;
     const data = await getCached(

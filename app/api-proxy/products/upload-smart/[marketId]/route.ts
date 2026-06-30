@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiSession, isAuthResponse } from '@/lib/api-auth';
 import { generateToken } from '@/lib/jwt';
 import { internalFetch } from '@/lib/internal-backend';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -21,6 +22,33 @@ export async function POST(
 
     const auth = await requireApiSession(request);
     if (isAuthResponse(auth)) return auth;
+
+    const allowedRoles = ['ADMIN', 'GESTOR'];
+    if (!allowedRoles.includes(auth.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Permissão insuficiente' },
+        { status: 403 }
+      );
+    }
+
+    const mercado = await prisma.mercados.findUnique({
+      where: { id: marketId },
+      select: { id: true, gestorId: true },
+    });
+
+    if (!mercado) {
+      return NextResponse.json(
+        { success: false, error: 'Mercado não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    if (auth.role === 'GESTOR' && mercado.gestorId !== auth.id) {
+      return NextResponse.json(
+        { success: false, error: 'Acesso negado a este mercado' },
+        { status: 403 }
+      );
+    }
 
     const formData = await request.formData();
 

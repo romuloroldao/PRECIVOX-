@@ -117,7 +117,7 @@ export default function ResumoSemanaPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Erro ao carregar');
       setPayload({
-        acoes: json.acoes,
+        acoes: Array.isArray(json.acoes) ? json.acoes : [],
         narrativa: json.narrativa,
         periodoDias: json.periodoDias,
         geradoEm: json.geradoEm,

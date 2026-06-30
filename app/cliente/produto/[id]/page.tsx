@@ -1,14 +1,14 @@
 'use client';
 
-import React, { use, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Star, MapPin, Clock, ShoppingCart, Plus, Minus, Share2, Eye, TrendingDown, Package, Heart } from 'lucide-react';
-import { recordProductViewed } from '@/lib/events/frontend-events';
 import { useLista } from '@/app/context/ListaContext';
 import { useToast } from '@/components/ToastContainer';
-import { ErrorState } from '@/components/ui';
+import { ErrorState } from '@/components/ui/ErrorState';
 interface Product {
   id: string;
+  estoqueId: string;
   name: string;
   price: number;
   category: string;
@@ -27,17 +27,22 @@ interface Product {
   weight?: string;
   origin?: string;
   stock?: number;
+  emPromocao?: boolean;
+  unidade?: {
+    id: string;
+    nome: string;
+    mercado: { id: string; nome: string };
+  };
 }
 
 interface ProductDetailsProps {
-  params: Promise<{
-    id: string;
-  }>;
+  params?: { id: string };
 }
 
-const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
+const ProductDetails: React.FC<ProductDetailsProps> = () => {
   const router = useRouter();
-  const { id } = use(params);
+  const routeParams = useParams();
+  const id = String(routeParams?.id ?? '');
   const { adicionarItem } = useLista();
   const { listaAdicionado } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
@@ -47,231 +52,50 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   useEffect(() => {
+    if (!id) {
+      setProduct(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        
-        // Dados mockados para diferentes produtos baseados no ID
-        const productsData: { [key: string]: Product } = {
-          '1': {
-            id: '1',
-            name: 'Cerveja Skol 350ml (lata)',
-            price: 3.50,
-            category: 'bebidas',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Cerveja+Skol',
-            store: 'Mercado do João',
-            savings: 0.50,
-            description: 'Cerveja Skol 350ml em lata, gelada e refrescante. Perfeita para momentos de descontração.',
-            distance: 0.8,
-            rating: 4.3,
-            reviews: 95,
-            available: true,
-            deliveryTime: '1-2 dias',
-            isNew: false,
-            isBestPrice: false,
-            brand: 'Skol',
-            weight: '350ml',
-            origin: 'Brasil',
-            stock: 32
-          },
-          '2': {
-            id: '2',
-            name: 'Cerveja Skol 350ml (lata)',
-            price: 3.20,
-            category: 'bebidas',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Cerveja+Skol',
-            store: 'Supermercado Central',
-            savings: 0.30,
-            description: 'Cerveja Skol 350ml em lata, gelada e refrescante. Perfeita para momentos de descontração.',
-            distance: 1.2,
-            rating: 4.5,
-            reviews: 128,
-            available: true,
-            deliveryTime: '1-2 dias',
-            isNew: false,
-            isBestPrice: true,
-            brand: 'Skol',
-            weight: '350ml',
-            origin: 'Brasil',
-            stock: 45
-          },
-          '3': {
-            id: '3',
-            name: 'Cerveja Skol 350ml (lata)',
-            price: 3.80,
-            category: 'bebidas',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Cerveja+Skol',
-            store: 'Mercadinho da Esquina',
-            savings: 0,
-            description: 'Cerveja Skol 350ml em lata, gelada e refrescante. Perfeita para momentos de descontração.',
-            distance: 2.1,
-            rating: 4.1,
-            reviews: 67,
-            available: true,
-            deliveryTime: '2-3 dias',
-            isNew: false,
-            isBestPrice: false,
-            brand: 'Skol',
-            weight: '350ml',
-            origin: 'Brasil',
-            stock: 18
-          },
-          '4': {
-            id: '4',
-            name: 'Refrigerante Coca-Cola 2L',
-            price: 8.50,
-            category: 'bebidas',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Coca-Cola',
-            store: 'Mercado do João',
-            savings: 1.00,
-            description: 'Refrigerante Coca-Cola 2 litros, o sabor original que todo mundo conhece.',
-            distance: 0.8,
-            rating: 4.4,
-            reviews: 89,
-            available: true,
-            deliveryTime: '1-2 dias',
-            isNew: false,
-            isBestPrice: false,
-            brand: 'Coca-Cola',
-            weight: '2L',
-            origin: 'Brasil',
-            stock: 15
-          },
-          '5': {
-            id: '5',
-            name: 'Refrigerante Coca-Cola 2L',
-            price: 7.50,
-            category: 'bebidas',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Coca-Cola',
-            store: 'Supermercado Central',
-            savings: 0,
-            description: 'Refrigerante Coca-Cola 2 litros, o sabor original que todo mundo conhece.',
-            distance: 1.2,
-            rating: 4.6,
-            reviews: 156,
-            available: true,
-            deliveryTime: '1-2 dias',
-            isNew: false,
-            isBestPrice: true,
-            brand: 'Coca-Cola',
-            weight: '2L',
-            origin: 'Brasil',
-            stock: 22
-          },
-          '6': {
-            id: '6',
-            name: 'Refrigerante Coca-Cola 2L',
-            price: 8.50,
-            category: 'bebidas',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Coca-Cola',
-            store: 'Mercado do João',
-            savings: 1.00,
-            description: 'Refrigerante Coca-Cola 2 litros, o sabor original que todo mundo conhece.',
-            distance: 0.8,
-            rating: 4.4,
-            reviews: 89,
-            available: true,
-            deliveryTime: '1-2 dias',
-            isNew: false,
-            isBestPrice: false,
-            brand: 'Coca-Cola',
-            weight: '2L',
-            origin: 'Brasil',
-            stock: 15
-          },
-          '7': {
-            id: '7',
-            name: 'Leite UHT 1L',
-            price: 4.50,
-            category: 'laticínios',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Leite+UHT',
-            store: 'Mercado do João',
-            savings: 0,
-            description: 'Leite UHT integral 1 litro, rico em cálcio e vitaminas. Perfeito para o café da manhã.',
-            distance: 0.8,
-            rating: 4.7,
-            reviews: 203,
-            available: true,
-            deliveryTime: '1 dia',
-            isNew: false,
-            isBestPrice: true,
-            brand: 'Parmalat',
-            weight: '1L',
-            origin: 'Brasil',
-            stock: 28
-          },
-          '8': {
-            id: '8',
-            name: 'Feijão Preto Camil 1kg',
-            price: 8.50,
-            category: 'grãos',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Feijão+Preto',
-            store: 'Mercado do João',
-            savings: 0,
-            description: 'Feijão preto Camil 1kg, selecionado e de alta qualidade. Essencial na mesa brasileira.',
-            distance: 0.8,
-            rating: 4.8,
-            reviews: 312,
-            available: true,
-            deliveryTime: '1-2 dias',
-            isNew: false,
-            isBestPrice: true,
-            brand: 'Camil',
-            weight: '1kg',
-            origin: 'Brasil',
-            stock: 38
-          },
-          '9': {
-            id: '9',
-            name: 'Pão Francês (kg)',
-            price: 12.00,
-            category: 'padaria',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Pão+Francês',
-            store: 'Mercadinho da Esquina',
-            savings: 1.50,
-            description: 'Pão francês fresco, crocante por fora e macio por dentro. Feito diariamente.',
-            distance: 2.1,
-            rating: 4.2,
-            reviews: 45,
-            available: true,
-            deliveryTime: '2-3 dias',
-            isNew: false,
-            isBestPrice: true,
-            brand: 'Padaria Local',
-            weight: '1kg',
-            origin: 'Local',
-            stock: 12
-          },
-          '10': {
-            id: '10',
-            name: 'Arroz Tio João 5kg',
-            price: 25.90,
-            category: 'grãos',
-            image: 'https://via.placeholder.com/500x500/004A7C/white?text=Arroz+Tio+João',
-            store: 'Mercadinho da Esquina',
-            savings: 0,
-            description: 'Arroz Tio João 5kg, tipo 1, grãos selecionados. O arroz que todo brasileiro conhece.',
-            distance: 2.1,
-            rating: 4.9,
-            reviews: 445,
-            available: true,
-            deliveryTime: '2-3 dias',
-            isNew: false,
-            isBestPrice: true,
-            brand: 'Tio João',
-            weight: '5kg',
-            origin: 'Brasil',
-            stock: 25
-          }
-        };
 
-        const productData = productsData[id];
-        
-        if (productData) {
-          setProduct(productData);
-        } else {
+        const res = await fetch(`/api/cliente/produtos/${encodeURIComponent(id)}`, {
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
           setProduct(null);
+          return;
         }
+
+        const json = await res.json();
+        if (!json.success || !json.data) {
+          setProduct(null);
+          return;
+        }
+
+        const d = json.data;
+        setProduct({
+          id: d.id,
+          estoqueId: d.estoqueId ?? d.id,
+          name: d.name,
+          price: d.price,
+          category: d.category,
+          image: d.image,
+          store: d.store,
+          savings: d.savings,
+          description: d.description,
+          available: d.available,
+          brand: d.brand,
+          weight: d.weight,
+          stock: d.stock,
+          isBestPrice: d.isBestPrice,
+          emPromocao: d.emPromocao,
+          unidade: d.unidade,
+        });
       } catch (error) {
         console.error('Erro ao carregar produto:', error);
         setProduct(null);
@@ -317,16 +141,16 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
     if (!product) return;
 
     adicionarItem({
-      id: product.id,
-      estoqueId: product.id,
+      id: product.estoqueId,
+      estoqueId: product.estoqueId,
       nome: product.name,
       preco: product.price,
-      emPromocao: false,
+      emPromocao: product.emPromocao ?? false,
       quantidade: quantity,
       imagem: product.image,
       categoria: product.category,
       marca: product.brand,
-      unidade: {
+      unidade: product.unidade ?? {
         id: `unidade-${product.id}`,
         nome: product.store,
         mercado: {
@@ -347,14 +171,19 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ params }) => {
 
   const handleShare = () => {
     if (navigator.share) {
+      // Usuário pode cancelar o share (AbortError) → tratar para não vazar rejection.
       navigator.share({
         title: product?.name,
         text: `Confira este produto: ${product?.name}`,
-        url: window.location.href
+        url: window.location.href,
+      }).catch(() => {
+        /* compartilhamento cancelado/negado — sem ação */
       });
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copiado para a área de transferência!');
+      navigator.clipboard
+        .writeText(window.location.href)
+        .then(() => alert('Link copiado para a área de transferência!'))
+        .catch(() => alert('Não foi possível copiar o link.'));
     }
   };
 

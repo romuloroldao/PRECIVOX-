@@ -10,9 +10,15 @@
 export function getApiUrl(): string {
   // Em cliente (browser), sempre usa relativo ou variável pública
   if (typeof window !== 'undefined') {
-    const publicApiUrl = process.env.NEXT_PUBLIC_API_URL;
     const isLocalhost =
       window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    // Em dev local, sempre usa o mesmo origin do Next (evita NEXT_PUBLIC_API_URL apontando porta errada).
+    if (isLocalhost && process.env.NODE_ENV === 'development') {
+      return '';
+    }
+
+    const publicApiUrl = process.env.NEXT_PUBLIC_API_URL;
 
     // Ignora localhost embutido no build quando o app roda em produção
     if (publicApiUrl && (isLocalhost || !publicApiUrl.includes('localhost'))) {

@@ -20,6 +20,7 @@ class AuthClient {
   private refreshToken: string | null = null;
   private expiresAt: Date | null = null;
   private refreshPromise: Promise<TokenPair | null> | null = null;
+  private loggingOut = false;
 
   constructor() {
     // Carregar tokens do sessionStorage na inicialização
@@ -65,13 +66,28 @@ class AuthClient {
   }
 
   /**
+   * Bloqueia refresh automático durante logout (evita recriar sessão).
+   */
+  beginLogout(): void {
+    this.loggingOut = true;
+    this.refreshPromise = null;
+  }
+
+  isLoggingOut(): boolean {
+    return this.loggingOut;
+  }
+
+  /**
    * Limpa tokens
    */
   clearTokens(): void {
     this.accessToken = null;
     this.refreshToken = null;
     this.expiresAt = null;
-    sessionStorage.removeItem('precivox_tokens');
+    this.refreshPromise = null;
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('precivox_tokens');
+    }
   }
 
   /**
@@ -92,6 +108,10 @@ class AuthClient {
    * Obtém access token válido (renova se necessário)
    */
   async getAccessToken(): Promise<string | null> {
+    if (this.loggingOut) {
+      return null;
+    }
+
     // Se não tem token, retorna null
     if (!this.accessToken) {
       return null;
@@ -115,6 +135,10 @@ class AuthClient {
    * Renova access token usando refresh token
    */
   async refreshAccessToken(): Promise<TokenPair | null> {
+    if (this.loggingOut) {
+      return null;
+    }
+
     // Evitar múltiplas chamadas simultâneas
     if (this.refreshPromise) {
       return this.refreshPromise;
@@ -283,6 +307,7 @@ export function useAuth() {
   };
 
   const logout = () => {
+    authClient.beginLogout();
     authClient.clearTokens();
   };
 

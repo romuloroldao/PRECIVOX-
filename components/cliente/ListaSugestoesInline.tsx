@@ -135,7 +135,8 @@ export function ListaSugestoesInline({ mercadoId }: Props) {
                     preco: p.preco,
                     precoPromocional: p.precoPromocional,
                     emPromocao: p.emPromocao,
-                    quantidade: p.quantidade,
+                    // p.quantidade é o estoque disponível; ao adicionar à lista começa em 1.
+                    quantidade: 1,
                     imagem: p.imagem,
                     categoria: p.categoria,
                     marca: p.marca,

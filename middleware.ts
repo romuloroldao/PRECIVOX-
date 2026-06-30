@@ -43,6 +43,7 @@ export function middleware(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/login',
+    '/logout',
     '/signup',
     '/register',
     '/resetar-senha',
@@ -80,6 +81,8 @@ export function middleware(request: NextRequest) {
     '/api/public/',
     '/api/stats/global',
     '/api/marketing/',
+    '/api/health',
+    '/api/telemetry/',
   ];
 
   if (publicApiRoutes.some(route => pathname.startsWith(route))) {

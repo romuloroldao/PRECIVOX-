@@ -20,7 +20,7 @@ if ! deploy_verify_pm2_alignment; then
   FAIL=1
 fi
 
-if ! deploy_smoke_static_assets "http://127.0.0.1:3000"; then
+if ! deploy_smoke_apps "http://127.0.0.1:3000"; then
   FAIL=1
 fi
 

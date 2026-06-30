@@ -98,8 +98,17 @@ const nextConfig = {
   },
 
   // Imagens (URLs absolutas do próprio site em produção)
+  // Obs.: as imagens de produto (public/uploads/produtos) já são webp
+  // pré-dimensionadas e content-addressed, então <ProductImage/> usa
+  // `unoptimized` e não passa pelo /_next/image. Os patterns abaixo cobrem
+  // usos otimizados (logo, fontes externas como Open Food Facts).
   images: {
     domains: ['localhost', 'precivox.com.br', 'www.precivox.com.br'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.openfoodfacts.org' },
+      { protocol: 'https', hostname: 'world.openfoodfacts.org' },
+      { protocol: 'https', hostname: 'static.openfoodfacts.org' },
+    ],
     formats: ['image/avif', 'image/webp'],
   },
 

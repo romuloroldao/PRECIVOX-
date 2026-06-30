@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getBaseUrl } from '@/lib/email';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,37 +27,12 @@ function generateReferralCode(userId: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const userId = session.id;
+
   try {
-    const body = await request.json();
-    const { userId } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Bad Request',
-          message: 'userId é obrigatório',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: 'Usuário não encontrado',
-        },
-        { status: 404 }
-      );
-    }
-
     // Verificar se já existe código de referral
     const existingReferral = await prisma.referral.findFirst({
       where: {

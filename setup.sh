@@ -65,9 +65,9 @@ npx prisma generate
 echo -e "${GREEN}✅ Cliente Prisma gerado${NC}"
 echo ""
 
-# Executar migrations
+# Executar migrations (baseline 00000000000000_init_baseline + futuras)
 echo -e "${BLUE}6/7 Executando migrations do banco de dados...${NC}"
-npx prisma migrate deploy || npx prisma db push
+npx prisma migrate deploy
 echo -e "${GREEN}✅ Migrations executadas${NC}"
 echo ""
 

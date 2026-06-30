@@ -13,11 +13,16 @@ import { rateLimiters, checkRateLimit, getUserIdentifier } from '@/lib/rate-limi
 import { autoUnlockBadgesServer } from '@/lib/gamification-server';
 import { invalidate, invalidatePattern } from '@/lib/redis';
 import { EventCollector } from '@/lib/ai/event-collector';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 async function handler(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
   try {
     const body = await request.json();
-    const { userId, name, products } = body;
+    const userId = session.id;
+    const { name, products } = body;
     
     // Rate limiting por usuário (10 req/min) - verificar após ler body
     let userLimitResult: ReturnType<typeof checkRateLimit> | null = null;
@@ -48,30 +53,14 @@ async function handler(request: NextRequest) {
     }
 
     // Validação
-    if (!userId || !name || !Array.isArray(products)) {
+    if (!name || !Array.isArray(products)) {
       return NextResponse.json(
         {
           success: false,
           error: 'Bad Request',
-          message: 'userId, name e products são obrigatórios',
+          message: 'name e products são obrigatórios',
         },
         { status: 400 }
-      );
-    }
-
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: 'Usuário não encontrado',
-        },
-        { status: 404 }
       );
     }
 

@@ -28,11 +28,27 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Handler ChunkLoadError — bypass de cache após deploy (evita HTML novo + chunks antigos)
+              // Recuperação de ChunkLoadError pós-deploy (HTML novo + chunks antigos em cache).
+              // Contador só é limpo após hidratação React (Providers montam) — evita loop infinito.
               (function() {
-                const REFRESH_KEY = 'precivox_chunk_reload_count';
-                const MAX_RETRIES = 2;
-                let recovering = false;
+                var REFRESH_KEY = 'precivox_chunk_reload_count';
+                var MAX_RETRIES = 2;
+                var recovering = false;
+
+                function isNextStaticUrl(url) {
+                  return typeof url === 'string' && url.indexOf('/_next/static/') !== -1;
+                }
+
+                function isChunkMessage(msg) {
+                  if (!msg) return false;
+                  return (
+                    msg.indexOf('Loading chunk') !== -1 ||
+                    msg.indexOf('ChunkLoadError') !== -1 ||
+                    msg.indexOf('Failed to fetch dynamically imported module') !== -1 ||
+                    msg.indexOf('Importing a module script failed') !== -1 ||
+                    msg.indexOf('error loading dynamically imported module') !== -1
+                  );
+                }
 
                 function hardReload() {
                   try {
@@ -68,69 +84,74 @@ export default function RootLayout({
                   p.then(done).catch(done);
                 }
 
-                function handleChunkError() {
+                function reportTelemetry(event, extra) {
+                  try {
+                    var payload = JSON.stringify(Object.assign({
+                      event: event,
+                      route: location.pathname,
+                      source: extra && extra.source ? extra.source : undefined,
+                      retry: extra && extra.retry != null ? extra.retry : undefined,
+                    }, extra || {}));
+                    if (navigator.sendBeacon) {
+                      navigator.sendBeacon('/api/telemetry/client', new Blob([payload], { type: 'application/json' }));
+                    } else {
+                      fetch('/api/telemetry/client', { method: 'POST', body: payload, keepalive: true });
+                    }
+                  } catch (e) { /* ignore */ }
+                }
+
+                function handleChunkError(source) {
                   if (recovering) return;
-                  console.warn('ChunkLoadError detectado. Verificando possibilidade de reload...');
+                  console.warn('[precivox] ChunkLoadError:', source || 'unknown');
 
                   try {
                     var currentRetries = parseInt(sessionStorage.getItem(REFRESH_KEY) || '0', 10);
-
+                    reportTelemetry('chunk_load_error', { source: source, retry: currentRetries });
                     if (currentRetries < MAX_RETRIES) {
                       recovering = true;
-                      console.log('Tentativa de recuperação ' + (currentRetries + 1) + '/' + MAX_RETRIES);
+                      reportTelemetry('chunk_recovery_attempt', { source: source, retry: currentRetries + 1 });
                       sessionStorage.setItem(REFRESH_KEY, String(currentRetries + 1));
                       clearClientCaches(hardReload);
                     } else {
-                      console.error('Limite de tentativas de reload excedido. Limpe o cache do site (Ctrl+Shift+R).');
+                      reportTelemetry('chunk_recovery_exhausted', { source: source, retry: currentRetries });
+                      console.error('[precivox] Limite de reload por chunk excedido. Use Ctrl+Shift+R.');
                     }
                   } catch (e) {
-                    console.error('Erro ao recuperar chunk:', e);
-                    hardReload();
+                    console.error('[precivox] Erro na recuperação de chunk:', e);
                   }
                 }
-                
-                // Limpar contador em navegação bem sucedida
-                window.addEventListener('load', () => {
-                  // Se carregou com sucesso, reseta o contador (mas com um pequeno delay para garantir que não é um falso positivo imediato)
-                  setTimeout(() => {
-                     sessionStorage.removeItem(REFRESH_KEY);
-                  }, 1000);
+
+                window.addEventListener('precivox:app-ready', function() {
+                  try {
+                    reportTelemetry('app_ready', {});
+                    sessionStorage.removeItem(REFRESH_KEY);
+                    var url = new URL(window.location.href);
+                    if (url.searchParams.has('__chunk_reload')) {
+                      url.searchParams.delete('__chunk_reload');
+                      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+                    }
+                  } catch (e) { /* ignore */ }
                 });
 
-                // Capturar erros de chunk via error event
-                window.addEventListener('error', (e) => {
-                  // Verificar se é erro de chunk (ERR_ABORTED, 400, 404, etc) ou CSS
-                  const isLinkError = e.target && (e.target.tagName === 'LINK' || e.target.tagName === 'SCRIPT');
-                  
-                  const isChunkError = 
-                    isLinkError ||
-                    (e.filename && (e.filename.includes('_next/static/chunks') || e.filename.includes('_next/static/css'))) ||
-                    (e.message && (
-                      e.message.includes('Loading chunk') ||
-                      e.message.includes('ChunkLoadError') ||
-                      e.message.includes('Failed to fetch dynamically imported module') ||
-                      e.message.includes('ERR_ABORTED') ||
-                      e.message.includes('400') ||
-                      e.message.includes('404')
-                    ));
-                  
-                  if (isChunkError) {
-                    handleChunkError();
+                window.addEventListener('error', function(e) {
+                  var target = e.target;
+                  if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+                    var src = target.src || target.href || '';
+                    if (isNextStaticUrl(src)) {
+                      handleChunkError(src);
+                      return;
+                    }
+                  }
+                  if (isNextStaticUrl(e.filename) && isChunkMessage(e.message)) {
+                    handleChunkError(e.filename);
                   }
                 }, true);
-                
-                // Capturar promises rejeitadas
-                window.addEventListener('unhandledrejection', (e) => {
-                  if (e?.reason) {
-                    const reason = e.reason.message || e.reason.toString() || '';
-                    const isChunkError =
-                      reason.includes('Loading chunk') ||
-                      reason.includes('ChunkLoadError') ||
-                      reason.includes('Failed to fetch dynamically imported module');
-                    
-                    if (isChunkError) {
-                      handleChunkError();
-                    }
+
+                window.addEventListener('unhandledrejection', function(e) {
+                  var reason = e && e.reason;
+                  var msg = (reason && (reason.message || String(reason))) || '';
+                  if (isChunkMessage(msg)) {
+                    handleChunkError(msg);
                   }
                 });
               })();

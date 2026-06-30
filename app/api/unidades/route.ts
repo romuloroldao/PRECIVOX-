@@ -36,6 +36,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (user.role === 'CLIENTE') {
+      return NextResponse.json(
+        { success: false, error: 'Acesso negado' },
+        { status: 403 }
+      );
+    }
+
     if (user.role === 'GESTOR' && mercado.gestorId !== user.id) {
       return NextResponse.json(
         { success: false, error: 'Acesso negado' },
@@ -109,6 +116,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Mercado não encontrado' },
         { status: 404 }
+      );
+    }
+
+    if (user.role === 'CLIENTE') {
+      return NextResponse.json(
+        { success: false, error: 'Acesso negado' },
+        { status: 403 }
       );
     }
 

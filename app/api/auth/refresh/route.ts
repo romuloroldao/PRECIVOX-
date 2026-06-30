@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { TokenManager } from '@/lib/token-manager';
+import { setAuthSessionCookies } from '@/lib/auth-session-cookies';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,18 +40,7 @@ export async function POST(req: NextRequest) {
       expiresAt: tokens.expiresAt.toISOString(),
     });
 
-    // Atualizar cookie do access token
-    const cookieName = process.env.NODE_ENV === 'production'
-      ? '__Secure-precivox-access-token'
-      : 'precivox-access-token';
-
-    response.cookies.set(cookieName, tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 15 * 60, // 15 minutos
-    });
+    setAuthSessionCookies(response, tokens.accessToken, tokens.refreshToken);
 
     return response;
   } catch (error) {

@@ -5,37 +5,24 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { TokenManager } from '@/lib/token-manager';
 import { encodeWebPushToken, type WebPushSubscriptionPayload } from '@/lib/push-web';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const resolvedUserId = session.id;
+
   try {
     const body = await request.json();
-    const { userId, token, platform = 'web', subscription } = body as {
-      userId?: string;
+    const { token, platform = 'web', subscription } = body as {
       token?: string;
       platform?: string;
       subscription?: WebPushSubscriptionPayload;
     };
-
-    const sessionUser = await TokenManager.validateSession({
-      headers: request.headers,
-      cookies: request.cookies,
-    });
-
-    const resolvedUserId = sessionUser?.id ?? userId;
-    if (!resolvedUserId) {
-      return NextResponse.json(
-        { success: false, error: 'userId obrigatório' },
-        { status: 400 }
-      );
-    }
-
-    if (sessionUser?.id && userId && sessionUser.id !== userId) {
-      return NextResponse.json({ success: false, error: 'Não autorizado' }, { status: 403 });
-    }
 
     let storedToken = token?.trim();
     if (subscription?.endpoint && subscription.keys?.p256dh && subscription.keys?.auth) {

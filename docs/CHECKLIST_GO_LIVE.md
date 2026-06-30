@@ -80,7 +80,7 @@ curl -X PATCH -H "Cookie: ..." -H "Content-Type: application/json" \
 - [x] Busca — 27 mercados, comparar ofertas
 - [x] Scan + EL — UI carrega (OCR + match catálogo)
 - [ ] Push cesta (48–72h) — requer opt-in VAPID
-- [ ] Perfil PRECI — **⚠️ chunk reload** em `/cliente/perfil` (investigar)
+- [x] Perfil PRECI — `/cliente/perfil` (fix chunk recovery + loading cliente, 30/06/2026)
 
 ### Gestor (Empório Select)
 - [x] Upload + sync + saúde catálogo (card visível; catálogo stale)

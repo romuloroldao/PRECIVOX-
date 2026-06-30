@@ -53,9 +53,10 @@ export function CatalogoMercadosResumo({ mercadoFiltro, modoComparativo, classNa
     ? resumo.mercados.find((m) => m.id === mercadoFiltro)
     : null;
 
-  const totalExibivel = modoComparativo
-    ? mercadoAtual?.ofertas ?? resumo.totais.ofertasTotal
-    : mercadoAtual?.produtosComEstoque ?? resumo.totais.produtosUnicosGlobal;
+  const totalExibivel =
+    (modoComparativo
+      ? mercadoAtual?.ofertas ?? resumo.totais?.ofertasTotal
+      : mercadoAtual?.produtosComEstoque ?? resumo.totais?.produtosUnicosGlobal) ?? 0;
 
   return (
     <div

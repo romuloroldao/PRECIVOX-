@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { recordProductAddedToList, recordProductRemovedFromList } from '@/lib/events/frontend-events';
 
 export interface ItemLista {
@@ -41,12 +41,9 @@ interface ListaContextType {
   listaAtivaId: string | null;
   listasSalvas: ListaSalva[];
   adicionarItem: (item: ItemLista) => void;
-  /** Restaura item removido (ex.: desfazer) sem incrementar quantidade. */
   restaurarItem: (item: ItemLista) => void;
   removerItem: (id: string) => void;
-  /** Troca vários itens de uma vez (ex.: consolidar rota) sem incrementar quantidade por id existente. */
   aplicarTrocaRota: (removerIds: string[], novosItens: ItemLista[]) => void;
-  /** Restaura lista a um snapshot (desfazer otimização de rota). */
   restaurarItens: (snapshot: ItemLista[]) => void;
   atualizarQuantidade: (id: string, quantidade: number) => void;
   limparLista: () => void;
@@ -56,7 +53,6 @@ interface ListaContextType {
   deletarLista: (listaId: string) => void;
   total: number;
   totalItens: number;
-  /** Último item adicionado — usado para feedback visual no FAB e toast rico. */
   ultimoItemAdicionado: ItemLista | null;
   limparUltimoItem: () => void;
 }
@@ -65,6 +61,13 @@ const ListaContext = createContext<ListaContextType | undefined>(undefined);
 
 const STORAGE_KEY_LISTAS = 'precivox_listas_salvas';
 const STORAGE_KEY_LISTA_ATIVA = 'precivox_lista_ativa_id';
+
+function calcularTotal(itens: ItemLista[]) {
+  return itens.reduce((acc, item) => {
+    const preco = item.emPromocao && item.precoPromocional ? item.precoPromocional : item.preco;
+    return acc + preco * item.quantidade;
+  }, 0);
+}
 
 export function ListaProvider({ children }: { children: ReactNode }) {
   const [itens, setItens] = useState<ItemLista[]>([]);
@@ -82,179 +85,141 @@ export function ListaProvider({ children }: { children: ReactNode }) {
       itens: [],
       total: 0,
     };
-    
-    setListasSalvas(prev => [...prev, novaLista]);
+
+    setListasSalvas((prev) => [...prev, novaLista]);
     setListaAtivaId(novaLista.id);
     setItens([]);
-    
+
     return novaLista.id;
   }, []);
 
-  // Carregar listas salvas e lista ativa do localStorage ao montar
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        // Carregar listas salvas
-        const listasSalvasData = localStorage.getItem(STORAGE_KEY_LISTAS);
-        let listas: ListaSalva[] = [];
-        if (listasSalvasData) {
-          listas = JSON.parse(listasSalvasData);
-          setListasSalvas(listas);
-        }
+    if (typeof window === 'undefined') return;
 
-        // Carregar lista ativa
-        const listaAtivaIdData = localStorage.getItem(STORAGE_KEY_LISTA_ATIVA);
-        if (listaAtivaIdData) {
-          const listaId = JSON.parse(listaAtivaIdData);
-          setListaAtivaId(listaId);
-          
-          // Carregar itens da lista ativa
-          const listaAtiva = listas.find((l: ListaSalva) => l.id === listaId);
-          
-          if (listaAtiva) {
-            setItens(listaAtiva.itens || []);
-          } else {
-            // Lista ativa não encontrada, criar uma nova
-            criarNovaLista('Lista de Compras');
-          }
-        } else {
-          // Se não há lista ativa, criar uma padrão
-          if (listas.length === 0) {
-            criarNovaLista('Lista de Compras');
-          } else {
-            // Usar a primeira lista disponível
-            setListaAtivaId(listas[0].id);
-            setItens(listas[0].itens || []);
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao carregar listas:', error);
-        // Em caso de erro, criar uma lista padrão
-        criarNovaLista('Lista de Compras');
+    try {
+      const listasSalvasData = localStorage.getItem(STORAGE_KEY_LISTAS);
+      let listas: ListaSalva[] = [];
+      if (listasSalvasData) {
+        listas = JSON.parse(listasSalvasData);
+        setListasSalvas(listas);
       }
+
+      const listaAtivaIdData = localStorage.getItem(STORAGE_KEY_LISTA_ATIVA);
+      if (listaAtivaIdData) {
+        const listaId = JSON.parse(listaAtivaIdData);
+        setListaAtivaId(listaId);
+        const listaAtiva = listas.find((l) => l.id === listaId);
+        if (listaAtiva) {
+          setItens(listaAtiva.itens || []);
+        } else {
+          criarNovaLista('Lista de Compras');
+        }
+      } else if (listas.length === 0) {
+        criarNovaLista('Lista de Compras');
+      } else {
+        setListaAtivaId(listas[0].id);
+        setItens(listas[0].itens || []);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar listas:', error);
+      criarNovaLista('Lista de Compras');
     }
   }, [criarNovaLista]);
 
-  // Salvar listas no localStorage sempre que mudarem
   useEffect(() => {
     if (typeof window !== 'undefined' && listasSalvas.length > 0) {
       localStorage.setItem(STORAGE_KEY_LISTAS, JSON.stringify(listasSalvas));
     }
   }, [listasSalvas]);
 
-  // Salvar lista ativa no localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && listaAtivaId) {
       localStorage.setItem(STORAGE_KEY_LISTA_ATIVA, JSON.stringify(listaAtivaId));
     }
   }, [listaAtivaId]);
 
-  // Atualizar lista ativa quando itens mudarem
   useEffect(() => {
-    if (typeof window !== 'undefined' && listaAtivaId) {
-      const listaAtualizada = listasSalvas.map(lista => {
-        if (lista.id === listaAtivaId) {
-          return {
-            ...lista,
-            itens,
-            total: itens.reduce((acc, item) => {
-              const preco = item.emPromocao && item.precoPromocional 
-                ? item.precoPromocional 
-                : item.preco;
-              return acc + preco * item.quantidade;
-            }, 0),
-          };
-        }
-        return lista;
-      });
-      setListasSalvas(listaAtualizada);
-    }
+    if (!listaAtivaId) return;
+    setListasSalvas((prev) =>
+      prev.map((lista) =>
+        lista.id === listaAtivaId
+          ? { ...lista, itens, total: calcularTotal(itens) }
+          : lista
+      )
+    );
   }, [itens, listaAtivaId]);
 
-  const selecionarLista = (listaId: string) => {
-    const lista = listasSalvas.find(l => l.id === listaId);
+  const selecionarLista = useCallback((listaId: string) => {
+    const lista = listasSalvas.find((l) => l.id === listaId);
     if (lista) {
       setListaAtivaId(listaId);
       setItens(lista.itens || []);
     }
-  };
+  }, [listasSalvas]);
 
-  const salvarListaAtual = (nome: string) => {
-    if (!listaAtivaId) {
-      criarNovaLista(nome);
-      return;
-    }
-
-    const listaAtualizada = listasSalvas.map(lista => {
-      if (lista.id === listaAtivaId) {
-        return {
-          ...lista,
-          nome,
-          itens,
-          total: itens.reduce((acc, item) => {
-            const preco = item.emPromocao && item.precoPromocional 
-              ? item.precoPromocional 
-              : item.preco;
-            return acc + preco * item.quantidade;
-          }, 0),
-        };
+  const salvarListaAtual = useCallback(
+    (nome: string) => {
+      if (!listaAtivaId) {
+        criarNovaLista(nome);
+        return;
       }
-      return lista;
-    });
-    setListasSalvas(listaAtualizada);
-  };
+      setListasSalvas((prev) =>
+        prev.map((lista) =>
+          lista.id === listaAtivaId
+            ? { ...lista, nome, itens, total: calcularTotal(itens) }
+            : lista
+        )
+      );
+    },
+    [listaAtivaId, itens, criarNovaLista]
+  );
 
-  const deletarLista = (listaId: string) => {
-    if (listasSalvas.length <= 1) {
-      // Não permite deletar a última lista
-      return;
-    }
-
-    const novasListas = listasSalvas.filter(l => l.id !== listaId);
-    setListasSalvas(novasListas);
-
-    // Se a lista deletada era a ativa, selecionar outra
-    if (listaId === listaAtivaId) {
-      if (novasListas.length > 0) {
-        selecionarLista(novasListas[0].id);
-      } else {
-        criarNovaLista('Lista de Compras');
-      }
-    }
-  };
-
-  const adicionarItem = useCallback((item: ItemLista) => {
-    const qtd = item.quantidade && item.quantidade > 0 ? item.quantidade : 1;
-    setItens((prevItens) => {
-      const itemExistente = prevItens.find((i) => i.id === item.id);
-      if (itemExistente) {
-        return prevItens.map((i) =>
-          i.id === item.id ? { ...i, quantidade: i.quantidade + qtd } : i
-        );
-      }
-      return [...prevItens, { ...item, quantidade: qtd }];
-    });
-    setUltimoItemAdicionado({ ...item, quantidade: qtd });
-
-    // Registrar evento para IA (não bloqueante)
-    if (typeof window !== 'undefined' && listaAtivaId) {
-      const userId = localStorage.getItem('userId') || 'anonymous';
-      const mercadoId = item.unidade?.mercado?.id || 'unknown';
-
-      recordProductAddedToList(
-        userId,
-        mercadoId,
-        item.id,
-        listaAtivaId,
-        item.quantidade || 1,
-        item.preco,
-        item.produtoCatalogoId
-      ).catch(err => {
-        console.error('Erro ao registrar evento:', err);
-        // Não quebrar o fluxo
+  const deletarLista = useCallback(
+    (listaId: string) => {
+      setListasSalvas((prev) => {
+        if (prev.length <= 1) return prev;
+        const novasListas = prev.filter((l) => l.id !== listaId);
+        if (listaId === listaAtivaId && novasListas.length > 0) {
+          const proxima = novasListas[0];
+          setListaAtivaId(proxima.id);
+          setItens(proxima.itens || []);
+        }
+        return novasListas;
       });
-    }
-  }, [listaAtivaId]);
+    },
+    [listaAtivaId]
+  );
+
+  const adicionarItem = useCallback(
+    (item: ItemLista) => {
+      const qtd = item.quantidade && item.quantidade > 0 ? item.quantidade : 1;
+      setItens((prevItens) => {
+        const itemExistente = prevItens.find((i) => i.id === item.id);
+        if (itemExistente) {
+          return prevItens.map((i) =>
+            i.id === item.id ? { ...i, quantidade: i.quantidade + qtd } : i
+          );
+        }
+        return [...prevItens, { ...item, quantidade: qtd }];
+      });
+      setUltimoItemAdicionado({ ...item, quantidade: qtd });
+
+      if (typeof window !== 'undefined' && listaAtivaId) {
+        const userId = localStorage.getItem('userId') || 'anonymous';
+        const mercadoId = item.unidade?.mercado?.id || 'unknown';
+        recordProductAddedToList(
+          userId,
+          mercadoId,
+          item.id,
+          listaAtivaId,
+          item.quantidade || 1,
+          item.preco,
+          item.produtoCatalogoId
+        ).catch((err) => console.error('Erro ao registrar evento:', err));
+      }
+    },
+    [listaAtivaId]
+  );
 
   const aplicarTrocaRota = useCallback((removerIds: string[], novosItens: ItemLista[]) => {
     setItens((prev) => {
@@ -278,80 +243,94 @@ export function ListaProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const removerItem = useCallback((id: string) => {
-    const itemRemovido = itens.find(i => i.id === id);
-    
-    setItens((prevItens) => prevItens.filter((item) => item.id !== id));
-
-    // Registrar evento para IA (não bloqueante)
-    if (typeof window !== 'undefined' && listaAtivaId && itemRemovido) {
-      const userId = localStorage.getItem('userId') || 'anonymous';
-      const mercadoId = itemRemovido.unidade?.mercado?.id || 'unknown';
-      
-      recordProductRemovedFromList(
-        userId,
-        mercadoId,
-        itemRemovido.id,
-        listaAtivaId,
-        itemRemovido.produtoCatalogoId
-      ).catch(err => {
-        console.error('Erro ao registrar evento:', err);
-        // Não quebrar o fluxo
+  const removerItem = useCallback(
+    (id: string) => {
+      setItens((prevItens) => {
+        const itemRemovido = prevItens.find((i) => i.id === id);
+        if (typeof window !== 'undefined' && listaAtivaId && itemRemovido) {
+          const userId = localStorage.getItem('userId') || 'anonymous';
+          const mercadoId = itemRemovido.unidade?.mercado?.id || 'unknown';
+          recordProductRemovedFromList(
+            userId,
+            mercadoId,
+            itemRemovido.id,
+            listaAtivaId,
+            itemRemovido.produtoCatalogoId
+          ).catch((err) => console.error('Erro ao registrar evento:', err));
+        }
+        return prevItens.filter((item) => item.id !== id);
       });
-    }
-  }, [itens, listaAtivaId]);
-
-  const atualizarQuantidade = (id: string, quantidade: number) => {
-    if (quantidade <= 0) {
-      removerItem(id);
-      return;
-    }
-    setItens((prevItens) =>
-      prevItens.map((item) =>
-        item.id === id ? { ...item, quantidade } : item
-      )
-    );
-  };
-
-  const limparLista = () => {
-    setItens([]);
-  };
-
-  const total = itens.reduce((acc, item) => {
-    const preco = item.emPromocao && item.precoPromocional 
-      ? item.precoPromocional 
-      : item.preco;
-    return acc + preco * item.quantidade;
-  }, 0);
-
-  const totalItens = itens.reduce((acc, item) => acc + item.quantidade, 0);
-
-  return (
-    <ListaContext.Provider
-      value={{
-        itens,
-        listaAtivaId,
-        listasSalvas,
-        adicionarItem,
-        restaurarItem,
-        removerItem,
-        aplicarTrocaRota,
-        restaurarItens,
-        atualizarQuantidade,
-        limparLista,
-        criarNovaLista,
-        selecionarLista,
-        salvarListaAtual,
-        deletarLista,
-        total,
-        totalItens,
-        ultimoItemAdicionado,
-        limparUltimoItem,
-      }}
-    >
-      {children}
-    </ListaContext.Provider>
+    },
+    [listaAtivaId]
   );
+
+  const atualizarQuantidade = useCallback(
+    (id: string, quantidade: number) => {
+      if (quantidade <= 0) {
+        removerItem(id);
+        return;
+      }
+      setItens((prevItens) =>
+        prevItens.map((item) => (item.id === id ? { ...item, quantidade } : item))
+      );
+    },
+    [removerItem]
+  );
+
+  const limparLista = useCallback(() => {
+    setItens([]);
+  }, []);
+
+  const total = useMemo(() => calcularTotal(itens), [itens]);
+  const totalItens = useMemo(
+    () => itens.reduce((acc, item) => acc + item.quantidade, 0),
+    [itens]
+  );
+
+  const value = useMemo(
+    () => ({
+      itens,
+      listaAtivaId,
+      listasSalvas,
+      adicionarItem,
+      restaurarItem,
+      removerItem,
+      aplicarTrocaRota,
+      restaurarItens,
+      atualizarQuantidade,
+      limparLista,
+      criarNovaLista,
+      selecionarLista,
+      salvarListaAtual,
+      deletarLista,
+      total,
+      totalItens,
+      ultimoItemAdicionado,
+      limparUltimoItem,
+    }),
+    [
+      itens,
+      listaAtivaId,
+      listasSalvas,
+      adicionarItem,
+      restaurarItem,
+      removerItem,
+      aplicarTrocaRota,
+      restaurarItens,
+      atualizarQuantidade,
+      limparLista,
+      criarNovaLista,
+      selecionarLista,
+      salvarListaAtual,
+      deletarLista,
+      total,
+      totalItens,
+      ultimoItemAdicionado,
+      limparUltimoItem,
+    ]
+  );
+
+  return <ListaContext.Provider value={value}>{children}</ListaContext.Provider>;
 }
 
 export function useLista() {
@@ -361,4 +340,3 @@ export function useLista() {
   }
   return context;
 }
-

@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,37 +23,12 @@ function daysBetween(date1: Date, date2: Date): number {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const userId = session.id;
+
   try {
-    const body = await request.json();
-    const { userId } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Bad Request',
-          message: 'userId é obrigatório',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: 'Usuário não encontrado',
-        },
-        { status: 404 }
-      );
-    }
-
     // Buscar streak do usuário
     let streak = await prisma.userStreak.findUnique({
       where: { userId },

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/hooks/useUnifiedSession';
-import { fullLogout } from '@/lib/logout-client';
+import { fullLogout, LOGOUT_REDIRECT } from '@/lib/logout-client';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 
@@ -29,10 +29,10 @@ export default function Header({ title = 'PRECIVOX', showUserInfo = true, loginH
 
   const handleLogout = async () => {
     try {
-      await fullLogout('/');
+      await fullLogout(LOGOUT_REDIRECT);
     } catch (error) {
       console.error('[Header] Erro ao fazer logout:', error);
-      window.location.href = '/';
+      window.location.replace(LOGOUT_REDIRECT);
     }
   };
 

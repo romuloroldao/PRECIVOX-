@@ -34,7 +34,8 @@ export default function NovaListaPage() {
       const res = await fetch('/api/lists/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, name: trimmed, products: [] }),
+        credentials: 'include',
+        body: JSON.stringify({ name: trimmed, products: [] }),
       });
       const data = await res.json();
       if (data.success && data.data?.listId) {

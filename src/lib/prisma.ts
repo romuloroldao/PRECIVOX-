@@ -1,4 +1,5 @@
-import 'server-only';
+// NOTE: este módulo roda no servidor Express (Node/tsx), NÃO em React Server Components.
+// Por isso NÃO importa 'server-only' (que lança erro fora do contexto RSC do Next.js).
 import { PrismaClient } from '@prisma/client';
 
 // Singleton pattern para Prisma Client

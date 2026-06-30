@@ -3,7 +3,6 @@ import { NpsSurveyWidget } from '@/components/cliente/NpsSurveyWidget';
 import { MercadoVivoGeofenceWatcher } from '@/components/cliente/MercadoVivoGeofenceWatcher';
 import { ClienteAppBar } from '@/components/cliente/ClienteAppBar';
 import BottomNav from '@/components/cliente/BottomNav';
-import { ToastProvider } from '@/components/ToastContainer';
 
 export default function ClienteLayout({
   children,
@@ -12,15 +11,13 @@ export default function ClienteLayout({
 }) {
   return (
     <RouteGuard allowedRoles={['CLIENTE', 'GESTOR', 'ADMIN']}>
-      <ToastProvider>
-        <MercadoVivoGeofenceWatcher>
-          <ClienteAppBar />
-          {/* Espaço inferior no mobile para o conteúdo não ficar sob a navegação. */}
-          <div className="pb-[calc(var(--cliente-bottom-nav-height)+1rem)] md:pb-0">{children}</div>
-          <NpsSurveyWidget />
-          <BottomNav />
-        </MercadoVivoGeofenceWatcher>
-      </ToastProvider>
+      <MercadoVivoGeofenceWatcher>
+        <ClienteAppBar />
+        {/* Espaço inferior no mobile para o conteúdo não ficar sob a navegação. */}
+        <div className="pb-[calc(var(--cliente-bottom-nav-height)+1rem)] md:pb-0">{children}</div>
+        <NpsSurveyWidget />
+        <BottomNav />
+      </MercadoVivoGeofenceWatcher>
     </RouteGuard>
   );
 }

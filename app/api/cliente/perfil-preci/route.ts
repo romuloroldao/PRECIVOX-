@@ -86,7 +86,13 @@ export async function PATCH(req: NextRequest) {
     const ajustes = body.ajustes as PerfilPreciAjustes | undefined;
     const elConfigRaw = body.elConfig as Partial<ElConfigUsuario> | undefined;
 
-    if (!ajustes && !elConfigRaw) {
+    const temAjustes =
+      ajustes &&
+      typeof ajustes === 'object' &&
+      Object.keys(ajustes).length > 0;
+    const temElConfig = Boolean(elConfigRaw);
+
+    if (!temAjustes && !temElConfig) {
       return NextResponse.json(
         { success: false, error: 'Informe ajustes e/ou elConfig' },
         { status: 400 }
@@ -110,8 +116,9 @@ export async function PATCH(req: NextRequest) {
     if (elValidado) {
       base.elConfig = { ...elValidado, atualizadoEm: new Date().toISOString() };
     }
-    if (ajustes && typeof ajustes === 'object') {
-      base.ajustes = ajustes;
+    if (temAjustes) {
+      const prev = (base.ajustes as PerfilPreciAjustes | undefined) ?? {};
+      base.ajustes = { ...prev, ...ajustes };
     }
     base.atualizadoEm = new Date().toISOString();
 

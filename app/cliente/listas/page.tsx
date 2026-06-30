@@ -56,7 +56,7 @@ export default function ListasPage() {
           return;
         }
 
-        const response = await fetch(`/api/lists?userId=${userId}`);
+        const response = await fetch('/api/lists', { credentials: 'include', cache: 'no-store' });
         const data = await response.json();
         const apiLists: List[] = data.success ? data.data.lists || [] : [];
         setLists(mergeListSummaries(apiLists, localLists));

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/jwt';
+import { TokenManager } from '@/lib/token-manager';
 import { z } from 'zod';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 const updateRoleSchema = z.object({
   role: z.enum(['CLIENTE', 'GESTOR', 'ADMIN']),
@@ -11,33 +12,15 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await requireApiSession(request, { roles: ['ADMIN'] });
+  if (isAuthResponse(auth)) return auth;
+
   try {
-    // Verificar autenticação
-    const token = request.cookies.get('token')?.value || 
-                  request.headers.get('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token não fornecido' },
-        { status: 401 }
-      );
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload || payload.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
-    }
-
-    // Validar dados
     const body = await request.json();
     const { role } = updateRoleSchema.parse(body);
 
-    // Verificar se usuário existe
     const user = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id: params.id },
     });
 
     if (!user) {
@@ -47,23 +30,27 @@ export async function PATCH(
       );
     }
 
-    // Atualizar role
     const updatedUser = await prisma.user.update({
       where: { id: params.id },
-      data: { role },
+      data: {
+        role,
+        // Invalida JWTs emitidos antes da troca de role
+        tokenVersion: { increment: 1 },
+      },
       select: {
         id: true,
         nome: true,
         email: true,
-        role: true
-      }
+        role: true,
+      },
     });
+
+    await TokenManager.revokeUserTokens(params.id);
 
     return NextResponse.json({
       success: true,
-      data: updatedUser
+      data: updatedUser,
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

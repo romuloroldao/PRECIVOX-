@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimiters } from '@/lib/rate-limiter';
 import { getCached } from '@/lib/redis';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,8 +87,28 @@ async function handler(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
   try {
     const { id } = params;
+
+    const owner = await prisma.listas_compras.findUnique({
+      where: { id },
+      select: { usuarioId: true },
+    });
+    if (!owner) {
+      return NextResponse.json(
+        { success: false, error: 'Not Found', message: 'Lista não encontrada' },
+        { status: 404 }
+      );
+    }
+    if (owner.usuarioId !== session.id) {
+      return NextResponse.json(
+        { success: false, error: 'Acesso negado' },
+        { status: 403 }
+      );
+    }
 
     // Buscar do cache Redis (5 minutos) ou do banco
     const data = await getCached(
@@ -114,7 +135,7 @@ async function handler(
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600',
         'X-Cache-Key': `list-${id}`,
       },
     });

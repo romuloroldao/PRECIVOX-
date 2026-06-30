@@ -68,15 +68,14 @@ export default function LoginForm({ onShowRegister }: { onShowRegister: () => vo
         });
       }
 
-      await router.refresh();
-
       const role = json.user?.role as string | undefined;
-      if (role === 'GESTOR' || role === 'ADMIN') {
-        router.push(getDashboardUrl(role));
-        return;
-      }
+      const destination =
+        role === 'GESTOR' || role === 'ADMIN'
+          ? getDashboardUrl(role)
+          : callbackUrl;
 
-      router.push(callbackUrl);
+      window.location.href = destination;
+      return;
     } catch (error) {
       console.error('Erro no login:', error);
       setErrorMessage('Não foi possível concluir o login agora. Tente novamente em instantes.');

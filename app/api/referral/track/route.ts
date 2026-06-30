@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { autoUnlockBadgesServer } from '@/lib/gamification-server';
 import { invalidate } from '@/lib/redis';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,21 +29,32 @@ const REFEREE_REWARDS = {
 };
 
 export async function POST(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
   try {
     const body = await request.json();
     const { code, refereeId } = body;
 
-    if (!code || !refereeId) {
+    if (!code) {
       return NextResponse.json(
         {
           success: false,
           error: 'Bad Request',
-          message: 'code e refereeId são obrigatórios',
+          message: 'code é obrigatório',
         },
         { status: 400 }
       );
     }
 
+    if (refereeId && refereeId !== session.id) {
+      return NextResponse.json(
+        { success: false, error: 'Não autorizado' },
+        { status: 403 }
+      );
+    }
+
+    const effectiveRefereeId = session.id;
     // Verificar se código existe e está pendente
     const referral = await prisma.referral.findUnique({
       where: { code },
@@ -73,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (referral.referrerId === refereeId) {
+    if (referral.referrerId === effectiveRefereeId) {
       return NextResponse.json(
         {
           success: false,
@@ -86,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar se referee existe
     const referee = await prisma.user.findUnique({
-      where: { id: refereeId },
+      where: { id: effectiveRefereeId },
     });
 
     if (!referee) {
@@ -104,7 +116,7 @@ export async function POST(request: NextRequest) {
     const updatedReferral = await prisma.referral.update({
       where: { id: referral.id },
       data: {
-        refereeId,
+        refereeId: effectiveRefereeId,
         status: 'completed',
         completedAt: new Date(),
       },

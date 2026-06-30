@@ -9,10 +9,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sendNotificationToUser } from '@/lib/notifications';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  // Rota administrativa: envia push para qualquer userId.
+  // Exige sessão ADMIN para evitar abuso/spam (IDOR de notificações).
+  const auth = await requireApiSession(request, { roles: ['ADMIN'] });
+  if (isAuthResponse(auth)) return auth;
+
   try {
     const body = await request.json();
     const { userId, type, title, body: message, data } = body;

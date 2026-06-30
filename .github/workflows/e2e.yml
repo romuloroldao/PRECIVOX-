@@ -50,8 +50,8 @@ jobs:
       - name: Prisma generate & schema (CI)
         run: |
           npx prisma generate
-          # Banco CI é sempre vazio: db push alinha schema (incl. PR-5 sem accounts/sessions).
-          npx prisma db push --accept-data-loss
+          # Banco CI é sempre vazio: a baseline (00000000000000_init_baseline) cria o schema completo.
+          npx prisma migrate deploy
 
       - name: Seed usuários de teste
         run: npm run db:seed

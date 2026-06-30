@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCached } from '@/lib/redis';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,21 +88,12 @@ async function fetchBadgesFromDB(userId?: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const userId = session.id;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || undefined;
-
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Bad Request',
-          message: 'userId é obrigatório',
-        },
-        { status: 400 }
-      );
-    }
-
     // Buscar do cache Redis (1 hora) ou do banco
     const cacheKey = `badges:${userId}`;
     let data;
@@ -134,7 +126,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200',
+        'Cache-Control': 'private, s-maxage=3600, stale-while-revalidate=7200',
         'X-Cache-Key': cacheKey,
       },
     });

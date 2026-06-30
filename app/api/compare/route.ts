@@ -12,11 +12,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimiters } from '@/lib/rate-limiter';
 import { autoUnlockBadgesServer } from '@/lib/gamification-server';
+import { getOptionalApiSession } from '@/lib/api-auth';
 
 async function handler(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productIds, location, userId } = body; // userId opcional para gamificação
+    const { productIds, location } = body;
+
+    const sessionUser = await getOptionalApiSession(request);
+    const userId = sessionUser?.id;
 
     // Validação
     if (!Array.isArray(productIds) || productIds.length === 0) {

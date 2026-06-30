@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { TokenManager } from '@/lib/token-manager';
 import { MarketHealthEngine } from '@/lib/ai';
+import { isGestorAuthResponse, requireGestorApiAccess } from '@/lib/gestor-api-mercado';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,28 +15,10 @@ export async function GET(
   { params }: { params: { mercadoId: string } }
 ) {
   try {
-    // Validar autenticação
-    const user = await TokenManager.validateSession({
-      headers: req.headers,
-      cookies: req.cookies,
-    });
+    const auth = await requireGestorApiAccess(req, params.mercadoId);
+    if (isGestorAuthResponse(auth)) return auth.response;
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Não autenticado', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
-
-    // Apenas ADMIN e GESTOR podem ver health score
-    if (user.role !== 'ADMIN' && user.role !== 'GESTOR') {
-      return NextResponse.json(
-        { error: 'Acesso negado', code: 'FORBIDDEN' },
-        { status: 403 }
-      );
-    }
-
-    const mercadoId = params.mercadoId;
+    const mercadoId = auth.mercadoId;
     const diasAnalise = parseInt(
       new URL(req.url).searchParams.get('dias') || '30'
     );

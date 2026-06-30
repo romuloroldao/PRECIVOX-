@@ -23,8 +23,8 @@ export async function autoUnlockBadges(
     const response = await fetch('/api/gamification/unlock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
-        userId,
         action,
         value,
       }),

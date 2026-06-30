@@ -20,48 +20,98 @@ import { fetchDashboardData } from '@/lib/ai-api';
 import DashboardLayout from '@/components/DashboardLayout';
 
 export default function AIInsightsDashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [actionableInsights, setActionableInsights] = useState<any[]>([]);
-
-  // Obter mercadoId do usuário logado
-  const mercadoId = (session?.user as any)?.mercadoId || 'mercado-1764614505466-1'; // Fallback para teste
+  const [mercadoId, setMercadoId] = useState('');
+  const [mercadoResolvido, setMercadoResolvido] = useState(false);
 
   useEffect(() => {
-    if (session) {
-      loadDashboardData();
+    if (status === 'unauthenticated') {
+      setLoading(false);
+      setError('Faça login para acessar o dashboard.');
+      return;
     }
-  }, [session]);
+    if (status !== 'authenticated') return;
+
+    const sid = (session?.user as { mercadoId?: string })?.mercadoId;
+    if (sid) {
+      setMercadoId(sid);
+      setMercadoResolvido(true);
+      return;
+    }
+
+    if ((session?.user as { role?: string })?.role !== 'GESTOR') {
+      setMercadoResolvido(true);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/markets', { cache: 'no-store' });
+        const json = await res.json();
+        const id = json.data?.[0]?.id as string | undefined;
+        if (!cancelled) {
+          setMercadoId(id || '');
+          setMercadoResolvido(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setMercadoId('');
+          setMercadoResolvido(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session, status]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !mercadoResolvido) return;
+    if (!mercadoId) {
+      setError('Mercado não encontrado.');
+      setLoading(false);
+      return;
+    }
+    loadDashboardData();
+  }, [status, mercadoResolvido, mercadoId]);
 
   const loadDashboardData = async () => {
+    if (!mercadoId) return;
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const data = await fetchDashboardData(mercadoId);
-      
+      const predictions = data.demand?.predictions ?? [];
+      const recommendations = data.pricing?.recommendations ?? [];
+
       // Processar dados para o formato do dashboard
       const processedData = {
         metrics: {
-          totalProducts: data.demand.predictions.length || 0,
-          stockHealth: data.stockHealth?.score || 0,
-          avgDemand: calculateAvgDemand(data.demand.predictions),
-          priceOptimization: calculatePriceOptimization(data.pricing.recommendations),
+          totalProducts: predictions.length,
+          stockHealth: data.stockHealth?.score ?? 0,
+          avgDemand: calculateAvgDemand(predictions),
+          priceOptimization: calculatePriceOptimization(recommendations),
         },
         trends: {
-          sales: calculateSalesTrend(data.demand.predictions),
-          stock: data.stockHealth?.score ? (data.stockHealth.score - 75) : 0,
-          demand: calculateDemandTrend(data.demand.predictions),
+          sales: calculateSalesTrend(predictions),
+          stock: data.stockHealth?.score ? data.stockHealth.score - 75 : 0,
+          demand: calculateDemandTrend(predictions),
         },
-        alerts: data.stockHealth?.alertas || [],
-        demandHeatmap: data.demand.heatmap || [],
-        stockRupture: data.stockHealth?.produtosRisco || [],
-        excessStock: data.stockHealth?.produtosExcesso || [],
-        priceElasticity: data.pricing.elasticity || [],
-        recommendations: data.pricing.recommendations || [],
+        alerts: data.stockHealth?.alertas ?? [],
+        demandHeatmap: data.demand?.heatmap ?? [],
+        stockRupture: data.stockHealth?.produtosRisco ?? [],
+        excessStock: data.stockHealth?.produtosExcesso ?? [],
+        priceElasticity: data.pricing?.elasticity ?? [],
+        recommendations,
       };
 
       setDashboardData(processedData);

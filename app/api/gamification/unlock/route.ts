@@ -9,37 +9,27 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const userId = session.id;
+
   try {
     const body = await request.json();
-    const { userId, action, value } = body;
+    const { action, value } = body;
 
     // Validação
-    if (!userId || !action) {
+    if (!action) {
       return NextResponse.json(
         {
           success: false,
           error: 'Bad Request',
-          message: 'userId e action são obrigatórios',
+          message: 'action é obrigatório',
         },
         { status: 400 }
-      );
-    }
-
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: 'Usuário não encontrado',
-        },
-        { status: 404 }
       );
     }
 

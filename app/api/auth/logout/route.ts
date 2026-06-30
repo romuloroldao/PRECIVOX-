@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { internalFetch } from '@/lib/internal-backend';
+import {
+  clearAuthSessionCookies,
+  getRefreshTokenFromCookies,
+} from '@/lib/auth-session-cookies';
+import { TokenManager } from '@/lib/token-manager';
 
-const production = process.env.NODE_ENV === 'production';
-const cookiePrefix = production ? '__Secure-' : '';
-const domain = production ? '.precivox.com.br' : undefined;
-
-/** Expira cookie igual ao usado no login (path + domain + flags). */
-function expireCookie(
-  response: NextResponse,
-  name: string,
-  options: { httpOnly?: boolean } = {}
-) {
-  const isHostOnly = name.startsWith('__Host-');
-  response.cookies.set(name, '', {
-    path: '/',
-    ...(isHostOnly ? {} : { domain }),
-    maxAge: 0,
-    httpOnly: options.httpOnly ?? false,
-    sameSite: 'lax',
-    secure: production,
-  });
-}
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    const refreshCookieName = `${cookiePrefix}precivox-refresh-token`;
-
-    const refreshToken = request.cookies.get(refreshCookieName)?.value;
+    const refreshToken = getRefreshTokenFromCookies(request.cookies);
 
     if (refreshToken) {
+      await TokenManager.revokeRefreshToken(refreshToken).catch(() => undefined);
       await internalFetch('/api/v1/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,17 +27,16 @@ export async function POST(request: NextRequest) {
       message: 'Logout realizado com sucesso',
     });
 
-    expireCookie(response, `${cookiePrefix}precivox-access-token`, { httpOnly: true });
-    expireCookie(response, 'precivox-access-token', { httpOnly: true });
-    expireCookie(response, '__Secure-precivox-access-token', { httpOnly: true });
-    expireCookie(response, refreshCookieName, { httpOnly: true });
+    clearAuthSessionCookies(response);
 
     return response;
   } catch (error) {
     console.error('Erro no logout:', error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
       { status: 500 }
     );
+    clearAuthSessionCookies(response);
+    return response;
   }
 }

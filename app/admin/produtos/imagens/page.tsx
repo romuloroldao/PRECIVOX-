@@ -88,6 +88,17 @@ export default function ProdutosImagensPage() {
     loadItems();
   }, [loadItems]);
 
+  // Redirect de role deve rodar em efeito (não durante o render) para evitar
+  // "Cannot update during render" e navegação disparada múltiplas vezes.
+  useEffect(() => {
+    if (session?.user) {
+      const role = parseRole((session.user as { role?: string }).role);
+      if (role !== 'ADMIN' && role !== 'GESTOR') {
+        router.replace(getDashboardUrl(role));
+      }
+    }
+  }, [session, router]);
+
   const runAction = async (
     produtoId: string,
     action: 'reprocessar' | 'restaurar' | 'remover' | 'upload',
@@ -131,7 +142,7 @@ export default function ProdutosImagensPage() {
   if (session?.user) {
     const role = parseRole((session.user as { role?: string }).role);
     if (role !== 'ADMIN' && role !== 'GESTOR') {
-      router.push(getDashboardUrl(role));
+      // Não-autorizado: o useEffect acima cuida do redirect; aqui só evitamos render.
       return null;
     }
   }

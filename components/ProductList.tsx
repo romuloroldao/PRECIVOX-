@@ -27,7 +27,8 @@ export function ProductList({ produtos, onAbrirLista }: ProductListProps) {
       preco: produto.preco,
       precoPromocional: produto.precoPromocional,
       emPromocao: produto.emPromocao,
-      quantidade: produto.quantidade,
+      // produto.quantidade é o estoque disponível; ao adicionar à lista começa em 1.
+      quantidade: 1,
       imagem: produto.imagem,
       imagemThumb: produto.imagemThumb,
       imagemStatus: produto.imagemStatus,

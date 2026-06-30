@@ -74,8 +74,14 @@ function LoginContent() {
             Clique abaixo para continuar.
           </p>
           <button
+            onClick={() => void import('@/lib/logout-client').then(({ fullLogout, LOGOUT_REDIRECT }) => fullLogout(LOGOUT_REDIRECT))}
+            className="w-full px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors font-medium mb-3"
+          >
+            Sair e usar outra conta
+          </button>
+          <button
             onClick={() => router.replace(targetUrl)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Continuar
           </button>

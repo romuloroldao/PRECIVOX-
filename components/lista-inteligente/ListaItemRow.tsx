@@ -63,7 +63,7 @@ export function ListaItemRow({
             {item.nome}
           </h4>
           <p className={cn('text-text-secondary', compact ? 'text-[10px]' : 'text-xs')}>
-            {item.unidade.mercado.nome}
+            {item.unidade?.mercado?.nome ?? 'Mercado'}
           </p>
 
           <div className={cn('flex flex-wrap items-center gap-1.5', compact ? 'mt-0.5' : 'mt-1')}>
@@ -91,6 +91,7 @@ export function ListaItemRow({
               onChange={(q) => onAtualizarQtd(item.id, q)}
               size={compact ? 'sm' : 'md'}
               min={1}
+              max={999}
             />
             <span
               className={cn(

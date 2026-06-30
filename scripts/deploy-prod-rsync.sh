@@ -36,11 +36,9 @@ npx prisma generate
 
 deploy_verify_pm2_alignment
 
-echo ">>> PM2 restart..."
-pm2 restart precivox-backend precivox-frontend precivox-ai-scheduler || pm2 restart precivox-frontend precivox-ai-scheduler
-pm2 save
+deploy_pm2_reload_apps
 
 sleep 2
-deploy_smoke_static_assets || exit 1
+deploy_smoke_apps || exit 1
 
 echo ">>> Deploy rápido concluído."

@@ -38,50 +38,51 @@ export function StreakCounter({ userId }: StreakCounterProps) {
             return;
         }
 
-        checkStreak();
-    }, [effectiveUserId]);
+        let cancelled = false;
+        let animTimer: ReturnType<typeof setTimeout> | undefined;
 
-    async function checkStreak() {
-        try {
-            setLoading(true);
-            setError(null);
+        void (async () => {
+            try {
+                setLoading(true);
+                setError(null);
 
-            const response = await fetch('/api/streaks/check', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ userId: effectiveUserId }),
-            });
+                const response = await fetch('/api/streaks/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({}),
+                });
 
-            const result = await response.json();
+                if (cancelled) return;
 
-            if (result.success) {
-                setStreakData(result.data);
+                const result = await response.json();
 
-                // Log events (callbacks removidos para evitar erros de serialização)
-                if (result.data.broken) {
-                    console.log(`Streak quebrado! Anterior: ${result.data.previousStreak} dias`);
+                if (result.success) {
+                    setStreakData(result.data);
+                    if (result.data.streak >= 3) {
+                        setShowAnimation(true);
+                        animTimer = setTimeout(() => {
+                            if (!cancelled) setShowAnimation(false);
+                        }, 2000);
+                    }
+                } else {
+                    setError(result.message || 'Erro ao carregar streak');
                 }
-                if (result.data.isNewRecord) {
-                    console.log(`Novo recorde! ${result.data.streak} dias consecutivos!`);
+            } catch (err) {
+                if (!cancelled) {
+                    console.error('Error checking streak:', err);
+                    setError('Erro ao conectar com o servidor');
                 }
-
-                // Animação de comemoração
-                if (result.data.streak >= 3) {
-                    setShowAnimation(true);
-                    setTimeout(() => setShowAnimation(false), 2000);
-                }
-            } else {
-                setError(result.message || 'Erro ao carregar streak');
+            } finally {
+                if (!cancelled) setLoading(false);
             }
-        } catch (err) {
-            console.error('Error checking streak:', err);
-            setError('Erro ao conectar com o servidor');
-        } finally {
-            setLoading(false);
-        }
-    }
+        })();
+
+        return () => {
+            cancelled = true;
+            if (animTimer) clearTimeout(animTimer);
+        };
+    }, [effectiveUserId]);
 
     if (loading) {
         return (

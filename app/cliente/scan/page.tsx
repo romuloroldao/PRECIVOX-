@@ -333,14 +333,14 @@ export default function ScanInteligentePage() {
                   </p>
                 )}
                 {m.melhorAlternativa &&
-                  m.melhorAlternativa.economiaLiquida.economiaLiquida > 0 && (
+                  (m.melhorAlternativa.economiaLiquida?.economiaLiquida ?? 0) > 0 && (
                     <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
                       <p className="text-xs font-semibold text-emerald-900">
                         Melhor preço na região
                       </p>
                       <p className="text-xs text-emerald-800">
-                        {m.melhorAlternativa.unidade.mercado.nome} ·{' '}
-                        {m.melhorAlternativa.unidade.nome}
+                        {m.melhorAlternativa.unidade?.mercado?.nome ?? 'Mercado'} ·{' '}
+                        {m.melhorAlternativa.unidade?.nome ?? '—'}
                         {m.melhorAlternativa.distanciaKm != null &&
                           ` · ${m.melhorAlternativa.distanciaKm.toFixed(1)} km`}
                       </p>

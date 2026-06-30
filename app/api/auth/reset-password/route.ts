@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { TokenManager } from '@/lib/token-manager';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
@@ -50,10 +51,16 @@ export async function POST(request: NextRequest) {
     await prisma.$transaction([
       prisma.user.update({
         where: { id: user.id },
-        data: { senhaHash: hashedPassword, dataAtualizacao: new Date() },
+        data: {
+          senhaHash: hashedPassword,
+          dataAtualizacao: new Date(),
+          tokenVersion: { increment: 1 },
+        },
       }),
       prisma.verification_tokens.delete({ where: { token: rawToken } }),
     ]);
+
+    await TokenManager.revokeUserTokens(user.id);
 
     return NextResponse.json({
       success: true,

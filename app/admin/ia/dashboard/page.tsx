@@ -369,7 +369,7 @@ export default function IADashboardPage() {
 
                   {/* Métricas */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(healthScore.metricas).map(([key, metrica]) => (
+                    {Object.entries(healthScore.metricas ?? {}).map(([key, metrica]) => (
                       <div key={key} className="border rounded-lg p-4">
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm font-medium text-gray-700 capitalize">
@@ -567,8 +567,8 @@ export default function IADashboardPage() {
                   <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4">
                     <h3 className="font-semibold text-purple-900 mb-2">Engajamento dos Usuários</h3>
                     <p className="text-sm text-purple-800">
-                      {healthScore.metricas.engajamentoUsuarios.valor.toFixed(1)} eventos por usuário por dia.
-                      {healthScore.metricas.engajamentoUsuarios.impacto > 0 
+                      {(healthScore.metricas?.engajamentoUsuarios?.valor ?? 0).toFixed(1)} eventos por usuário por dia.
+                      {(healthScore.metricas?.engajamentoUsuarios?.impacto ?? 0) > 0 
                         ? ' Isso indica bom engajamento.' 
                         : ' Considere estratégias para aumentar o engajamento.'}
                     </p>
@@ -577,8 +577,8 @@ export default function IADashboardPage() {
                   <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4">
                     <h3 className="font-semibold text-green-900 mb-2">Conversão Lista → Compra</h3>
                     <p className="text-sm text-green-800">
-                      {healthScore.metricas.conversaoListaCompra.valor.toFixed(1)}% das listas resultam em compra.
-                      {healthScore.metricas.conversaoListaCompra.impacto > 0
+                      {(healthScore.metricas?.conversaoListaCompra?.valor ?? 0).toFixed(1)}% das listas resultam em compra.
+                      {(healthScore.metricas?.conversaoListaCompra?.impacto ?? 0) > 0
                         ? ' Taxa de conversão saudável.'
                         : ' Há oportunidade de melhorar a conversão através de notificações e lembretes.'}
                     </p>

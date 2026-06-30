@@ -12,39 +12,29 @@ import { prisma } from '@/lib/prisma';
 import { autoUnlockBadgesServer } from '@/lib/gamification-server';
 import { invalidate } from '@/lib/redis';
 import { notifySavingsAlert } from '@/lib/notifications';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const userId = session.id;
+
   try {
     const body = await request.json();
-    const { userId, listId, productId, pricePaid, avgPrice } = body;
+    const { listId, productId, pricePaid, avgPrice } = body;
 
     // Validação
-    if (!userId || !pricePaid || !avgPrice) {
+    if (!pricePaid || !avgPrice) {
       return NextResponse.json(
         {
           success: false,
           error: 'Bad Request',
-          message: 'userId, pricePaid e avgPrice são obrigatórios',
+          message: 'pricePaid e avgPrice são obrigatórios',
         },
         { status: 400 }
-      );
-    }
-
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: 'Usuário não encontrado',
-        },
-        { status: 404 }
       );
     }
 

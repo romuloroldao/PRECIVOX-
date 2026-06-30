@@ -28,7 +28,7 @@ export function ProductCard({ produtos, onAdicionar, onAbrirLista }: ProductCard
   const { adicionarItem, listaAtivaId } = useLista();
   const { listaAdicionado } = useToast();
   const mercadoIds = useMemo(
-    () => [...new Set(produtos.map((p) => p.unidade.mercado.id))],
+    () => [...new Set(produtos.map((p) => p.unidade?.mercado?.id).filter(Boolean) as string[])],
     [produtos]
   );
   const selosMercado = useMercadoSelos(mercadoIds);
@@ -42,7 +42,8 @@ export function ProductCard({ produtos, onAdicionar, onAbrirLista }: ProductCard
       preco: produto.preco,
       precoPromocional: produto.precoPromocional,
       emPromocao: produto.emPromocao,
-      quantidade: produto.quantidade,
+      // produto.quantidade é o estoque disponível; ao adicionar à lista começa em 1.
+      quantidade: 1,
       imagem: produto.imagem,
       imagemThumb: produto.imagemThumb,
       imagemStatus: produto.imagemStatus,
@@ -61,7 +62,7 @@ export function ProductCard({ produtos, onAdicionar, onAbrirLista }: ProductCard
   const registrarSubstituicao = useCallback(
     (origem: Produto, substituto: Produto, modo: 'categoria' | 'equivalente') => {
       const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || 'anonymous' : 'anonymous';
-      const mid = origem.unidade.mercado.id;
+      const mid = origem.unidade?.mercado?.id ?? '';
       const origemPid = origem.produtoCatalogoId ?? origem.produto?.id;
       const subPid = substituto.produtoCatalogoId ?? substituto.produto?.id;
       if (origemPid && subPid) {
@@ -97,8 +98,8 @@ export function ProductCard({ produtos, onAdicionar, onAbrirLista }: ProductCard
         <CardLinhaSubstituto
           key={produto.id}
           produto={produto}
-          seloMercado={selosMercado[produto.unidade.mercado.id]?.selo ?? null}
-          seloCurto={selosMercado[produto.unidade.mercado.id]?.seloCurto ?? null}
+          seloMercado={selosMercado[produto.unidade?.mercado?.id ?? '']?.selo ?? null}
+          seloCurto={selosMercado[produto.unidade?.mercado?.id ?? '']?.seloCurto ?? null}
           onAdicionar={handleAdicionar}
           onSubstituir={registrarSubstituicao}
         />
@@ -137,7 +138,7 @@ function CardLinhaSubstituto({
     produto.emPromocao && produto.precoPromocional ? produto.precoPromocional : produto.preco;
 
   const pid = produto.produtoCatalogoId ?? produto.produto?.id;
-  const mercadoId = produto.unidade.mercado.id;
+  const mercadoId = produto.unidade?.mercado?.id ?? '';
 
   const carregarSubs = async (modo: 'categoria' | 'equivalente') => {
     if (!pid) return;
@@ -317,7 +318,7 @@ function CardLinhaSubstituto({
             </div>
 
             <p className="mb-4 text-sm text-text-secondary">
-              {produto.unidade.mercado.nome}
+              {produto.unidade?.mercado?.nome ?? 'Mercado'}
               {seloMercado && (
                 <MercadoSeloBadge
                   selo={seloMercado}
@@ -371,7 +372,7 @@ function CardLinhaSubstituto({
                   <p className="text-xs text-text-secondary">Categoria: {produto.categoria}</p>
                 )}
                 <p className="text-xs text-text-tertiary">
-                  {produto.unidade.nome} — {produto.unidade.cidade}
+                  {produto.unidade?.nome ?? '—'} — {produto.unidade?.cidade ?? '—'}
                 </p>
                 {produto.truth && (
                   <PrecoTruthBadge

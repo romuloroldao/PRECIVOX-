@@ -10,25 +10,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
+  const userId = session.id;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Bad Request',
-          message: 'userId é obrigatório',
-        },
-        { status: 400 }
-      );
-    }
-
     // Buscar badges não desbloqueados
     const unlockedBadgeIds = await prisma.user_badges.findMany({
       where: { userId },
@@ -80,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600',
         'X-Cache-Key': `progress-${userId}`,
       },
     });

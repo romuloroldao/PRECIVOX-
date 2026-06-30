@@ -5,8 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { TokenManager } from '@/lib/token-manager';
 import { MarketBehaviorEngine } from '@/lib/ai';
+import { TokenManager } from '@/lib/token-manager';
+import { resolveMercadoIdForGestorApi } from '@/lib/gestor-api-mercado';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,9 +27,9 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId') || user.id;
     const mercadoId = searchParams.get('mercadoId');
     const diasAnalise = parseInt(searchParams.get('dias') || '30');
+    const userId = user.role === 'ADMIN' ? (searchParams.get('userId') || user.id) : user.id;
 
     if (!mercadoId) {
       return NextResponse.json(
@@ -37,12 +38,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Verificar permissão (admin ou próprio usuário)
-    if (user.role !== 'ADMIN' && userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Acesso negado', code: 'FORBIDDEN' },
-        { status: 403 }
-      );
+    // GESTOR/ADMIN: validar acesso ao mercado; CLIENTE só consulta o próprio comportamento
+    if (user.role === 'GESTOR' || user.role === 'ADMIN') {
+      const mercadoOk = await resolveMercadoIdForGestorApi(user, mercadoId);
+      if (mercadoOk.ok === false) {
+        return NextResponse.json(
+          { error: mercadoOk.error, code: 'FORBIDDEN' },
+          { status: mercadoOk.status }
+        );
+      }
     }
 
     // Analisar comportamento

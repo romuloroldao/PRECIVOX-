@@ -6,23 +6,31 @@ export type RoleHandler = (request: NextRequest, user: AuthUser) => Promise<Resp
 
 export function withRole(roles: Role[], handler: RoleHandler) {
   return async function (request: NextRequest) {
-    const auth = await requireRole(request, roles);
+    try {
+      const auth = await requireRole(request, roles);
 
-    if (auth.status === 'unauthenticated') {
+      if (auth.status === 'unauthenticated') {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 },
+        );
+      }
+
+      if (auth.status === 'forbidden') {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden' },
+          { status: 403 },
+        );
+      }
+
+      return await handler(request, auth.user);
+    } catch (error) {
+      console.error('[withRole]', error);
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 },
+        { success: false, error: 'Erro interno' },
+        { status: 500 },
       );
     }
-
-    if (auth.status === 'forbidden') {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 },
-      );
-    }
-
-    return handler(request, auth.user);
   };
 }
 

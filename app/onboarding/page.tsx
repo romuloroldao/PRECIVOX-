@@ -78,13 +78,16 @@ export default function OnboardingPage() {
       const productsData = await productsResponse.json();
 
       if (productsData.success) {
+        const popularProducts: any[] = Array.isArray(productsData.data?.products)
+          ? productsData.data.products
+          : [];
         const createResponse = await fetch('/api/lists/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
-            userId: effectiveUserId,
             name: 'Minha Primeira Lista',
-            products: productsData.data.products.slice(0, 5).map((p: any) => p.id),
+            products: popularProducts.slice(0, 5).map((p: any) => p.id),
           }),
         });
 

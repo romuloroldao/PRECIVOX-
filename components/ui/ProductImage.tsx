@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,21 @@ const sizeClasses = {
   md: 'h-14 w-14',
   lg: 'h-48 w-full',
   card: 'h-40 w-full sm:h-44',
+};
+
+/**
+ * `sizes` informa ao Next o tamanho renderizado para evitar warning de layout.
+ * As imagens já são webp pré-dimensionadas (full ~600px, thumb ~150px) e o
+ * armazenamento é content-addressed em disco, então usamos `unoptimized` para
+ * não reprocessar via /_next/image (desnecessário e instável com arquivos
+ * gravados em runtime / URLs legadas externas).
+ */
+const sizeSizes: Record<NonNullable<ProductImageProps['size']>, string> = {
+  xs: '40px',
+  sm: '48px',
+  md: '56px',
+  lg: '(max-width: 640px) 100vw, 300px',
+  card: '(max-width: 640px) 100vw, 300px',
 };
 
 export function ProductImage({
@@ -55,15 +71,17 @@ export function ProductImage({
               aria-hidden
             />
           )}
-          <img
+          <Image
             src={displaySrc!}
             alt={alt}
+            fill
+            sizes={sizeSizes[size]}
             loading="lazy"
-            decoding="async"
+            unoptimized
             onLoad={() => setLoaded(true)}
             onError={() => setError(true)}
             className={cn(
-              'h-full w-full object-contain p-1 transition-opacity duration-200',
+              'object-contain p-1 transition-opacity duration-200',
               loaded ? 'opacity-100' : 'opacity-0',
               imageClassName
             )}

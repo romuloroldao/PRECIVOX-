@@ -52,6 +52,17 @@ async function fetchStatsFromDB() {
   };
 }
 
+// Fallback exibido quando o banco está indisponível. Mantém a landing page
+// funcional (degradação graciosa) em vez de retornar 500 para todos os visitantes.
+const FALLBACK_STATS = {
+  totalUsers: 0,
+  totalSavings: 0,
+  savingsThisMonth: 0,
+  activeMarkets: 0,
+  lastUpdate: new Date(0).toISOString(),
+  degraded: true as const,
+};
+
 async function handler(request: NextRequest) {
   try {
     // Buscar do cache Redis (5 minutos) ou do banco
@@ -61,27 +72,29 @@ async function handler(request: NextRequest) {
       300 // 5 minutos
     );
 
-    const response = {
-      success: true,
-      data,
-    };
-
-    return NextResponse.json(response, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-        'X-Cache-Key': 'stats-global',
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching global stats:', error);
-    
     return NextResponse.json(
+      { success: true, data },
       {
-        success: false,
-        error: 'Internal Server Error',
-        message: 'Erro ao buscar estatísticas globais',
-      },
-      { status: 500 }
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          'X-Cache-Key': 'stats-global',
+        },
+      }
+    );
+  } catch (error) {
+    // Log explícito e detalhado para investigação (não é falha silenciosa),
+    // mas a resposta degrada para não derrubar a página pública.
+    console.error('[API /stats/global] Falha ao buscar estatísticas — retornando fallback:', error);
+
+    return NextResponse.json(
+      { success: true, data: FALLBACK_STATS, degraded: true },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store',
+          'X-Stats-Degraded': '1',
+        },
+      }
     );
   }
 }

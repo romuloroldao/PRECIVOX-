@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimiters } from '@/lib/rate-limiter';
 import { getCached } from '@/lib/redis';
+import { isAuthResponse, requireApiSession } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,21 +44,13 @@ async function fetchListsFromDB(userId: string, limit: number) {
 }
 
 async function handler(request: NextRequest) {
+  const session = await requireApiSession(request);
+  if (isAuthResponse(session)) return session;
+
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || undefined;
+    const userId = session.id;
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 100);
-
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Bad Request',
-          message: 'userId é obrigatório',
-        },
-        { status: 400 }
-      );
-    }
 
     const cacheKey = `lists:${userId}:${limit}`;
     const data = await getCached(

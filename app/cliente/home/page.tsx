@@ -88,9 +88,9 @@ export default function DashboardCliente() {
         setIsLoading(true);
 
         const [statsRes, listsRes, badgesRes] = await Promise.all([
-          fetch(`/api/stats/global?userId=${userId}`),
-          fetch(`/api/lists?userId=${userId}&limit=6`),
-          fetch(`/api/gamification/badges?userId=${userId}`),
+          fetch(`/api/stats/global?userId=${userId}`, { credentials: 'include', cache: 'no-store' }),
+          fetch('/api/lists?limit=6', { credentials: 'include', cache: 'no-store' }),
+          fetch('/api/gamification/badges', { credentials: 'include', cache: 'no-store' }),
         ]);
 
         const [statsData, listsData, badgesData] = await Promise.all([

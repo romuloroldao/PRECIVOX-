@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from '@/lib/hooks/useUnifiedSession';
+import { fullLogout, LOGOUT_REDIRECT } from '@/lib/logout-client';
 
 export default function PersonaSelector() {
   const router = useRouter();
-  const { data: session } = useSession();
   const [selectedPersona, setSelectedPersona] = useState<'cliente' | 'gestor' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -140,7 +139,7 @@ export default function PersonaSelector() {
         {/* Footer */}
         <div className="text-center mt-8">
           <button
-            onClick={() => router.push('/logout')}
+            onClick={() => void fullLogout(LOGOUT_REDIRECT)}
             className="text-white hover:text-blue-100 transition-colors text-sm"
           >
             Sair

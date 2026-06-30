@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { LogOut } from 'lucide-react';
 import Logo from '@/components/Logo';
-import { fullLogout } from '@/lib/logout-client';
+import { fullLogout, LOGOUT_REDIRECT } from '@/lib/logout-client';
 import { cn } from '@/lib/utils';
 import { CLIENTE_NAV_ITEMS, isClienteNavActive } from '@/components/cliente/cliente-nav-items';
 
@@ -17,9 +17,9 @@ export function ClienteAppBar() {
 
   const handleLogout = async () => {
     try {
-      await fullLogout('/login');
+      await fullLogout(LOGOUT_REDIRECT);
     } catch {
-      window.location.href = '/login';
+      window.location.replace(LOGOUT_REDIRECT);
     }
   };
 

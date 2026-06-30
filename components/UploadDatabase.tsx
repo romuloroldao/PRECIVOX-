@@ -57,13 +57,21 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
     setProgress(0);
     setError('');
 
+    // Declarado fora do try para poder limpar no catch/finally (evita timer órfão).
+    let progressInterval: ReturnType<typeof setInterval> | undefined;
+
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('unidadeId', unidadeId);
+      // FormData é consumido a cada fetch; recriar a cada tentativa garante que
+      // o retry após 401 envie o arquivo (e não um corpo vazio).
+      const buildFormData = () => {
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        fd.append('unidadeId', unidadeId);
+        return fd;
+      };
 
       // Simula progresso
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 90) {
             clearInterval(progressInterval);
@@ -94,7 +102,7 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
         },
-        body: formData,
+        body: buildFormData(),
       });
 
       // Se token expirou/invalidou, tenta renovar uma vez e refazer
@@ -107,7 +115,7 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
             response = await fetch(`/api/products/upload-smart/${mercadoId}`, {
               method: 'POST',
               headers: { Authorization: `Bearer ${j2.token}` },
-              body: formData,
+              body: buildFormData(), // novo FormData — o anterior já foi consumido
             });
           }
         } catch {}
@@ -117,8 +125,15 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
       setProgress(100);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao fazer upload');
+        // Resposta de erro pode não ser JSON (ex.: 502/HTML do proxy).
+        let errorMessage = `Erro ao fazer upload (HTTP ${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          /* mantém mensagem padrão com status */
+        }
+        throw new Error(errorMessage);
       }
 
       const resultado = await response.json();
@@ -160,6 +175,8 @@ export default function UploadDatabase({ mercadoId, unidades, onUploadComplete }
       //   router.push(`/cliente/busca`);
       // }, 2000);
     } catch (err: any) {
+      // Garante que o timer de progresso pare mesmo se o fetch lançar (rede/proxy).
+      if (progressInterval) clearInterval(progressInterval);
       setError(err.message || 'Erro ao fazer upload');
       console.error('Erro no upload:', err);
     } finally {

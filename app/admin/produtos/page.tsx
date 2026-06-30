@@ -71,6 +71,15 @@ export default function ProdutosPage() {
     loadProdutos();
   }, [debouncedSearch, categoriaFilter, unidadeFilter, page]);
 
+  // Redirect de role em efeito (nunca durante o render) — evita warning do React
+  // e navegação repetida quando um CLIENTE acessa a página de produtos do admin.
+  useEffect(() => {
+    const role = (session?.user as any)?.role;
+    if (session?.user && role !== 'ADMIN' && role !== 'GESTOR') {
+      router.replace(getDashboardUrl(role ?? 'CLIENTE'));
+    }
+  }, [session, router]);
+
   const loadCategorias = async () => {
     try {
       const response = await fetch('/api/produtos/categorias');
@@ -168,9 +177,8 @@ export default function ProdutosPage() {
     }
   };
 
-  // Verificar permissões
+  // Verificar permissões (redirect tratado no useEffect acima; aqui só evita render)
   if (session?.user && (session.user as any).role !== 'ADMIN' && (session.user as any).role !== 'GESTOR') {
-    router.push(getDashboardUrl((session.user as any).role ?? 'CLIENTE'));
     return null;
   }
 

@@ -246,13 +246,16 @@ export default function GestorProdutoEditPage() {
     }
   };
 
-  if (!session || (session.user as any).role !== 'GESTOR') {
+  const role = (session?.user as { role?: string })?.role;
+  if (!session || (role !== 'GESTOR' && role !== 'ADMIN')) {
     return null;
   }
 
+  const layoutRole = role === 'ADMIN' ? 'ADMIN' : 'GESTOR';
+
   if (loading) {
     return (
-      <DashboardLayout role="GESTOR">
+      <DashboardLayout role={layoutRole}>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -265,7 +268,7 @@ export default function GestorProdutoEditPage() {
 
   if (!produto) {
     return (
-      <DashboardLayout role="GESTOR">
+      <DashboardLayout role={layoutRole}>
         <div className="text-center py-8">
           <p className="text-gray-500">Produto não encontrado</p>
           <button
@@ -280,7 +283,7 @@ export default function GestorProdutoEditPage() {
   }
 
   return (
-    <DashboardLayout role="GESTOR">
+    <DashboardLayout role={layoutRole}>
       <div className="space-y-6">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-gray-600">
