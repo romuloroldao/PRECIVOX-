@@ -3,15 +3,13 @@
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ScanLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   getClienteNavBarItems,
-  getClienteScanHref,
   isClienteNavActive,
 } from '@/components/cliente/cliente-nav-items';
 import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
-import { UX } from '@/lib/ux-copy';
+import { ScannerFab } from '@/components/cliente/ScannerFab';
 
 /**
  * Navegação inferior persistente (mobile).
@@ -44,25 +42,11 @@ export default function BottomNav() {
   }, [aiNative]);
 
   const items = useMemo(() => getClienteNavBarItems(aiNative), [aiNative]);
+  const onScanPage = pathname.startsWith('/cliente/scan');
 
   return (
     <>
-      {aiNative && (
-        <Link
-          href={getClienteScanHref()}
-          aria-label={UX.nav.scanner}
-          className={cn(
-            'fixed z-50 flex h-14 w-14 items-center justify-center rounded-full',
-            'bg-primary-600 text-white shadow-lg shadow-primary-600/30',
-            'transition-transform hover:scale-105 active:scale-95',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
-            'left-1/2 -translate-x-1/2 md:hidden'
-          )}
-          style={{ bottom: 'var(--cliente-fab-bottom)' }}
-        >
-          <ScanLine className="h-7 w-7" aria-hidden />
-        </Link>
-      )}
+      {aiNative && <ScannerFab />}
 
       <nav
         aria-label="Navegação principal"
@@ -80,8 +64,8 @@ export default function BottomNav() {
               {items.slice(0, 2).map((item) => (
                 <NavSlot key={item.href} item={item} pathname={pathname} />
               ))}
-              {/* Espaço central para o FAB */}
-              <li className="w-14 shrink-0" aria-hidden />
+              {/* Espaço central para o FAB (mantém alinhamento mesmo na página scan) */}
+              <li className={cn('w-14 shrink-0', onScanPage && 'invisible')} aria-hidden />
               {items.slice(2).map((item) => (
                 <NavSlot key={item.href} item={item} pathname={pathname} />
               ))}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { UX } from '@/lib/ux-copy';
 import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
+import { buildScanHref } from '@/lib/cliente-mercado-ref';
 
 export type ClienteNavItem = {
   href: string;
@@ -56,7 +57,7 @@ export function getClienteNavBarItems(aiNative = isAiNativeShellEnabled()): Clie
 }
 
 export function getClienteScanHref(): string {
-  return '/cliente/scan';
+  return buildScanHref();
 }
 
 export function isClienteNavActive(pathname: string, item: ClienteNavItem): boolean {

@@ -7,10 +7,17 @@ import { ClientePage } from '@/components/cliente/ClientePage';
 import { ContribuidorBadge } from '@/components/cliente/ContribuidorBadge';
 import { RelatorioSemanaCard } from '@/components/cliente/RelatorioSemanaCard';
 import { MlLeveClienteCard } from '@/components/cliente/MlLeveClienteCard';
+import {
+  ElConfigPreferenciasCard,
+  EL_PREFERENCIAS_PADRAO,
+} from '@/components/cliente/ElConfigPreferenciasCard';
 import type { EixoPreci, PerfilPreciScores } from '@/lib/perfil-preci';
+import type { ElPreferenciasUsuario } from '@/lib/el-config-preferencias';
+import type { ElConfigUsuario } from '@/lib/el-config-usuario';
 import { useSession } from '@/lib/hooks/useUnifiedSession';
-import { Sparkles, Clock } from 'lucide-react';
-import { EL_CONFIG_LIMITS, labelFaixaValorHora, type ElConfigUsuario } from '@/lib/el-config-usuario';
+import { CASA } from '@/lib/ux-copy-casa';
+import { UX } from '@/lib/ux-copy';
+import { PreciPorQueEspelho } from '@/components/cliente/PreciPorQueEspelho';
 
 type PerfilData = {
   scores: PerfilPreciScores;
@@ -26,6 +33,7 @@ type PerfilData = {
     proximoNivelEm: number | null;
   };
   elConfig: ElConfigUsuario;
+  elPreferencias: ElPreferenciasUsuario;
   elDefaults: ElConfigUsuario;
 };
 
@@ -43,13 +51,11 @@ export default function PerfilPreciPage() {
   const [perfil, setPerfil] = useState<PerfilData | null>(null);
   const [intent, setIntent] = useState<IntentData | null>(null);
   const [ajustes, setAjustes] = useState<Partial<PerfilPreciScores>>({});
-  const [elConfig, setElConfig] = useState<ElConfigUsuario>({ valorHoraReais: 20, custoKmReais: 0.8 });
+  const [elPreferencias, setElPreferencias] = useState<ElPreferenciasUsuario>(EL_PREFERENCIAS_PADRAO);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [msgPerfil, setMsgPerfil] = useState<string | null>(null);
-  const [msgEl, setMsgEl] = useState<string | null>(null);
   const [msgErroPerfil, setMsgErroPerfil] = useState(false);
-  const [msgErroEl, setMsgErroEl] = useState(false);
   const [mercadoId, setMercadoId] = useState<string | null>(null);
 
   const carregar = useCallback(async (opts?: { silent?: boolean }) => {
@@ -64,7 +70,7 @@ export default function PerfilPreciPage() {
       if (pJson.success) {
         setPerfil(pJson.data);
         setAjustes(pJson.data.ajustesUsuario ?? {});
-        if (pJson.data.elConfig) setElConfig(pJson.data.elConfig);
+        if (pJson.data.elPreferencias) setElPreferencias(pJson.data.elPreferencias);
       } else if (pRes.status === 401) {
         setMsgErroPerfil(true);
         setMsgPerfil('Faça login para ver e editar seu perfil.');
@@ -141,34 +147,29 @@ export default function PerfilPreciPage() {
     }
   };
 
-  const salvarElConfig = async () => {
-    setSalvando(true);
-    setMsgEl(null);
-    setMsgErroEl(false);
-    try {
-      const res = await fetch('/api/cliente/perfil-preci', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ elConfig }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(
-          res.status === 401
-            ? 'Sua sessão expirou. Entre novamente para salvar.'
-            : json.error || 'Erro ao salvar'
-        );
-      }
-      setMsgErroEl(false);
-      setMsgEl('Preferências de EL salvas!');
-      await carregar({ silent: true });
-    } catch (e) {
-      setMsgErroEl(true);
-      setMsgEl(e instanceof Error ? e.message : 'Erro ao salvar');
-    } finally {
-      setSalvando(false);
+  const salvarElPreferencias = async (payload: {
+    preferencias: ElPreferenciasUsuario;
+    elConfig: ElConfigUsuario;
+  }) => {
+    const res = await fetch('/api/cliente/perfil-preci', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        preferencias: payload.preferencias,
+        elConfig: payload.elConfig,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(
+        res.status === 401
+          ? 'Sua sessão expirou. Entre novamente para salvar.'
+          : json.error || 'Erro ao salvar'
+      );
     }
+    setElPreferencias(payload.preferencias);
+    await carregar({ silent: true });
   };
 
   const scoresExibidos = perfil
@@ -181,8 +182,8 @@ export default function PerfilPreciPage() {
   return (
     <DashboardLayout role="CLIENTE">
       <ClientePage
-        title="Seu Perfil PRECI"
-        description="Espelho do seu jeito de comprar — calculado pelo app, ajustável por você."
+        title={UX.perfil.titulo}
+        description={UX.perfil.subtitulo}
         actions={<ContribuidorBadge />}
       >
       <div className="space-y-6">
@@ -190,7 +191,7 @@ export default function PerfilPreciPage() {
           href="/cliente/familia"
           className="inline-flex text-sm font-semibold text-indigo-700 hover:underline"
         >
-          Raio familiar — listas e preferências da casa →
+          {CASA.perfilLink}
         </Link>
 
         {loading && !perfil && <p className="text-gray-500">Carregando…</p>}
@@ -202,13 +203,11 @@ export default function PerfilPreciPage() {
         {perfil && scoresExibidos && (
           <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div>
-              <h2 className="font-semibold text-gray-900">Ajuste como quer ser tratado</h2>
-              <p className="mt-1 text-xs text-gray-500">
-                Arraste cada eixo e toque em salvar. Valores calculados pelo app ficam como referência.
-              </p>
+              <h2 className="font-semibold text-gray-900">{UX.perfil.eixosTitulo}</h2>
+              <p className="mt-1 text-xs text-gray-500">{UX.perfil.eixosDica}</p>
             </div>
             <p className="text-xs text-gray-500">
-              Confiança do perfil: {perfil.confianca}% · {perfil.reputacaoCrowd.confirmacoes}{' '}
+              Confiança: {perfil.confianca}% · {perfil.reputacaoCrowd.confirmacoes}{' '}
               preços confirmados
               {perfil.reputacaoCrowd.proximoNivelEm != null &&
                 ` · faltam ${perfil.reputacaoCrowd.proximoNivelEm} para o próximo nível`}
@@ -231,9 +230,12 @@ export default function PerfilPreciPage() {
                   className="mt-1 h-2 w-full cursor-pointer accent-emerald-600"
                   aria-label={`Ajustar ${perfil.eixoLabels[eixo]}`}
                 />
-                <p className="mt-1 text-xs text-gray-500">{perfil.explicacoes[eixo]}</p>
               </div>
             ))}
+
+            <PreciPorQueEspelho
+              linhas={EIXOS.map((e) => `${perfil.eixoLabels[e]}: ${perfil.explicacoes[e]}`)}
+            />
 
             <button
               type="button"
@@ -241,7 +243,7 @@ export default function PerfilPreciPage() {
               onClick={() => void salvarAjustesPerfil()}
               className="w-full rounded-xl bg-precivox-blue py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             >
-              {salvando ? 'Salvando…' : 'Salvar como quero ser tratado'}
+              {salvando ? 'Salvando…' : UX.perfil.salvar}
             </button>
             {msgPerfil && (
               <p className={`text-center text-sm ${msgErroPerfil ? 'text-red-600' : 'text-emerald-700'}`}>
@@ -255,90 +257,23 @@ export default function PerfilPreciPage() {
         {mercadoId && <MlLeveClienteCard mercadoId={mercadoId} />}
 
         {intent && (
-          <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">
-            <div className="flex items-center gap-2 text-violet-900">
-              <Sparkles className="h-5 w-5" />
-              <span className="font-semibold">Intenção de compra: {intent.score}/100</span>
-            </div>
-            <p className="mt-2 text-sm text-violet-800">{intent.mensagem}</p>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+            <p className="text-sm font-medium text-slate-800">
+              {UX.perfil.intentTitulo}
+              {intent.proximaCompraEstimada ? ` · ${intent.proximaCompraEstimada}` : ''}
+            </p>
+            <p className="mt-1 text-sm text-slate-600">{intent.mensagem}</p>
             {intent.fatores && intent.fatores.length > 0 && (
-              <ul className="mt-2 list-inside list-disc text-xs text-violet-700">
-                {intent.fatores.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
+              <PreciPorQueEspelho className="mt-2" linhas={intent.fatores} />
             )}
           </div>
         )}
 
         {perfil && (
-          <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-emerald-900">
-              <Clock className="h-5 w-5" />
-              <h2 className="font-semibold">Economia Líquida — valor do seu tempo</h2>
-            </div>
-            <p className="text-xs text-emerald-800/80">
-              Usamos isso para calcular se vale a pena ir a outra loja. Padrão do app: R${' '}
-              {perfil.elDefaults.valorHoraReais}/h e R$ {perfil.elDefaults.custoKmReais}/km.
-            </p>
-
-            <div>
-              <div className="flex justify-between text-sm">
-                <span className="font-medium text-gray-800">Quanto vale sua hora?</span>
-                <span className="tabular-nums text-gray-600">R$ {elConfig.valorHoraReais}/h</span>
-              </div>
-              <input
-                type="range"
-                min={EL_CONFIG_LIMITS.valorHoraMin}
-                max={EL_CONFIG_LIMITS.valorHoraMax}
-                step={1}
-                value={elConfig.valorHoraReais}
-                onChange={(ev) =>
-                  setElConfig((prev) => ({
-                    ...prev,
-                    valorHoraReais: parseInt(ev.target.value, 10),
-                  }))
-                }
-                className="mt-1 h-2 w-full cursor-pointer accent-emerald-600"
-              />
-              <p className="mt-1 text-xs text-emerald-700">{labelFaixaValorHora(elConfig.valorHoraReais)}</p>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm">
-                <span className="font-medium text-gray-800">Custo por km (combustível + desgaste)</span>
-                <span className="tabular-nums text-gray-600">R$ {elConfig.custoKmReais.toFixed(2)}/km</span>
-              </div>
-              <input
-                type="range"
-                min={EL_CONFIG_LIMITS.custoKmMin * 10}
-                max={EL_CONFIG_LIMITS.custoKmMax * 10}
-                step={1}
-                value={Math.round(elConfig.custoKmReais * 10)}
-                onChange={(ev) =>
-                  setElConfig((prev) => ({
-                    ...prev,
-                    custoKmReais: parseInt(ev.target.value, 10) / 10,
-                  }))
-                }
-                className="mt-1 h-2 w-full cursor-pointer accent-emerald-600"
-              />
-            </div>
-
-            <button
-              type="button"
-              disabled={salvando}
-              onClick={() => void salvarElConfig()}
-              className="w-full rounded-xl bg-emerald-700 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
-            >
-              {salvando ? 'Salvando…' : 'Salvar preferências de EL'}
-            </button>
-            {msgEl && (
-              <p className={`text-center text-sm ${msgErroEl ? 'text-red-600' : 'text-emerald-700'}`}>
-                {msgEl}
-              </p>
-            )}
-          </div>
+          <ElConfigPreferenciasCard
+            preferenciasIniciais={elPreferencias}
+            onSalvar={salvarElPreferencias}
+          />
         )}
       </div>
       </ClientePage>

@@ -18,6 +18,7 @@ import { BuscaFiltrosSheet } from '@/components/cliente/BuscaFiltrosSheet';
 import { useProdutos } from '@/app/hooks/useProdutos';
 import { useLista } from '@/app/context/ListaContext';
 import { CompraConfirmacaoPrompt } from '@/components/cliente/CompraConfirmacaoPrompt';
+import { CasaCompartilharBanner } from '@/components/cliente/casa/CasaCompartilharBanner';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry';
 import {
@@ -28,6 +29,8 @@ import {
   EmptyState,
 } from '@/components/ui';
 import { UX, type OrdenacaoBusca } from '@/lib/ux-copy';
+import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
+import { dispararElOnboardingPrompt, listaTemElVisivel } from '@/lib/el-onboarding';
 import {
   Filter,
   ShoppingCart,
@@ -35,7 +38,9 @@ import {
   ChevronUp,
   PanelRightClose,
   PanelRightOpen,
+  Home,
 } from 'lucide-react';
+import Link from 'next/link';
 
 const STORAGE_LISTA_COLLAPSED = 'precivox_lista_desktop_collapsed';
 
@@ -142,8 +147,10 @@ export default function BuscaPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const pref = new URLSearchParams(window.location.search).get('pref');
+    const params = new URLSearchParams(window.location.search);
+    const pref = params.get('pref') || params.get('q');
     if (pref?.trim()) setBusca(pref.trim());
+    if (params.get('comparar') === '1') setModoComparativo(true);
   }, []);
 
   const { produtos, loading, loadingMore, error, total, hasMore, loadMore } = useProdutos({
@@ -179,6 +186,12 @@ export default function BuscaPage() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, loadMore]);
+
+  useEffect(() => {
+    if (loading || produtos.length === 0 || modoComparativo) return;
+    if (!listaTemElVisivel(produtos)) return;
+    dispararElOnboardingPrompt('busca_el');
+  }, [loading, produtos, modoComparativo]);
 
   const limparFiltros = () => {
     setCategoria('');
@@ -239,6 +252,18 @@ export default function BuscaPage() {
               title={UX.busca.titulo}
               mobileDescription={UX.busca.subtitulo}
             />
+
+            {isAiNativeShellEnabled() && (
+              <p className="mb-3 flex items-center gap-2 text-sm text-slate-600">
+                <Home className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+                <span>
+                  Busca é um atalho.{' '}
+                  <Link href="/cliente/casa" className="font-semibold text-primary-700 hover:underline">
+                    Voltar à Casa
+                  </Link>
+                </span>
+              </p>
+            )}
 
             {/* Busca — elemento principal */}
             <div className="mb-3">
@@ -329,6 +354,8 @@ export default function BuscaPage() {
                 {mercadoFiltro && <span className="text-primary-600"> · mercado selecionado</span>}
               </p>
             )}
+
+            <CasaCompartilharBanner className="mt-3" />
 
             {/* Resultados */}
             {loading ? (

@@ -10,6 +10,7 @@ import { useLista } from '@/app/context/ListaContext';
 import { UX } from '@/lib/ux-copy';
 import { ClientePage } from '@/components/cliente/ClientePage';
 import { useToast } from '@/components/ToastContainer';
+import { rememberMercadoId } from '@/lib/cliente-mercado-ref';
 
 /**
  * Aba Compra — Lista Inteligente full-bleed (Fase 2: compra-first).
@@ -29,7 +30,10 @@ export default function ClienteCompraPage() {
       try {
         const res = await fetch('/api/nps/suggest-mercado', { cache: 'no-store' });
         const json = await res.json();
-        if (json.mercadoId) setMercadoId(json.mercadoId);
+        if (json.mercadoId) {
+          setMercadoId(json.mercadoId);
+          rememberMercadoId(json.mercadoId);
+        }
       } catch {
         /* ignore */
       }
@@ -77,6 +81,19 @@ export default function ClienteCompraPage() {
       setMontando(false);
     }
   }, [montando, mercadoId, criarNovaLista, adicionarItem, success, toastError, router]);
+
+  /** Hub / deep-link: ?montar=1 dispara rascunho da semana (Fase 4). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('montar') !== '1') return;
+    if (!mercadoId || montando || totalItens > 0) return;
+    void montarRascunho().finally(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('montar');
+      window.history.replaceState({}, '', url.pathname + (url.search || ''));
+    });
+  }, [mercadoId, montando, totalItens, montarRascunho]);
 
   return (
     <ClientePage

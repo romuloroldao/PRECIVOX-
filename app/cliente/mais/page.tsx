@@ -13,21 +13,44 @@ import {
 import { ClientePage } from '@/components/cliente/ClientePage';
 import { UX } from '@/lib/ux-copy';
 
-const LINKS = [
+const PREFS = [
   { href: '/cliente/perfil', label: UX.mais.perfilPrefs, icon: User },
   { href: '/cliente/familia', label: UX.mais.familia, icon: Users },
+] as const;
+
+const ATALHOS = [
   { href: '/cliente/mercado-vivo', label: UX.mais.mercadoVivo, icon: Store },
   { href: '/cliente/busca', label: UX.mais.busca, icon: Search },
   { href: '/cliente/listas', label: UX.mais.listas, icon: ListChecks },
   { href: '/cliente/scan', label: UX.mais.scan, icon: ScanLine },
 ] as const;
 
-/** Aba Mais — conta, prefs e atalhos (Perfil PRECI fora da nav primária). */
+/** Aba Mais — PRECI fora da nav primária (Fase 7). */
 export default function ClienteMaisPage() {
   return (
     <ClientePage title={UX.mais.titulo} description={UX.mais.subtitulo}>
-      <ul className="mx-auto max-w-lg divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        {LINKS.map(({ href, label, icon: Icon }) => (
+      <div className="mx-auto max-w-lg space-y-6">
+        <NavGroup title={UX.mais.secaoPrefs} items={PREFS} />
+        <NavGroup title={UX.mais.secaoAtalhos} items={ATALHOS} />
+      </div>
+    </ClientePage>
+  );
+}
+
+function NavGroup({
+  title,
+  items,
+}: {
+  title: string;
+  items: ReadonlyArray<{ href: string; label: string; icon: typeof User }>;
+}) {
+  return (
+    <section>
+      <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {title}
+      </h2>
+      <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        {items.map(({ href, label, icon: Icon }) => (
           <li key={href}>
             <Link
               href={href}
@@ -40,6 +63,6 @@ export default function ClienteMaisPage() {
           </li>
         ))}
       </ul>
-    </ClientePage>
+    </section>
   );
 }

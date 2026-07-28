@@ -34,7 +34,9 @@ import { ShareEconomiaCard } from '@/components/cliente/ShareEconomiaCard';
 import { NotificacaoPermissaoBanner } from '@/components/cliente/NotificacaoPermissaoBanner';
 import { OnboardingChecklist } from '@/components/cliente/OnboardingChecklist';
 import { HubPreciBar } from '@/components/cliente/HubPreciBar';
+import { PreciPorQueEspelho } from '@/components/cliente/PreciPorQueEspelho';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { rememberMercadoId } from '@/lib/cliente-mercado-ref';
 import Link from 'next/link';
 
 interface DashboardData {
@@ -107,7 +109,10 @@ export function CasaAgoraScreen() {
       try {
         const res = await fetch('/api/nps/suggest-mercado', { cache: 'no-store' });
         const json = await res.json();
-        if (json.mercadoId) setMercadoId(json.mercadoId);
+        if (json.mercadoId) {
+          setMercadoId(json.mercadoId);
+          rememberMercadoId(json.mercadoId);
+        }
       } catch {
         /* ignore */
       }
@@ -191,7 +196,17 @@ export function CasaAgoraScreen() {
         </header>
 
         <section className="mb-4">
-          <HubPreciBar />
+          <HubPreciBar mercadoId={mercadoId} />
+          {(data?.economy.savingsThisMonth ?? 0) > 0 && (
+            <div className="mt-2 px-1">
+              <PreciPorQueEspelho
+                linhas={[
+                  `Neste mês você já economizou cerca de R$ ${Number(data!.economy.savingsThisMonth).toFixed(2).replace('.', ',')}.`,
+                  'Sugestões de compra usam o que a casa costuma levar e o que falta na despensa.',
+                ]}
+              />
+            </div>
+          )}
         </section>
 
         {error && (

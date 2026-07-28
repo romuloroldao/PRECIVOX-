@@ -677,40 +677,42 @@ type StructuredResponse = {
 
 ### Fase 4 — Hub PRECI v1
 
-- [ ] `POST /api/cliente/hub/intent` retorna `StructuredResponse`
-- [ ] Intents: `add_items`, `build_weekly`, `price_query`, `repeat_last`, `scan` com testes de seam
-- [ ] Toda response tem `explanation` não vazia
-- [ ] Renderer abre UI visual correta (não chat thread)
-- [ ] Copy Hub sem jargão de IA
+- [x] `POST /api/cliente/hub/intent` retorna `StructuredResponse`
+- [x] Intents: `add_items`, `build_weekly`, `price_query`, `repeat_last`, `scan` com testes de seam
+- [x] Toda response tem `explanation` não vazia
+- [x] Renderer abre UI visual correta (não chat thread) via `useHubIntent` + `HubPreciBar`
+- [x] Copy Hub sem jargão de IA
+- [x] Testes em `tests/unit/hub-detect-intent.test.ts`
 
 ### Fase 5 — Scanner global
 
-- [ ] FAB visível em Casa, Compra, Despensa, Mais
-- [ ] 1 toque → câmera/scan
-- [ ] Fluxo OCR/EAN/EL/crowd preservado
+- [x] FAB visível em Casa, Compra, Despensa, Mais (`ScannerFab`)
+- [x] 1 toque → câmera/scan (oculto na própria página scan)
+- [x] Fluxo OCR/EAN/EL/crowd preservado
+- [x] `mercadoId` lembrado em sessão para o FAB (`cliente-mercado-ref`)
 
 ### Fase 6 — Voz
 
-- [ ] Frases: “Adiciona leite”, “Monte a compra da semana”, “Quanto custa arroz?”
-- [ ] Voz → mesmo endpoint Hub
-- [ ] Falha de permissão → fallback toque/texto sem culpar usuário
+- [x] Frases: “Adiciona leite”, “Monte a compra da semana”, “Quanto custa arroz?” (via Hub)
+- [x] Voz → mesmo endpoint Hub (`useSpeechToText` → `useHubIntent`)
+- [x] Falha de permissão → fallback toque/texto sem culpar o usuário
 
 ### Fase 7 — PRECI silencioso
 
-- [ ] Perfil fora da bottom nav
-- [ ] Preferências em Mais
-- [ ] Ranking/cesta/EL ainda usam eixos + intent
-- [ ] Espelho “por quê?” opcional e explicável
+- [x] Perfil fora da bottom nav
+- [x] Preferências em Mais
+- [x] Ranking/cesta/EL ainda usam eixos + intent
+- [x] Espelho “por quê?” opcional e explicável
 
 ### Fase 8 — Foto multimodal
 
-- [ ] Foto no Hub usa pipeline scan/OCR
-- [ ] Mesmo `StructuredResponse` que scanner
+- [x] Foto no Hub usa pipeline scan/OCR
+- [x] Mesmo `StructuredResponse` que scanner
 
 ### Fase 9 — Deprecate nav antiga
 
-- [ ] Redirects: `/cliente/home` → Casa; busca como capability
-- [ ] Flag default **on**
+- [x] Redirects: `/cliente/home` → Casa; busca como capability
+- [ ] Flag default **on** (ligado em `.env.local` / piloto; **prod permanece off** até ciclo estável)
 - [ ] Nav antiga removida só após 1 ciclo de piloto estável
 - [ ] Analytics: funil Casa → rascunho → confirmação ≥ baseline anterior
 

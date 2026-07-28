@@ -10,10 +10,10 @@ import { fullLogout, LOGOUT_REDIRECT } from '@/lib/logout-client';
 import { cn } from '@/lib/utils';
 import {
   getClienteNavBarItems,
-  getClienteScanHref,
   isClienteNavActive,
 } from '@/components/cliente/cliente-nav-items';
 import { clienteHomeHref, isAiNativeShellEnabled } from '@/lib/ai-native-shell';
+import { buildScanHref } from '@/lib/cliente-mercado-ref';
 import { UX } from '@/lib/ux-copy';
 
 export function ClienteAppBar() {
@@ -22,10 +22,12 @@ export function ClienteAppBar() {
   const user = session?.user;
   const displayName = (user as { nome?: string } | undefined)?.nome || user?.name;
   const [aiNative, setAiNative] = useState(false);
+  const [scanHref, setScanHref] = useState('/cliente/scan');
 
   useEffect(() => {
     setAiNative(isAiNativeShellEnabled());
-  }, []);
+    setScanHref(buildScanHref());
+  }, [pathname]);
 
   const navItems = useMemo(() => getClienteNavBarItems(aiNative), [aiNative]);
   const logoHref = clienteHomeHref(aiNative);
@@ -69,7 +71,7 @@ export function ClienteAppBar() {
           })}
           {aiNative && (
             <Link
-              href={getClienteScanHref()}
+              href={scanHref}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 pathname.startsWith('/cliente/scan')

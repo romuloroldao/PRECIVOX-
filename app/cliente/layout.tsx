@@ -5,6 +5,7 @@ import { ElRefinamentoToast } from '@/components/cliente/ElRefinamentoToast';
 import { MercadoVivoGeofenceWatcher } from '@/components/cliente/MercadoVivoGeofenceWatcher';
 import { ClienteAppBar } from '@/components/cliente/ClienteAppBar';
 import BottomNav from '@/components/cliente/BottomNav';
+import { AiNativeCanonicalRedirects } from '@/components/cliente/AiNativeCanonicalRedirects';
 
 export default function ClienteLayout({
   children,
@@ -14,6 +15,7 @@ export default function ClienteLayout({
   return (
     <RouteGuard allowedRoles={['CLIENTE', 'GESTOR', 'ADMIN']}>
       <MercadoVivoGeofenceWatcher>
+        <AiNativeCanonicalRedirects />
         <ClienteAppBar />
         {/* Espaço inferior no mobile para o conteúdo não ficar sob a navegação. */}
         <div className="pb-[var(--cliente-content-pad-bottom)] md:pb-0">{children}</div>

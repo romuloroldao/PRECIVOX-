@@ -15,6 +15,7 @@ import {
   labelStatusCurto,
 } from '@/lib/despensa-copy';
 import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
+import { rememberMercadoId } from '@/lib/cliente-mercado-ref';
 import { Loader2, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -203,7 +204,13 @@ export default function DespensaPage() {
     <DashboardLayout role="CLIENTE">
       <ClientePage title={UX.despensa.titulo} description={UX.despensa.subtitulo}>
         <div className="mx-auto max-w-lg space-y-5">
-          <MercadoSelector value={mercadoId} onChange={setMercadoId} />
+          <MercadoSelector
+          value={mercadoId}
+          onChange={(id) => {
+            setMercadoId(id);
+            rememberMercadoId(id);
+          }}
+        />
 
           {!mercadoId && (
             <p className="text-center text-sm text-slate-500 py-4">{UX.despensa.semMercado}</p>
