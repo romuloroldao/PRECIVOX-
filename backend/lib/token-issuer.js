@@ -9,7 +9,8 @@
  * Usa o MESMO segredo (lib/jwt-secret.cjs) do Next.js, então os tokens emitidos aqui
  * são aceitos pelo middleware do Next (auth-core) e pelo validateJWT do backend.
  */
-import crypto from 'crypto';
+import './webcrypto-polyfill.js';
+import crypto, { webcrypto } from 'crypto';
 import { SignJWT } from 'jose';
 import { getJwtSecret } from './jwt-secret-loader.js';
 import { prisma } from './prisma.js';
@@ -17,8 +18,20 @@ import { prisma } from './prisma.js';
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN_DAYS = 7;
 
-function getSecretKey() {
-  return new TextEncoder().encode(getJwtSecret());
+let hmacKeyPromise = null;
+
+/** CryptoKey evita o caminho Uint8Array do jose webapi (usa `crypto` livre). */
+function getHmacKey() {
+  if (!hmacKeyPromise) {
+    hmacKeyPromise = webcrypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(getJwtSecret()),
+      { name: 'HMAC', hash: 'SHA-512' },
+      false,
+      ['sign', 'verify']
+    );
+  }
+  return hmacKeyPromise;
 }
 
 function hashToken(token) {
@@ -34,6 +47,7 @@ function generateRefreshToken() {
  * @param {{ id: string, email: string, role: string, nome?: string|null, tokenVersion?: number }} user
  */
 async function signAccessToken(user) {
+  const key = await getHmacKey();
   return new SignJWT({
     sub: user.id,
     id: user.id,
@@ -45,7 +59,7 @@ async function signAccessToken(user) {
     .setProtectedHeader({ alg: 'HS512' })
     .setIssuedAt()
     .setExpirationTime(ACCESS_TOKEN_EXPIRES_IN)
-    .sign(getSecretKey());
+    .sign(key);
 }
 
 /**

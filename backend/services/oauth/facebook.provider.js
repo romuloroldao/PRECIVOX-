@@ -14,7 +14,7 @@ const ME_ENDPOINT = `https://graph.facebook.com/${GRAPH_VERSION}/me`;
 export const facebookProvider = {
   name: 'FACEBOOK',
 
-  async exchangeAndVerify({ code, redirectUri }) {
+  async exchangeAndVerify({ code, codeVerifier, redirectUri }) {
     const clientId = process.env.FACEBOOK_CLIENT_ID;
     const clientSecret = process.env.FACEBOOK_CLIENT_SECRET;
     if (!clientId || !clientSecret) {
@@ -26,6 +26,10 @@ export const facebookProvider = {
     tokenUrl.searchParams.set('client_secret', clientSecret);
     tokenUrl.searchParams.set('redirect_uri', redirectUri);
     tokenUrl.searchParams.set('code', code);
+    // O authorize do BFF sempre envia PKCE; a Meta exige code_verifier na troca.
+    if (codeVerifier) {
+      tokenUrl.searchParams.set('code_verifier', codeVerifier);
+    }
 
     const tokenRes = await fetch(tokenUrl, { method: 'GET' });
     const tokens = await tokenRes.json().catch(() => ({}));

@@ -1,4 +1,5 @@
 // backend/server.js - PRECIVOX API v5.0 - Com PostgreSQL e autenticação completa
+import './lib/webcrypto-polyfill.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
