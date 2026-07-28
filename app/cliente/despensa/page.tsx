@@ -15,8 +15,8 @@ import {
   labelStatusCurto,
 } from '@/lib/despensa-copy';
 import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
-import { rememberMercadoId } from '@/lib/cliente-mercado-ref';
-import { Loader2, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { rememberMercadoId, getRememberedMercadoId } from '@/lib/cliente-mercado-ref';
+import { Loader2, Plus, ShoppingCart, Trash2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type DespensaItem = {
@@ -54,7 +54,28 @@ export default function DespensaPage() {
 
   useEffect(() => {
     const m = searchParams.get('mercadoId');
-    if (m) setMercadoId(m);
+    if (m) {
+      setMercadoId(m);
+      rememberMercadoId(m);
+      return;
+    }
+    const remembered = getRememberedMercadoId();
+    if (remembered) {
+      setMercadoId(remembered);
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await fetch('/api/nps/suggest-mercado', { cache: 'no-store' });
+        const json = await res.json();
+        if (json.mercadoId) {
+          setMercadoId(json.mercadoId);
+          rememberMercadoId(json.mercadoId);
+        }
+      } catch {
+        /* usuário escolhe no seletor */
+      }
+    })();
   }, [searchParams]);
 
   const carregar = useCallback(async () => {
@@ -205,15 +226,29 @@ export default function DespensaPage() {
       <ClientePage title={UX.despensa.titulo} description={UX.despensa.subtitulo}>
         <div className="mx-auto max-w-lg space-y-5">
           <MercadoSelector
-          value={mercadoId}
-          onChange={(id) => {
-            setMercadoId(id);
-            rememberMercadoId(id);
-          }}
-        />
+            mode="required"
+            value={mercadoId}
+            onChange={(id) => {
+              setMercadoId(id);
+              if (id) rememberMercadoId(id);
+              const url = new URL(window.location.href);
+              if (id) url.searchParams.set('mercadoId', id);
+              else url.searchParams.delete('mercadoId');
+              window.history.replaceState({}, '', url.pathname + (url.search || ''));
+            }}
+          />
 
           {!mercadoId && (
-            <p className="text-center text-sm text-slate-500 py-4">{UX.despensa.semMercado}</p>
+            <div
+              role="status"
+              className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            >
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
+              <div>
+                <p className="font-semibold">{UX.despensa.semMercadoTitulo}</p>
+                <p className="mt-1 text-amber-900/90">{UX.despensa.semMercado}</p>
+              </div>
+            </div>
           )}
 
           {resumo && !loading && mercadoId && (
@@ -315,27 +350,46 @@ export default function DespensaPage() {
             </ul>
           )}
 
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+          <div
+            className={cn(
+              'rounded-xl border border-dashed p-4',
+              mercadoId ? 'border-slate-300 bg-slate-50' : 'border-amber-200 bg-amber-50/40'
+            )}
+          >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               {UX.despensa.adicionarManual}
             </p>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <input
-                type="text"
-                value={novoNome}
-                onChange={(e) => setNovoNome(e.target.value)}
-                placeholder="Ex.: Leite integral"
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                min={3}
-                max={60}
-                value={novoCiclo}
-                onChange={(e) => setNovoCiclo(e.target.value)}
-                className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm"
-                title="Ciclo em dias"
-              />
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <label className="sr-only" htmlFor="despensa-nome">
+                  Nome do produto
+                </label>
+                <input
+                  id="despensa-nome"
+                  type="text"
+                  value={novoNome}
+                  onChange={(e) => setNovoNome(e.target.value)}
+                  placeholder="Ex.: Leite integral"
+                  disabled={!mercadoId || salvando}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold uppercase text-slate-500" htmlFor="despensa-ciclo">
+                  {UX.despensa.cicloDias}
+                </label>
+                <input
+                  id="despensa-ciclo"
+                  type="number"
+                  min={3}
+                  max={60}
+                  value={novoCiclo}
+                  onChange={(e) => setNovoCiclo(e.target.value)}
+                  disabled={!mercadoId || salvando}
+                  className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70"
+                  title={UX.despensa.cicloDias}
+                />
+              </div>
               <button
                 type="button"
                 disabled={salvando || !mercadoId || !novoNome.trim()}
@@ -346,6 +400,9 @@ export default function DespensaPage() {
                 Adicionar
               </button>
             </div>
+            {!mercadoId && (
+              <p className="mt-2 text-xs font-medium text-amber-800">{UX.despensa.adicionarBloqueado}</p>
+            )}
           </div>
 
           {erro && (

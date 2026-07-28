@@ -108,7 +108,10 @@ export const UX = {
     verCompra: 'Ver compra',
     adicionarManual: 'Adicionar manual',
     vazio: 'Nenhum item ainda. Adicione manualmente ou use listas e compras para inferir.',
-    semMercado: 'Escolha um mercado para ver a despensa.',
+    semMercado: 'A despensa é por mercado. Selecione um mercado acima para ver o que costuma acabar e poder adicionar itens.',
+    semMercadoTitulo: 'Falta escolher o mercado',
+    adicionarBloqueado: 'Selecione um mercado acima para liberar o botão Adicionar.',
+    cicloDias: 'Ciclo (dias)',
     semEstoque: 'Não há oferta deste item neste mercado agora. Busque pelo nome.',
   },
   mais: {
