@@ -23,7 +23,9 @@ deploy_load_env_production "$SRC"
 
 echo ">>> Build frontend em $SRC..."
 rm -rf .next/cache
-npm run build
+# Nunca bake AI-Native on a partir de .env.local no deploy de produção.
+# Piloto usa cookie AI_NATIVE_SHELL=1 ou rebuild dedicado de staging.
+NEXT_PUBLIC_AI_NATIVE_SHELL=false npm run build
 deploy_require_next_static "$SRC"
 
 deploy_sync_to_dest

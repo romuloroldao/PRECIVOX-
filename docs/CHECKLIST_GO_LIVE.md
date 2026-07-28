@@ -82,15 +82,15 @@ curl -X PATCH -H "Cookie: ..." -H "Content-Type: application/json" \
 - [ ] Push cesta (48–72h) — requer opt-in VAPID
 - [x] Perfil PRECI — `/cliente/perfil` (fix chunk recovery + loading cliente, 30/06/2026)
 
-### Cliente AI-Native (piloto — flag on só em staging/local)
+### Cliente AI-Native (piloto — flag on só via cookie/staging)
 Ver checklist detalhado: [`QA_AI_NATIVE_PILOTO.md`](./QA_AI_NATIVE_PILOTO.md)
 
-- [ ] `NEXT_PUBLIC_AI_NATIVE_SHELL=true` (ou cookie `AI_NATIVE_SHELL=1`) + rebuild Next
-- [ ] Nav: Casa · Compra · Scanner · Despensa · Mais
+- [x] Código em produção (28/07/2026) com `NEXT_PUBLIC_AI_NATIVE_SHELL=false`
+- [ ] QA manual com cookie `AI_NATIVE_SHELL=1` (nav Casa/Compra/Scanner/Mais)
 - [ ] Hub texto / voz / foto → superfície correta
-- [ ] Flag off: nav legada intacta
+- [x] Flag off: nav legada é o default em produção
 - [ ] Funil eventos: `casa_aberta` → `compra_rascunho_montado` → `compra_confirmada`
-- [ ] **Não** ligar flag em produção até 1 ciclo estável
+- [x] **Não** ligar flag env em produção até 1 ciclo estável
 
 ### Gestor (Empório Select)
 - [x] Upload + sync + saúde catálogo (card visível; catálogo stale)

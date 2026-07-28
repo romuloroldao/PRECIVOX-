@@ -1,19 +1,25 @@
 # QA piloto — jornada AI-Native
 
-**Branch:** `feat/redesign-jornada-cliente` · **PR:** https://github.com/romuloroldao/PRECIVOX-/pull/9  
+**PR:** https://github.com/romuloroldao/PRECIVOX-/pull/9 (merged em `main`)  
 **Flag:** `NEXT_PUBLIC_AI_NATIVE_SHELL` (build) ou cookie `AI_NATIVE_SHELL=1` (QA sem rebuild)  
 **Regra:** produção permanece **off** até 1 ciclo de piloto estável.
 
-## Pré-requisitos
+## Status infra (28/07/2026)
+- [x] `main` publicado; deploy produção BUILD_ID `46oQy-MKLBlr5tTL1KJks`
+- [x] `.env.production` com `NEXT_PUBLIC_AI_NATIVE_SHELL=false`
+- [x] Smoke apps + hardening OK; hub intent responde 401 sem auth
+- [x] Rotas `/cliente/casa`, `/cliente/compra`, `/cliente/mais` HTTP 200
+
+## Pré-requisitos (QA manual com shell novo)
 - [ ] Login cliente válido
-- [ ] Flag on no ambiente de teste + restart do Next
+- [ ] Cookie `AI_NATIVE_SHELL=1` no browser (ou rebuild staging com flag true)
 - [ ] Backend com `INTERNAL_API_SECRET` / `JWT_SECRET` (gateway IA)
 - [ ] Opcional: `GROQ_API_KEY` (sem chave = análise de lista em modo básico/mock)
 
 ## Shell e navegação
 - [ ] Bottom nav: **Casa · Compra · (FAB) · Despensa · Mais**
 - [ ] FAB Scanner abre `/cliente/scan` em 1 toque; oculto na própria página scan
-- [ ] Com flag **off**: nav legada (Início · Buscar · Listas · Despensa · Perfil)
+- [ ] Com flag **off**: nav legada (Início · Buscar · Listas · Despensa · Perfil) — default em prod
 - [ ] `/cliente/home` com flag on → redirect `/cliente/casa`
 
 ## Casa / Agora
@@ -49,4 +55,4 @@
 
 ---
 
-*Criado 28/07/2026.*
+*Atualizado 28/07/2026 — pós-merge e deploy.*
