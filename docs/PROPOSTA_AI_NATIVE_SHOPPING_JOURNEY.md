@@ -714,7 +714,7 @@ type StructuredResponse = {
 - [x] Redirects: `/cliente/home` → Casa; busca como capability
 - [ ] Flag default **on** (ligado em `.env.local` / piloto; **prod permanece off** até ciclo estável)
 - [ ] Nav antiga removida só após 1 ciclo de piloto estável
-- [ ] Analytics: funil Casa → rascunho → confirmação ≥ baseline anterior
+- [x] Analytics: eventos `casa_aberta` → `compra_rascunho_montado` → `compra_confirmada` + `lib/ai-native-funnel.ts` (comparar ≥ baseline em ops/piloto)
 
 ## Métricas de sucesso da transformação
 

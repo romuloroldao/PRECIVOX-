@@ -37,6 +37,7 @@ import { HubPreciBar } from '@/components/cliente/HubPreciBar';
 import { PreciPorQueEspelho } from '@/components/cliente/PreciPorQueEspelho';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { rememberMercadoId } from '@/lib/cliente-mercado-ref';
+import { recordCasaAberta, recordCompraRascunhoMontado } from '@/lib/events/frontend-events';
 import Link from 'next/link';
 
 interface DashboardData {
@@ -119,6 +120,11 @@ export function CasaAgoraScreen() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (!userId || !mercadoId) return;
+    void recordCasaAberta(userId, mercadoId, { shell: 'ai_native' });
+  }, [userId, mercadoId]);
+
   const revisarCompra = useCallback(async () => {
     if (totalItens > 0) {
       router.push('/cliente/compra');
@@ -145,6 +151,12 @@ export function CasaAgoraScreen() {
       for (const item of itens) {
         adicionarItem(item);
       }
+      if (userId) {
+        void recordCompraRascunhoMontado(userId, mercadoId, {
+          origem: 'casa',
+          itensCount: Array.isArray(itens) ? itens.length : undefined,
+        });
+      }
       success('Compra sugerida pronta para revisar.');
       router.push('/cliente/compra');
     } catch (e) {
@@ -153,7 +165,7 @@ export function CasaAgoraScreen() {
     } finally {
       setMontando(false);
     }
-  }, [totalItens, mercadoId, router, criarNovaLista, adicionarItem, success, toastError]);
+  }, [totalItens, mercadoId, userId, router, criarNovaLista, adicionarItem, success, toastError]);
 
   return (
     <main className="min-h-screen bg-slate-50">

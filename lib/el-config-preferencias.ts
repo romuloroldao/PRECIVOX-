@@ -7,6 +7,8 @@ import {
   EL_CONFIG_LIMITS,
   elConfigEfetivo,
   labelFaixaValorHora,
+  parseElConfigFromPerfil,
+  validarElConfigInput,
   type ElConfigUsuario,
 } from '@/lib/el-config-usuario';
 
@@ -149,6 +151,70 @@ export function validarElPreferencias(
   };
   if (!ids.prioridade || !ids.transporte || !ids.pressa) return null;
   return input as ElPreferenciasUsuario;
+}
+
+export type ElConfigPersistido = ElConfigUsuario & {
+  preferencias: ElPreferenciasUsuario;
+  atualizadoEm: string;
+  onboardingCompleto?: boolean;
+};
+
+/** Preferências explícitas ou inferidas de números legados / Perfil PRECI. */
+export function resolverElPreferenciasFromPerfil(
+  perfilPreci: unknown,
+  hint?: { scoreConveniencia?: number }
+): ElPreferenciasUsuario {
+  const salvas = parseElPreferenciasFromPerfil(perfilPreci);
+  if (salvas) return salvas;
+
+  const cfg = parseElConfigFromPerfil(perfilPreci);
+  if (cfg) return inferirPreferenciasDeConfig(cfg, hint);
+
+  if (hint?.scoreConveniencia != null) {
+    return inferirPreferenciasDeConfig(preferenciasParaElConfig(EL_PREFERENCIAS_PADRAO), hint);
+  }
+  return EL_PREFERENCIAS_PADRAO;
+}
+
+/** Monta payload JSON para `perfilPreci.elConfig`. */
+export function montarElConfigPersistido(
+  preferencias: ElPreferenciasUsuario,
+  numeros: ElConfigUsuario,
+  opts?: { atualizadoEm?: string; onboardingCompleto?: boolean }
+): ElConfigPersistido {
+  const payload: ElConfigPersistido = {
+    ...elConfigEfetivo(numeros),
+    preferencias,
+    atualizadoEm: opts?.atualizadoEm ?? new Date().toISOString(),
+  };
+  if (opts?.onboardingCompleto) payload.onboardingCompleto = true;
+  return payload;
+}
+
+/** Resolve preferências + números a partir do body do PATCH. */
+export function resolverElConfigPatchInput(
+  input: {
+    preferencias?: Partial<ElPreferenciasUsuario>;
+    elConfig?: Partial<ElConfigUsuario>;
+  },
+  hint?: { scoreConveniencia?: number }
+): { preferencias: ElPreferenciasUsuario; numeros: ElConfigUsuario } | null {
+  const prefValidadas = validarElPreferencias(input.preferencias);
+  const numerosValidados = validarElConfigInput(input.elConfig);
+
+  if (prefValidadas && numerosValidados) {
+    return { preferencias: prefValidadas, numeros: numerosValidados };
+  }
+  if (prefValidadas) {
+    return { preferencias: prefValidadas, numeros: preferenciasParaElConfig(prefValidadas) };
+  }
+  if (numerosValidados) {
+    return {
+      preferencias: inferirPreferenciasDeConfig(numerosValidados, hint),
+      numeros: numerosValidados,
+    };
+  }
+  return null;
 }
 
 /** Texto curto para o usuário entender o efeito das escolhas. */

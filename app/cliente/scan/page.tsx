@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -19,6 +19,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { CrowdEtiquetaConfirm } from '@/components/cliente/CrowdEtiquetaConfirm';
+import { dispararElOnboardingPrompt } from '@/lib/el-onboarding';
+import { inferirAcaoElAoAdicionar } from '@/lib/el-sugestao-client';
+import { recordElSugestaoResposta } from '@/lib/events/frontend-events';
+import type { RecomendacaoEL } from '@/lib/economia-liquida';
 
 type ScanMatch = {
   produtoId: string;
@@ -72,6 +76,18 @@ export default function ScanInteligentePage() {
     eansDetectados: string[];
     mercadoId: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (matches.length === 0) return;
+    const temEl = matches.some(
+      (m) =>
+        m.melhorAlternativa?.economiaLiquida &&
+        ((m.melhorAlternativa.economiaLiquida.economiaLiquida ?? 0) > 0 ||
+          m.melhorAlternativa.economiaLiquida.recomendacao === 'ir' ||
+          m.melhorAlternativa.economiaLiquida.recomendacao === 'ficar')
+    );
+    if (temEl) dispararElOnboardingPrompt('scan_el');
+  }, [matches]);
 
   const processarImagem = useCallback(async (file: File) => {
     setErro(null);
@@ -166,6 +182,23 @@ export default function ScanInteligentePage() {
   };
 
   const adicionarNaLista = (m: ScanMatch) => {
+    const el = m.melhorAlternativa?.economiaLiquida;
+    if (el && m.mercadoId) {
+      const recomendacao = el.recomendacao as RecomendacaoEL;
+      const acao = inferirAcaoElAoAdicionar(recomendacao);
+      if (acao) {
+        void recordElSugestaoResposta('session', m.mercadoId, {
+          acao,
+          recomendacao,
+          economiaLiquida: el.economiaLiquida,
+          distanciaKm: m.melhorAlternativa?.distanciaKm,
+          estoqueId: m.estoqueId,
+          produtoId: m.produtoId,
+          mercadoOrigemId: m.mercadoId,
+          mercadoDestinoNome: m.melhorAlternativa?.unidade?.mercado?.nome,
+        });
+      }
+    }
     const item: ItemLista = {
       id: m.estoqueId,
       produtoCatalogoId: m.produtoId,

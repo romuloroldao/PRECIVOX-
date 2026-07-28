@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EventCollector } from '@/lib/ai/event-collector';
 import type { UserEventType } from '@/lib/ai/types';
+import { refinarElConfigUsuario } from '@/lib/el-refinamento';
 import { TokenManager } from '@/lib/token-manager';
 
 const ALLOWED_TYPES: UserEventType[] = [
@@ -21,6 +22,9 @@ const ALLOWED_TYPES: UserEventType[] = [
   'compra_confirmada',
   'compra_parcial',
   'compra_nao_realizada',
+  'el_sugestao_resposta',
+  'casa_aberta',
+  'compra_rascunho_montado',
 ];
 
 /**
@@ -67,6 +71,14 @@ export async function POST(req: NextRequest) {
       type as UserEventType,
       (metadata && typeof metadata === 'object' ? metadata : {}) as Record<string, unknown>,
     );
+
+    if (type === 'el_sugestao_resposta') {
+      const refinado = await refinarElConfigUsuario(user.id).catch((err) => {
+        console.error('[api/events/track] el refinamento', err);
+        return false;
+      });
+      return NextResponse.json({ success: true, elRefinado: refinado });
+    }
 
     return NextResponse.json({ success: true });
   } catch (e) {

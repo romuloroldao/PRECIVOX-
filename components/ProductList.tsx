@@ -6,6 +6,7 @@ import { useToast } from '@/components/ToastContainer';
 import { ShoppingCart } from 'lucide-react';
 import { PrecoTruthBadge } from '@/components/cliente/PrecoTruthBadge';
 import { EconomiaLiquidaChip } from '@/components/cliente/EconomiaLiquidaChip';
+import { inferirAcaoElAoAdicionar, registrarRespostaEl } from '@/lib/el-sugestao-client';
 import { ProductImage } from '@/components/ui';
 
 interface ProductListProps {
@@ -19,6 +20,22 @@ export function ProductList({ produtos, onAbrirLista }: ProductListProps) {
   const { listaAdicionado } = useToast();
 
   const handleAdicionar = (produto: Produto) => {
+    const el = produto.melhorAlternativa?.economiaLiquida;
+    const mid = produto.unidade?.mercado?.id;
+    if (el && mid) {
+      const acao = inferirAcaoElAoAdicionar(el.recomendacao);
+      if (acao) {
+        registrarRespostaEl(
+          {
+            estoqueId: produto.estoqueId,
+            produtoCatalogoId: produto.produtoCatalogoId ?? produto.produto?.id,
+            mercadoOrigemId: mid,
+            melhorAlternativa: produto.melhorAlternativa,
+          },
+          acao
+        );
+      }
+    }
     adicionarItem({
       id: produto.id,
       produtoCatalogoId: produto.produtoCatalogoId ?? produto.produto?.id,
@@ -149,6 +166,11 @@ export function ProductList({ produtos, onAbrirLista }: ProductListProps) {
                         mercadoDestino={produto.melhorAlternativa.mercadoNome}
                         distanciaKm={produto.melhorAlternativa.distanciaKm}
                         tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
+                        tracking={{
+                          estoqueId: produto.estoqueId,
+                          mercadoOrigemId: produto.unidade.mercado.id,
+                          produtoCatalogoId: produto.produtoCatalogoId ?? produto.produto?.id,
+                        }}
                       />
                     )}
                   </div>

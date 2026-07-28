@@ -30,6 +30,7 @@ import {
 } from '@/components/ui';
 import { UX, type OrdenacaoBusca } from '@/lib/ux-copy';
 import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
+import { dispararElOnboardingPrompt, listaTemElVisivel } from '@/lib/el-onboarding';
 import {
   Filter,
   ShoppingCart,
@@ -185,6 +186,12 @@ export default function BuscaPage() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, loadMore]);
+
+  useEffect(() => {
+    if (loading || produtos.length === 0 || modoComparativo) return;
+    if (!listaTemElVisivel(produtos)) return;
+    dispararElOnboardingPrompt('busca_el');
+  }, [loading, produtos, modoComparativo]);
 
   const limparFiltros = () => {
     setCategoria('');

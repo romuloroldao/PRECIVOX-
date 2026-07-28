@@ -11,6 +11,8 @@ import { UX } from '@/lib/ux-copy';
 import { ClientePage } from '@/components/cliente/ClientePage';
 import { useToast } from '@/components/ToastContainer';
 import { rememberMercadoId } from '@/lib/cliente-mercado-ref';
+import { useSession } from '@/lib/hooks/useUnifiedSession';
+import { recordCompraRascunhoMontado } from '@/lib/events/frontend-events';
 
 /**
  * Aba Compra — Lista Inteligente full-bleed (Fase 2: compra-first).
@@ -19,6 +21,8 @@ import { rememberMercadoId } from '@/lib/cliente-mercado-ref';
  */
 export default function ClienteCompraPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
   const { totalItens, total, listaAtivaId, criarNovaLista, adicionarItem } = useLista();
   const { success, error: toastError } = useToast();
   const [mercadoId, setMercadoId] = useState<string | null>(null);
@@ -74,13 +78,19 @@ export default function ClienteCompraPage() {
       for (const item of itens) {
         adicionarItem(item);
       }
+      if (userId) {
+        void recordCompraRascunhoMontado(userId, mercadoId, {
+          origem: 'compra',
+          itensCount: Array.isArray(itens) ? itens.length : undefined,
+        });
+      }
       success('Compra sugerida pronta para revisar.');
     } catch (e) {
       toastError(e instanceof Error ? e.message : 'Tente de novo');
     } finally {
       setMontando(false);
     }
-  }, [montando, mercadoId, criarNovaLista, adicionarItem, success, toastError, router]);
+  }, [montando, mercadoId, userId, criarNovaLista, adicionarItem, success, toastError, router]);
 
   /** Hub / deep-link: ?montar=1 dispara rascunho da semana (Fase 4). */
   useEffect(() => {

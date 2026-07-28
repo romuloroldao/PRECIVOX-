@@ -7,6 +7,7 @@ import { useLista } from '@/app/context/ListaContext';
 import { Produto } from '@/app/hooks/useProdutos';
 import { useToast } from '@/components/ToastContainer';
 import { recordProdutoSubstituicaoAceita } from '@/lib/events/frontend-events';
+import { inferirAcaoElAoAdicionar, registrarRespostaEl } from '@/lib/el-sugestao-client';
 import { ShoppingCart, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, Button, ProductImage } from '@/components/ui';
 import { UX } from '@/lib/ux-copy';
@@ -34,6 +35,22 @@ export function ProductCard({ produtos, onAdicionar, onAbrirLista }: ProductCard
   const selosMercado = useMercadoSelos(mercadoIds);
 
   const handleAdicionar = (produto: Produto) => {
+    const el = produto.melhorAlternativa?.economiaLiquida;
+    const mid = produto.unidade?.mercado?.id;
+    if (el && mid) {
+      const acao = inferirAcaoElAoAdicionar(el.recomendacao);
+      if (acao) {
+        registrarRespostaEl(
+          {
+            estoqueId: produto.estoqueId,
+            produtoCatalogoId: produto.produtoCatalogoId ?? produto.produto?.id,
+            mercadoOrigemId: mid,
+            melhorAlternativa: produto.melhorAlternativa,
+          },
+          acao
+        );
+      }
+    }
     adicionarItem({
       id: produto.id,
       produtoCatalogoId: produto.produtoCatalogoId ?? produto.produto?.id,
@@ -398,6 +415,15 @@ function CardLinhaSubstituto({
                     mercadoDestino={produto.melhorAlternativa.mercadoNome}
                     distanciaKm={produto.melhorAlternativa.distanciaKm}
                     tempoMinutos={produto.melhorAlternativa.economiaLiquida.tempoMinutos}
+                    tracking={
+                      produto.estoqueId && mercadoId
+                        ? {
+                            estoqueId: produto.estoqueId,
+                            mercadoOrigemId: mercadoId,
+                            produtoCatalogoId: pid ? String(pid) : undefined,
+                          }
+                        : undefined
+                    }
                   />
                 )}
                 {produto.provaSocial?.mensagem && (

@@ -28,7 +28,12 @@ export type UserEventType =
   | 'checkin_mercado'
   | 'compra_confirmada'
   | 'compra_parcial'
-  | 'compra_nao_realizada';
+  | 'compra_nao_realizada'
+  /** Economia Líquida — resposta implícita ou explícita à sugestão de deslocamento */
+  | 'el_sugestao_resposta'
+  /** Funil AI-Native (Fase 9): Casa → rascunho → confirmação */
+  | 'casa_aberta'
+  | 'compra_rascunho_montado';
 
 export interface UserEvent {
   id: string;

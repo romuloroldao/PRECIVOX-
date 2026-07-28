@@ -9,19 +9,25 @@ async function postEvent(
   _userId: string,
   mercadoId: string,
   metadata: Record<string, unknown> = {}
-): Promise<void> {
+): Promise<{ elRefinado?: boolean }> {
   if (typeof window === 'undefined') {
-    return;
+    return {};
   }
   try {
-    await fetch('/api/events/track', {
+    const res = await fetch('/api/events/track', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ type, mercadoId, metadata }),
     });
+    const data = (await res.json()) as { elRefinado?: boolean };
+    if (data.elRefinado) {
+      window.dispatchEvent(new CustomEvent('precivox-el-refinamento-atualizado'));
+    }
+    return data;
   } catch (error) {
     console.error('[FrontendEvents] Falha ao enviar evento:', error);
+    return {};
   }
 }
 
@@ -215,4 +221,36 @@ export async function recordCompraNaoRealizada(
   metadata?: { listaId?: string; motivo?: string }
 ): Promise<void> {
   await postEvent('compra_nao_realizada', userId, mercadoId, (metadata ?? {}) as Record<string, unknown>);
+}
+
+/** Resposta à sugestão de Economia Líquida (visualização, aceite, ignore). */
+export async function recordElSugestaoResposta(
+  _userId: string,
+  mercadoId: string,
+  metadata: import('@/lib/el-sugestao-types').ElSugestaoMetadata
+): Promise<void> {
+  await postEvent('el_sugestao_resposta', _userId, mercadoId, metadata as Record<string, unknown>);
+}
+
+/** Funil AI-Native: usuário abriu Casa / Agora. */
+export async function recordCasaAberta(
+  userId: string,
+  mercadoId: string,
+  metadata?: { shell?: 'ai_native' | 'legacy' }
+): Promise<void> {
+  await postEvent('casa_aberta', userId, mercadoId, (metadata ?? { shell: 'ai_native' }) as Record<string, unknown>);
+}
+
+/** Funil AI-Native: rascunho da semana montado (Casa CTA ou Compra). */
+export async function recordCompraRascunhoMontado(
+  userId: string,
+  mercadoId: string,
+  metadata?: { origem?: 'casa' | 'compra' | 'hub'; itensCount?: number }
+): Promise<void> {
+  await postEvent(
+    'compra_rascunho_montado',
+    userId,
+    mercadoId,
+    (metadata ?? {}) as Record<string, unknown>
+  );
 }

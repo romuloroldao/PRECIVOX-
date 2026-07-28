@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { RecomendacaoEL } from '@/lib/economia-liquida';
 import { cn } from '@/lib/utils';
 import { MapPin, Home, HelpCircle } from 'lucide-react';
+import { recordElSugestaoResposta } from '@/lib/events/frontend-events';
+import { impressaoElJaRegistrada, marcarImpressaoEl } from '@/lib/el-sugestao-types';
 
 export interface EconomiaLiquidaChipProps {
   recomendacao: RecomendacaoEL;
@@ -12,6 +15,12 @@ export interface EconomiaLiquidaChipProps {
   distanciaKm?: number | null;
   tempoMinutos?: number | null;
   className?: string;
+  /** Quando informado, registra impressão da sugestão EL (uma vez por sessão/estoque). */
+  tracking?: {
+    estoqueId: string;
+    mercadoOrigemId: string;
+    produtoCatalogoId?: string;
+  };
 }
 
 export function EconomiaLiquidaChip({
@@ -22,7 +31,47 @@ export function EconomiaLiquidaChip({
   distanciaKm,
   tempoMinutos,
   className,
+  tracking,
 }: EconomiaLiquidaChipProps) {
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (!tracking?.estoqueId || !tracking.mercadoOrigemId) return;
+    if (impressaoElJaRegistrada(tracking.estoqueId)) return;
+
+    const node = ref.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (impressaoElJaRegistrada(tracking.estoqueId)) return;
+        marcarImpressaoEl(tracking.estoqueId);
+        void recordElSugestaoResposta('session', tracking.mercadoOrigemId, {
+          acao: 'visualizada',
+          recomendacao,
+          economiaLiquida,
+          distanciaKm,
+          estoqueId: tracking.estoqueId,
+          produtoId: tracking.produtoCatalogoId,
+          mercadoOrigemId: tracking.mercadoOrigemId,
+          mercadoDestinoNome: mercadoDestino,
+        });
+        observer.disconnect();
+      },
+      { threshold: 0.6 }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [
+    tracking,
+    recomendacao,
+    economiaLiquida,
+    distanciaKm,
+    mercadoDestino,
+  ]);
+
   if (recomendacao === 'indeterminado' && economiaLiquida <= 0) {
     return null;
   }
@@ -54,6 +103,7 @@ export function EconomiaLiquidaChip({
 
   return (
     <p
+      ref={ref}
       className={cn(
         'mt-2 flex items-start gap-2 rounded-lg px-2.5 py-2 text-xs font-medium leading-snug',
         styles[recomendacao],

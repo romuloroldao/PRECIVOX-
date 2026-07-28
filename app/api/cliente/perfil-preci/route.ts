@@ -10,12 +10,15 @@ import {
   EIXO_LABELS,
 } from '@/lib/perfil-preci';
 import { getReputacaoCrowd } from '@/lib/crowd-reputacao';
+import { elConfigEfetivo, parseElConfigFromPerfil } from '@/lib/el-config-usuario';
 import {
-  elConfigEfetivo,
-  parseElConfigFromPerfil,
-  validarElConfigInput,
-  type ElConfigUsuario,
-} from '@/lib/el-config-usuario';
+  montarElConfigPersistido,
+  resolverElConfigPatchInput,
+  resolverElPreferenciasFromPerfil,
+  validarElPreferencias,
+} from '@/lib/el-config-preferencias';
+import { elOnboardingCompleto } from '@/lib/el-onboarding';
+import { parseElRefinamentoPendente } from '@/lib/el-refinamento-core';
 import { EL_DEFAULTS } from '@/lib/economia-liquida';
 
 export const dynamic = 'force-dynamic';
@@ -47,8 +50,11 @@ export async function GET(req: NextRequest) {
     const calculado = calcularPerfilPreciDeEventos(eventos);
     const ajustes = (dbUser?.perfilPreci as { ajustes?: PerfilPreciAjustes } | null)?.ajustes ?? null;
     const elConfigSalvo = parseElConfigFromPerfil(dbUser?.perfilPreci);
-    const elConfig = elConfigEfetivo(elConfigSalvo);
     const scoresEfetivos = mesclarComAjustes(calculado.scores, ajustes);
+    const elConfig = elConfigEfetivo(elConfigSalvo);
+    const elPreferencias = resolverElPreferenciasFromPerfil(dbUser?.perfilPreci, {
+      scoreConveniencia: scoresEfetivos.conveniencia,
+    });
 
     return NextResponse.json({
       success: true,
@@ -60,6 +66,9 @@ export async function GET(req: NextRequest) {
         reputacaoCrowd: reputacao,
         periodoDias: dias,
         elConfig,
+        elPreferencias,
+        elOnboardingCompleto: elOnboardingCompleto(dbUser?.perfilPreci),
+        elRefinamentoPendente: parseElRefinamentoPendente(dbUser?.perfilPreci),
         elDefaults: {
           valorHoraReais: EL_DEFAULTS.valorHoraReais,
           custoKmReais: EL_DEFAULTS.custoKmReais,
@@ -84,17 +93,21 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
     const ajustes = body.ajustes as PerfilPreciAjustes | undefined;
-    const elConfigRaw = body.elConfig as Partial<ElConfigUsuario> | undefined;
+    const elConfigRaw = body.elConfig as
+      | { valorHoraReais?: number; custoKmReais?: number }
+      | undefined;
+    const preferenciasRaw = body.preferencias;
+    const onboardingCompleto = body.onboardingCompleto === true;
 
     const temAjustes =
       ajustes &&
       typeof ajustes === 'object' &&
       Object.keys(ajustes).length > 0;
-    const temElConfig = Boolean(elConfigRaw);
+    const temElPayload = Boolean(elConfigRaw || preferenciasRaw);
 
-    if (!temAjustes && !temElConfig) {
+    if (!temAjustes && !temElPayload) {
       return NextResponse.json(
-        { success: false, error: 'Informe ajustes e/ou elConfig' },
+        { success: false, error: 'Informe ajustes e/ou preferencias/elConfig' },
         { status: 400 }
       );
     }
@@ -108,13 +121,26 @@ export async function PATCH(req: NextRequest) {
         ? (dbUser.perfilPreci as Record<string, unknown>)
         : {};
 
-    const elValidado = elConfigRaw ? validarElConfigInput(elConfigRaw) : null;
-    if (elConfigRaw && !elValidado) {
-      return NextResponse.json({ success: false, error: 'elConfig inválido' }, { status: 400 });
-    }
+    if (temElPayload) {
+      const elResolvido = resolverElConfigPatchInput({
+        preferencias: preferenciasRaw,
+        elConfig: elConfigRaw,
+      });
+      if (!elResolvido) {
+        return NextResponse.json(
+          { success: false, error: 'preferencias ou elConfig inválido' },
+          { status: 400 }
+        );
+      }
+      const prevEl = base.elConfig as { onboardingCompleto?: boolean } | undefined;
+      const marcarOnboarding =
+        onboardingCompleto ||
+        Boolean(validarElPreferencias(preferenciasRaw)) ||
+        Boolean(prevEl?.onboardingCompleto);
 
-    if (elValidado) {
-      base.elConfig = { ...elValidado, atualizadoEm: new Date().toISOString() };
+      base.elConfig = montarElConfigPersistido(elResolvido.preferencias, elResolvido.numeros, {
+        onboardingCompleto: marcarOnboarding || undefined,
+      });
     }
     if (temAjustes) {
       const prev = (base.ajustes as PerfilPreciAjustes | undefined) ?? {};
