@@ -84,7 +84,7 @@ async function handle(req: NextRequest, provider: string) {
   }
 
   const codeVerifier = req.cookies.get(OAUTH_COOKIE.verifier)?.value;
-  const postLoginRedirect = req.cookies.get(OAUTH_COOKIE.redirect)?.value || '/cliente/home';
+  const postLoginRedirect = req.cookies.get(OAUTH_COOKIE.redirect)?.value || '/cliente/casa';
   const redirectUri = buildRedirectUri(origin, provider as SocialProvider);
 
   try {

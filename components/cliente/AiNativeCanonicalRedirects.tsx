@@ -2,18 +2,16 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
 
 /**
- * Redirects canônicos com shell AI-Native (Fase 9 — soft deprecate).
- * Nav legada permanece no código até piloto estável; só redireciona bookmarks.
+ * Redirects canônicos do shell cliente.
+ * `/cliente/home` → Casa / Agora (destino pós-login).
  */
 export function AiNativeCanonicalRedirects() {
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAiNativeShellEnabled()) return;
     if (pathname === '/cliente/home' || pathname === '/cliente/home/') {
       router.replace('/cliente/casa');
     }

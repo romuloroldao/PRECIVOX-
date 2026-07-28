@@ -234,14 +234,14 @@ export async function sendWelcomeEmail(params: { nome: string; email: string }):
       <tr><td style="padding: 6px 0; font-size: 15px; color: #334155;">💸&nbsp;&nbsp;Comparar preços entre mercados em tempo real</td></tr>
       <tr><td style="padding: 6px 0; font-size: 15px; color: #334155;">📊&nbsp;&nbsp;Acompanhar quanto você economiza</td></tr>
     </table>
-    ${button(`${baseUrl}/cliente/home`, 'Acessar minha conta')}
+    ${button(`${baseUrl}/cliente/casa`, 'Acessar minha conta')}
     ${muted('Se você não criou esta conta, pode ignorar este e-mail com segurança.')}
   `;
   return sendEmail({
     to: params.email,
     subject: 'Bem-vindo(a) ao Precivox! Sua conta está pronta 🎉',
     html: renderLayout({ preheader: 'Sua conta foi ativada — comece a economizar agora.', bodyHtml }),
-    text: `Olá, ${params.nome}! Seu e-mail foi confirmado e sua conta no Precivox está ativa. Acesse: ${baseUrl}/cliente/home`,
+    text: `Olá, ${params.nome}! Seu e-mail foi confirmado e sua conta no Precivox está ativa. Acesse: ${baseUrl}/cliente/casa`,
   });
 }
 

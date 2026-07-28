@@ -42,7 +42,7 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
-    router.push('/cliente/home');
+    router.push('/cliente/casa');
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {

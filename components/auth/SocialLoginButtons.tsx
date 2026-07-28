@@ -33,7 +33,7 @@ const FacebookIcon = () => (
 );
 
 export default function SocialLoginButtons({
-  callbackUrl = '/cliente/home',
+  callbackUrl = '/cliente/casa',
   platform = 'web',
   disabled = false,
 }: SocialLoginButtonsProps) {

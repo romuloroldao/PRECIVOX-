@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
           }),
       data: {
         usuario: newUser,
-        redirectUrl: '/cliente/home',
+        redirectUrl: '/cliente/casa',
         referralReward,
       },
     }, { status: 201 });

@@ -3,7 +3,7 @@
  */
 export function safeCallbackUrl(
   raw: string | null | undefined,
-  defaultPath = '/cliente/busca'
+  defaultPath = '/cliente/casa'
 ): string {
   if (raw == null || typeof raw !== 'string') return defaultPath;
   try {

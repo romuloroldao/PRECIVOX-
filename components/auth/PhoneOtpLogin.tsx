@@ -15,7 +15,7 @@ function toE164(raw: string): string {
   return `+${digits}`;
 }
 
-export default function PhoneOtpLogin({ callbackUrl = '/cliente/home' }: PhoneOtpLoginProps) {
+export default function PhoneOtpLogin({ callbackUrl = '/cliente/casa' }: PhoneOtpLoginProps) {
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');

@@ -3,7 +3,6 @@
 import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -53,7 +52,7 @@ export default function RouteGuard({ children, allowedRoles }: RouteGuardProps) 
       const redirectUrls: Record<string, string> = {
         ADMIN: '/admin/dashboard',
         GESTOR: '/gestor/home',
-        CLIENTE: isAiNativeShellEnabled() ? '/cliente/casa' : '/cliente/home',
+        CLIENTE: '/cliente/casa',
       };
 
       const redirectUrl = redirectUrls[userRole] || '/login';

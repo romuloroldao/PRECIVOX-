@@ -16,7 +16,6 @@ import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { Plus, Search, ShoppingCart } from 'lucide-react';
 import { useLista } from '@/app/context/ListaContext';
 import { listasSalvasToSummaries, mergeListSummaries } from '@/lib/listas-merge';
-import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
 
 import { EconomyCard } from '@/components/cliente/EconomyCard';
 import { RecentLists } from '@/components/cliente/RecentLists';
@@ -68,11 +67,9 @@ export default function DashboardCliente() {
   const userId = (session?.user as any)?.id ?? null;
   const { listasSalvas } = useLista();
 
-  /** Dual-shell: com flag AI-Native, /home redireciona para Casa (rota antiga permanece). */
+  /** Destino canônico pós-login: /home → Casa / Agora. */
   useEffect(() => {
-    if (isAiNativeShellEnabled()) {
-      router.replace('/cliente/casa');
-    }
+    router.replace('/cliente/casa');
   }, [router]);
 
   const localLists = useMemo(

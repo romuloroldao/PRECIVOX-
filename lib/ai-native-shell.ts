@@ -25,7 +25,7 @@ export function isAiNativeShellEnabled(): boolean {
   return isAiNativeShellEnvEnabled();
 }
 
-/** Destino pós-login / logo do shell cliente. */
-export function clienteHomeHref(aiNative = isAiNativeShellEnabled()): string {
-  return aiNative ? '/cliente/casa' : '/cliente/home';
+/** Destino pós-login / logo do shell cliente — Casa / Agora. */
+export function clienteHomeHref(_aiNative = isAiNativeShellEnabled()): string {
+  return '/cliente/casa';
 }
