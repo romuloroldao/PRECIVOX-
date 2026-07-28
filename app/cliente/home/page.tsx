@@ -16,6 +16,7 @@ import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { Plus, Search, ShoppingCart } from 'lucide-react';
 import { useLista } from '@/app/context/ListaContext';
 import { listasSalvasToSummaries, mergeListSummaries } from '@/lib/listas-merge';
+import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
 
 import { EconomyCard } from '@/components/cliente/EconomyCard';
 import { RecentLists } from '@/components/cliente/RecentLists';
@@ -28,6 +29,7 @@ import { TrocaHistoricoCard } from '@/components/cliente/TrocaHistoricoCard';
 import { ProvaSocialMercadoCard } from '@/components/cliente/ProvaSocialMercadoCard';
 import { ScanInteligenteEntry } from '@/components/cliente/ScanInteligenteEntry';
 import { RaioFamiliarCard } from '@/components/cliente/RaioFamiliarCard';
+import { CasaCompartilharBanner } from '@/components/cliente/casa/CasaCompartilharBanner';
 import { MercadoVivoBanner } from '@/components/cliente/MercadoVivoBanner';
 import { InflacaoCestaCard } from '@/components/cliente/InflacaoCestaCard';
 import { PreciIndexBairroCard } from '@/components/cliente/PreciIndexBairroCard';
@@ -65,6 +67,13 @@ export default function DashboardCliente() {
   const { data: session, status } = useSession();
   const userId = (session?.user as any)?.id ?? null;
   const { listasSalvas } = useLista();
+
+  /** Dual-shell: com flag AI-Native, /home redireciona para Casa (rota antiga permanece). */
+  useEffect(() => {
+    if (isAiNativeShellEnabled()) {
+      router.replace('/cliente/casa');
+    }
+  }, [router]);
 
   const localLists = useMemo(
     () => listasSalvasToSummaries(listasSalvas),
@@ -192,6 +201,13 @@ export default function DashboardCliente() {
         {!isLoading && userId && (
           <div className="mb-4">
             <OnboardingChecklist />
+          </div>
+        )}
+
+        {/* Sugestão Minha Casa — lista com 3+ itens e sem casa criada */}
+        {!isLoading && userId && (
+          <div className="mb-4">
+            <CasaCompartilharBanner />
           </div>
         )}
 

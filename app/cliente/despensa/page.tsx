@@ -1,11 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 import { MercadoSelector } from '@/components/cliente/MercadoSelector';
 import { ClientePage } from '@/components/cliente/ClientePage';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { useLista, type ItemLista } from '@/app/context/ListaContext';
+import { useToast } from '@/components/ToastContainer';
+import { UX } from '@/lib/ux-copy';
+import {
+  copyDespensaPreditiva,
+  deveSugerirIncluirNaCompra,
+  labelStatusCurto,
+} from '@/lib/despensa-copy';
+import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
+import { Loader2, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type DespensaItem = {
   produtoId: string;
@@ -18,12 +29,6 @@ type DespensaItem = {
   fonte: 'inferido' | 'manual';
 };
 
-const STATUS_LABEL: Record<DespensaItem['status'], string> = {
-  acabando: 'Acabando',
-  atencao: 'Atenção',
-  ok: 'OK',
-};
-
 const STATUS_COLOR: Record<DespensaItem['status'], string> = {
   acabando: 'bg-red-100 text-red-800',
   atencao: 'bg-amber-100 text-amber-900',
@@ -32,6 +37,9 @@ const STATUS_COLOR: Record<DespensaItem['status'], string> = {
 
 export default function DespensaPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { adicionarItem, itens: itensLista } = useLista();
+  const { success, error: toastError } = useToast();
   const [mercadoId, setMercadoId] = useState('');
   const [itens, setItens] = useState<DespensaItem[]>([]);
   const [resumo, setResumo] = useState('');
@@ -40,6 +48,8 @@ export default function DespensaPage() {
   const [novoNome, setNovoNome] = useState('');
   const [novoCiclo, setNovoCiclo] = useState('14');
   const [salvando, setSalvando] = useState(false);
+  const [intentScore, setIntentScore] = useState<number | null>(null);
+  const [incluindoId, setIncluindoId] = useState<string | null>(null);
 
   useEffect(() => {
     const m = searchParams.get('mercadoId');
@@ -51,14 +61,25 @@ export default function DespensaPage() {
     setLoading(true);
     setErro(null);
     try {
-      const res = await fetch(`/api/cliente/despensa?mercadoId=${encodeURIComponent(mercadoId)}`, {
-        credentials: 'include',
-        cache: 'no-store',
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || 'Falha ao carregar');
+      const [despRes, intentRes] = await Promise.all([
+        fetch(`/api/cliente/despensa?mercadoId=${encodeURIComponent(mercadoId)}`, {
+          credentials: 'include',
+          cache: 'no-store',
+        }),
+        fetch('/api/cliente/intent-score', { credentials: 'include', cache: 'no-store' }),
+      ]);
+      const json = await despRes.json();
+      if (!despRes.ok || !json.success) throw new Error(json.error || 'Falha ao carregar');
       setItens(json.data.itens ?? []);
       setResumo(json.data.resumo ?? '');
+
+      try {
+        const intentJson = await intentRes.json();
+        const score = intentJson?.data?.score ?? intentJson?.score;
+        if (typeof score === 'number') setIntentScore(score);
+      } catch {
+        /* intent opcional */
+      }
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro');
       setItens([]);
@@ -70,6 +91,66 @@ export default function DespensaPage() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  const jaNaLista = useCallback(
+    (produtoId: string) =>
+      itensLista.some(
+        (i) => i.produtoCatalogoId === produtoId || i.id === produtoId || i.estoqueId === `manual-${produtoId}`
+      ),
+    [itensLista]
+  );
+
+  const incluirNaCompra = async (item: DespensaItem) => {
+    if (!mercadoId || incluindoId) return;
+    setIncluindoId(item.produtoId);
+    setErro(null);
+    try {
+      if (item.produtoId.startsWith('manual-')) {
+        const stub: ItemLista = {
+          id: item.produtoId,
+          produtoCatalogoId: item.produtoId,
+          estoqueId: `manual-${item.produtoId}`,
+          nome: item.nome,
+          preco: 0,
+          emPromocao: false,
+          quantidade: 1,
+          unidade: {
+            id: 'manual',
+            nome: 'A definir',
+            mercado: { id: mercadoId, nome: 'Mercado' },
+          },
+        };
+        adicionarItem(stub);
+        success(UX.despensa.incluido);
+        return;
+      }
+
+      const res = await fetch('/api/cliente/despensa/para-lista', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mercadoId, produtoIds: [item.produtoId] }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || UX.despensa.semEstoque);
+      }
+      const resolved = (json.data?.itens ?? []) as ItemLista[];
+      if (resolved.length === 0) {
+        toastError(UX.despensa.semEstoque);
+        router.push(`/cliente/busca?q=${encodeURIComponent(item.nome)}`);
+        return;
+      }
+      for (const row of resolved) {
+        adicionarItem(row);
+      }
+      success(UX.despensa.incluido);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : 'Erro ao incluir');
+    } finally {
+      setIncluindoId(null);
+    }
+  };
 
   const adicionarManual = async () => {
     if (!mercadoId || !novoNome.trim()) return;
@@ -116,103 +197,156 @@ export default function DespensaPage() {
     }
   };
 
+  const compraHref = isAiNativeShellEnabled() ? '/cliente/compra' : '/cliente/busca';
+
   return (
     <DashboardLayout role="CLIENTE">
-      <ClientePage
-        title="Despensa digital"
-        description="Itens que você costuma repor — inferidos ou manuais"
-      >
-      <div className="mx-auto max-w-lg space-y-5">
-        <MercadoSelector value={mercadoId} onChange={setMercadoId} />
+      <ClientePage title={UX.despensa.titulo} description={UX.despensa.subtitulo}>
+        <div className="mx-auto max-w-lg space-y-5">
+          <MercadoSelector value={mercadoId} onChange={setMercadoId} />
 
-        {resumo && !loading && (
-          <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">{resumo}</p>
-        )}
+          {!mercadoId && (
+            <p className="text-center text-sm text-slate-500 py-4">{UX.despensa.semMercado}</p>
+          )}
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {itens.map((item) => (
-              <li
-                key={item.produtoId}
-                className="flex items-start justify-between gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{item.nome}</p>
-                  <p className="text-xs text-gray-500">
-                    Ciclo ~{item.cicloDias} dias
-                    {item.diasRestantes != null && ` · repor em ~${item.diasRestantes}d`}
-                    {item.fonte === 'manual' && ' · manual'}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS_COLOR[item.status]}`}
+          {resumo && !loading && mercadoId && (
+            <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">{resumo}</p>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {itens.map((item) => {
+                const copy = copyDespensaPreditiva({
+                  ...item,
+                  intentScore,
+                });
+                const showCta = deveSugerirIncluirNaCompra(copy.urgencia);
+                const naLista = jaNaLista(item.produtoId);
+                const busy = incluindoId === item.produtoId;
+
+                return (
+                  <li
+                    key={item.produtoId}
+                    className={cn(
+                      'rounded-xl border bg-white p-3 shadow-sm',
+                      copy.urgencia === 'alta'
+                        ? 'border-red-200'
+                        : copy.urgencia === 'media'
+                          ? 'border-amber-200'
+                          : 'border-slate-200'
+                    )}
                   >
-                    {STATUS_LABEL[item.status]}
-                  </span>
-                  {item.fonte === 'manual' && (
-                    <button
-                      type="button"
-                      disabled={salvando}
-                      onClick={() => void removerManual(item.produtoId)}
-                      className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                      aria-label="Remover"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-            {itens.length === 0 && mercadoId && (
-              <p className="text-center text-sm text-gray-500 py-8">
-                Nenhum item ainda. Adicione manualmente ou use listas/compras para inferir.
-              </p>
-            )}
-          </ul>
-        )}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900">{item.nome}</p>
+                        <p className="mt-0.5 text-sm font-medium text-slate-800">{copy.primaria}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {copy.secundaria}
+                          {item.fonte === 'manual' ? ' · manual' : ''}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
+                            STATUS_COLOR[item.status]
+                          )}
+                        >
+                          {labelStatusCurto(item.status)}
+                        </span>
+                        {item.fonte === 'manual' && (
+                          <button
+                            type="button"
+                            disabled={salvando}
+                            onClick={() => void removerManual(item.produtoId)}
+                            className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                            aria-label="Remover"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Adicionar manual</p>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <input
-              type="text"
-              value={novoNome}
-              onChange={(e) => setNovoNome(e.target.value)}
-              placeholder="Ex.: Leite integral"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-            <input
-              type="number"
-              min={3}
-              max={60}
-              value={novoCiclo}
-              onChange={(e) => setNovoCiclo(e.target.value)}
-              className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-sm"
-              title="Ciclo em dias"
-            />
-            <button
-              type="button"
-              disabled={salvando || !mercadoId || !novoNome.trim()}
-              onClick={() => void adicionarManual()}
-              className="inline-flex items-center justify-center gap-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-              Adicionar
-            </button>
+                    {showCta && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {naLista ? (
+                          <Link
+                            href={compraHref}
+                            className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
+                          >
+                            <ShoppingCart className="h-4 w-4" aria-hidden />
+                            {UX.despensa.verCompra}
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busy || !mercadoId}
+                            onClick={() => void incluirNaCompra(item)}
+                            className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+                          >
+                            {busy ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                            ) : (
+                              <ShoppingCart className="h-4 w-4" aria-hidden />
+                            )}
+                            {busy ? UX.despensa.incluindo : UX.despensa.incluir}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+              {itens.length === 0 && mercadoId && (
+                <p className="py-8 text-center text-sm text-slate-500">{UX.despensa.vazio}</p>
+              )}
+            </ul>
+          )}
+
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              {UX.despensa.adicionarManual}
+            </p>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                value={novoNome}
+                onChange={(e) => setNovoNome(e.target.value)}
+                placeholder="Ex.: Leite integral"
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                min={3}
+                max={60}
+                value={novoCiclo}
+                onChange={(e) => setNovoCiclo(e.target.value)}
+                className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                title="Ciclo em dias"
+              />
+              <button
+                type="button"
+                disabled={salvando || !mercadoId || !novoNome.trim()}
+                onClick={() => void adicionarManual()}
+                className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar
+              </button>
+            </div>
           </div>
-        </div>
 
-        {erro && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
-            {erro}
-          </p>
-        )}
-      </div>
+          {erro && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+              {erro}
+            </p>
+          )}
+        </div>
       </ClientePage>
     </DashboardLayout>
   );

@@ -24,6 +24,7 @@ import {
   type ListSummary,
 } from '@/lib/listas-merge';
 import { useToast } from '@/components/ToastContainer';
+import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
 
 type FilterType = 'all' | 'active' | 'archived';
 
@@ -74,7 +75,7 @@ export default function ListasPage() {
   const handleOpenList = (list: List) => {
     if (isListaLocal(list.id)) {
       selecionarLista(list.id);
-      router.push('/cliente/busca');
+      router.push(isAiNativeShellEnabled() ? '/cliente/compra' : '/cliente/busca');
       return;
     }
     router.push(`/cliente/listas/${list.id}`);
@@ -108,7 +109,16 @@ export default function ListasPage() {
   };
 
   const handleCreateList = () => {
+    // Compra-first: fluxo principal é revisar/montar compra; lista vazia é secundário
+    if (isAiNativeShellEnabled()) {
+      router.push('/cliente/compra');
+      return;
+    }
     router.push('/cliente/busca');
+  };
+
+  const handleCreateEmptyList = () => {
+    router.push('/cliente/listas/nova');
   };
 
   const handleDuplicate = (list: List) => {
@@ -157,9 +167,16 @@ export default function ListasPage() {
         title="Minhas listas"
         description="Gerencie suas listas de compras"
         actions={
-          <Button variant="primary" size="sm" icon={Plus} onClick={handleCreateList}>
-            Começar compra
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="primary" size="sm" icon={Plus} onClick={handleCreateList}>
+              {isAiNativeShellEnabled() ? 'Revisar compra' : 'Começar compra'}
+            </Button>
+            {isAiNativeShellEnabled() && (
+              <Button variant="secondary" size="sm" onClick={handleCreateEmptyList}>
+                Lista vazia
+              </Button>
+            )}
+          </div>
         }
       >
         {/* Filtros */}

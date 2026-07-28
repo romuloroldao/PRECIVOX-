@@ -20,7 +20,7 @@ export function DespensaCard({ mercadoId }: { mercadoId?: string | null }) {
         <div>
           <p className="font-semibold text-gray-900">Despensa digital</p>
           <p className="mt-0.5 text-sm text-gray-600">
-            Veja o que está acabando e o que repor esta semana
+            Veja o que provavelmente acabou e inclua na compra em um toque
           </p>
         </div>
       </div>

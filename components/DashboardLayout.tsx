@@ -7,6 +7,8 @@ import { fullLogout, LOGOUT_REDIRECT } from '@/lib/logout-client';
 import Logo from '@/components/Logo';
 import { GestorNav } from '@/components/gestor/GestorNav';
 
+import { clienteHomeHref } from '@/lib/ai-native-shell';
+
 type DashboardRole = 'ADMIN' | 'GESTOR' | 'CLIENTE';
 
 function logoHrefForRole(role: DashboardRole): string {
@@ -17,7 +19,7 @@ function logoHrefForRole(role: DashboardRole): string {
       return '/admin/dashboard';
     case 'CLIENTE':
     default:
-      return '/cliente/home';
+      return clienteHomeHref();
   }
 }
 

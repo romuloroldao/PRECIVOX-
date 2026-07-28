@@ -1,19 +1,34 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from '@/lib/hooks/useUnifiedSession';
-import { LogOut } from 'lucide-react';
+import { LogOut, ScanLine } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { fullLogout, LOGOUT_REDIRECT } from '@/lib/logout-client';
 import { cn } from '@/lib/utils';
-import { CLIENTE_NAV_ITEMS, isClienteNavActive } from '@/components/cliente/cliente-nav-items';
+import {
+  getClienteNavBarItems,
+  getClienteScanHref,
+  isClienteNavActive,
+} from '@/components/cliente/cliente-nav-items';
+import { clienteHomeHref, isAiNativeShellEnabled } from '@/lib/ai-native-shell';
+import { UX } from '@/lib/ux-copy';
 
 export function ClienteAppBar() {
   const pathname = usePathname() || '';
   const { data: session } = useSession();
   const user = session?.user;
   const displayName = (user as { nome?: string } | undefined)?.nome || user?.name;
+  const [aiNative, setAiNative] = useState(false);
+
+  useEffect(() => {
+    setAiNative(isAiNativeShellEnabled());
+  }, []);
+
+  const navItems = useMemo(() => getClienteNavBarItems(aiNative), [aiNative]);
+  const logoHref = clienteHomeHref(aiNative);
 
   const handleLogout = async () => {
     try {
@@ -26,13 +41,13 @@ export function ClienteAppBar() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:gap-4 sm:px-6">
-        <Logo height={30} href="/cliente/home" className="shrink-0" />
+        <Logo height={30} href={logoHref} className="shrink-0" />
 
         <nav
           aria-label="Navegação principal"
           className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex"
         >
-          {CLIENTE_NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = isClienteNavActive(pathname, item);
             const Icon = item.icon;
             return (
@@ -52,6 +67,20 @@ export function ClienteAppBar() {
               </Link>
             );
           })}
+          {aiNative && (
+            <Link
+              href={getClienteScanHref()}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                pathname.startsWith('/cliente/scan')
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              )}
+            >
+              <ScanLine className="h-4 w-4" aria-hidden />
+              {UX.nav.scanner}
+            </Link>
+          )}
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">

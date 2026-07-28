@@ -14,6 +14,8 @@
   /* BottomNav mobile: 56px + safe-area iOS */
   --cliente-bottom-nav-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   --cliente-fab-bottom: calc(var(--cliente-bottom-nav-height) + 0.75rem);
+  /* Padding do conteúdo: nav + folga; shell AI-Native sobe via JS para o FAB */
+  --cliente-content-pad-bottom: calc(var(--cliente-bottom-nav-height) + 1rem);
   --cliente-toast-lista-bottom: calc(var(--cliente-fab-bottom) + 3.5rem + 0.5rem);
 }
 
