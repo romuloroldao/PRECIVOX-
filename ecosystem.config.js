@@ -59,6 +59,10 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3001,
+        // IA (Groq) — carregada de .env.production via loadEnvProduction()
+        GROQ_API_KEY: process.env.GROQ_API_KEY,
+        GROQ_MODEL_REASONING: process.env.GROQ_MODEL_REASONING,
+        GROQ_MODEL_FAST: process.env.GROQ_MODEL_FAST,
       },
       error_file: '/var/log/precivox-backend-error.log',
       out_file: '/var/log/precivox-backend-out.log',

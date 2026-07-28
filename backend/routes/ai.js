@@ -1,34 +1,29 @@
 // backend/routes/ai.js
-// Rotas para análises AI reais usando Groq
+// Rotas de análise com IA — todo acesso a LLM via AI Gateway (lib/ai-gateway)
 
 import express from 'express';
-import Groq from 'groq-sdk';
+import { getAiGateway, sanitizeListItems, sanitizeProduct } from '../lib/ai-gateway/index.js';
 
 const router = express.Router();
-
-// Inicializar Groq SDK (opcional)
-let groq = null;
-try {
-  if (process.env.GROQ_API_KEY) {
-    groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY
-    });
-  }
-} catch (error) {
-  console.warn('⚠️ Groq SDK não inicializado - API key não encontrada');
-}
+const aiGateway = getAiGateway();
 
 /**
  * Health check do serviço AI
  */
 router.get('/health', (req, res) => {
-  const hasApiKey = !!process.env.GROQ_API_KEY;
-  
   res.json({
-    status: 'ok',
+    ...aiGateway.health(),
     service: 'AI Analysis Service',
-    groq_configured: hasApiKey,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/** Métricas de observabilidade do gateway (uso interno / admin) */
+router.get('/metrics', (req, res) => {
+  res.json({
+    metrics: aiGateway.metrics(),
+    cache: aiGateway.health().cache,
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -47,132 +42,63 @@ router.post('/analyze-list', async (req, res) => {
       });
     }
 
-    // Verificar se Groq está configurado
-    if (!process.env.GROQ_API_KEY) {
-      console.warn('⚠️ GROQ_API_KEY não configurada, usando análise mock');
-      return res.json(generateMockAnalysis(listItems));
-    }
+    const safeItems = sanitizeListItems(listItems);
 
-    // Preparar prompt para a IA
-    const listSummary = listItems.map(item => 
+    const listSummary = safeItems.map(item =>
       `${item.produto.nome} - R$${item.produto.preco} (${item.quantidade}x) - ${item.produto.loja || 'Loja não especificada'}`
     ).join('\n');
 
-    const totalValue = listItems.reduce((sum, item) => 
+    const totalValue = safeItems.reduce((sum, item) =>
       sum + (item.produto.preco * item.quantidade), 0
     );
 
-    const prompt = `
-Analise esta lista de compras e forneça insights para otimização:
-
-LISTA DE COMPRAS:
-${listSummary}
-
-VALOR TOTAL: R$${totalValue.toFixed(2)}
-TOTAL DE ITENS: ${listItems.length}
-
-Por favor, forneça uma análise estruturada em JSON com:
-1. Economia estimada possível
-2. Score de eficiência (0-100)
-3. Sugestões de otimização
-4. Alternativas de produtos
-5. Insights sobre preços e disponibilidade
-
-Responda apenas com JSON válido.`;
-
-    console.log('🤖 Enviando prompt para Groq...');
-
-    // Chamar Groq API
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é um especialista em otimização de compras e análise de preços. Analise listas de compras e forneça insights valiosos para economia e eficiência. Sempre responda em JSON válido em português brasileiro.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      model: 'llama-3.1-70b-versatile',
-      temperature: 0.3,
-      max_tokens: 2048
+    const gatewayResult = await aiGateway.complete({
+      task: 'shopping-list-analysis',
+      input: { listSummary, totalValue: totalValue.toFixed(2), itemCount: safeItems.length },
+      consumer: 'POST /analyze-list',
+      fallback: () => generateMockAnalysis(safeItems),
     });
 
-    const aiResponse = completion.choices[0]?.message?.content;
-    
-    if (!aiResponse) {
-      throw new Error('Resposta vazia da IA');
+    if (gatewayResult._meta?.provider === 'fallback') {
+      return res.json(gatewayResult.data);
     }
 
-    console.log('✅ Resposta recebida da IA');
-
-    try {
-      // Tentar parsear a resposta JSON da IA
-      const analysis = JSON.parse(aiResponse);
-      
-      // Estruturar resposta no formato esperado pelo frontend
-      const structuredResponse = {
-        sessionId,
-        timestamp: new Date().toISOString(),
-        analysis: {
-          totalCost: totalValue,
-          estimatedSavings: analysis.economia_estimada || totalValue * 0.1,
-          efficiencyScore: analysis.score_eficiencia || 75,
-          routeOptimization: {
-            currentRoute: extractStores(listItems),
-            optimizedRoute: analysis.rota_otimizada || extractStores(listItems),
-            timeSaved: analysis.tempo_economizado || 0,
-            fuelSaved: analysis.combustivel_economizado || 0
-          },
-          insights: analysis.insights || [
-            'Análise AI concluída com sucesso',
-            `Lista com ${listItems.length} itens analisada`
-          ],
-          warnings: analysis.avisos || []
+    const parsed = /** @type {Record<string, unknown>} */ (gatewayResult.data);
+    const structuredResponse = {
+      sessionId,
+      timestamp: new Date().toISOString(),
+      analysis: {
+        totalCost: totalValue,
+        estimatedSavings: parsed.economia_estimada || totalValue * 0.1,
+        efficiencyScore: parsed.score_eficiencia || 75,
+        routeOptimization: {
+          currentRoute: extractStores(safeItems),
+          optimizedRoute: parsed.rota_otimizada || extractStores(safeItems),
+          timeSaved: parsed.tempo_economizado || 0,
+          fuelSaved: parsed.combustivel_economizado || 0
         },
-        suggestions: analysis.sugestoes || [],
-        alternatives: analysis.alternativas || [],
-        marketAnalysis: analysis.analise_mercados || [],
-        metadata: {
-          model: 'llama-3.1-70b-versatile',
-          processingTime: Date.now() - Date.now(),
-          confidence: analysis.confianca || 0.8
-        }
-      };
+        insights: parsed.insights || [
+          'Análise concluída com sucesso',
+          `Lista com ${safeItems.length} itens analisada`
+        ],
+        warnings: parsed.avisos || [],
+        explicacao: parsed.explicacao || null,
+      },
+      suggestions: parsed.sugestoes || [],
+      alternatives: parsed.alternativas || [],
+      marketAnalysis: parsed.analise_mercados || [],
+      metadata: {
+        model: gatewayResult._meta?.model || 'fallback',
+        promptVersion: gatewayResult._meta?.promptVersion,
+        processingTime: gatewayResult._meta?.latencyMs || 0,
+        confidence: parsed.confianca || 0.8,
+        tokens: gatewayResult._meta?.tokens,
+        costUsd: gatewayResult._meta?.costUsd,
+        cached: gatewayResult._meta?.cached || false,
+      }
+    };
 
-      res.json(structuredResponse);
-
-    } catch (parseError) {
-      console.error('❌ Erro ao parsear resposta da IA:', parseError);
-      console.log('Raw AI Response:', aiResponse);
-      
-      // Fallback com análise básica baseada na resposta text
-      res.json({
-        sessionId,
-        timestamp: new Date().toISOString(),
-        analysis: {
-          totalCost: totalValue,
-          estimatedSavings: totalValue * 0.1,
-          efficiencyScore: 70,
-          routeOptimization: {
-            currentRoute: extractStores(listItems),
-            optimizedRoute: extractStores(listItems),
-            timeSaved: 0,
-            fuelSaved: 0
-          },
-          insights: [
-            'Análise AI processada com resposta textual',
-            aiResponse.substring(0, 200) + '...'
-          ],
-          warnings: ['Resposta AI em formato não estruturado']
-        },
-        suggestions: [],
-        alternatives: [],
-        marketAnalysis: [],
-        rawAIResponse: aiResponse
-      });
-    }
+    return res.json(structuredResponse);
 
   } catch (error) {
     console.error('❌ Erro na análise AI:', error);
@@ -198,57 +124,24 @@ router.post('/product-alternatives', async (req, res) => {
 
     console.log('🔍 [AI] Buscando alternativas para:', product.nome);
 
-    if (!process.env.GROQ_API_KEY) {
-      return res.json({
-        originalProduct: product,
-        alternatives: []
-      });
-    }
+    const safeProduct = sanitizeProduct(product);
 
-    const prompt = `
-Encontre alternativas para este produto:
-
-PRODUTO: ${product.nome}
-PREÇO ATUAL: R$${product.preco}
-LOJA ATUAL: ${product.loja}
-CATEGORIA: ${product.categoria}
-
-Contexto da lista: ${context?.length || 0} itens total
-
-Forneça alternativas em JSON com produtos similares, comparação de preços e recomendações.`;
-
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é um especialista em produtos de supermercado. Sugira alternativas para produtos considerando preço, qualidade e disponibilidade.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      model: 'llama-3.1-70b-versatile',
-      temperature: 0.2,
-      max_tokens: 1024
+    const gatewayResult = await aiGateway.complete({
+      task: 'product-alternatives',
+      input: { product: safeProduct, contextSize: context?.length || 0 },
+      consumer: 'POST /product-alternatives',
+      useCache: true,
+      fallback: () => ({ alternativas: [], explicacao: null }),
     });
 
-    const aiResponse = completion.choices[0]?.message?.content;
-    
-    try {
-      const alternatives = JSON.parse(aiResponse);
-      res.json({
-        originalProduct: product,
-        alternatives: alternatives.alternativas || [],
-        timestamp: new Date().toISOString()
-      });
-    } catch (parseError) {
-      res.json({
-        originalProduct: product,
-        alternatives: [],
-        rawResponse: aiResponse
-      });
-    }
+    const parsed = /** @type {Record<string, unknown>} */ (gatewayResult.data || {});
+    res.json({
+      originalProduct: safeProduct,
+      alternatives: parsed.alternativas || [],
+      explicacao: parsed.explicacao || null,
+      metadata: gatewayResult._meta,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('❌ Erro ao buscar alternativas:', error);
@@ -273,12 +166,23 @@ router.post('/optimize-route', async (req, res) => {
       return res.status(400).json({ error: 'Lista de itens é obrigatória' });
     }
 
-    // Extrair lojas únicas
     const stores = extractStores(items);
-    
-    if (!process.env.GROQ_API_KEY) {
-      return res.json({
-        optimizedRoute: stores.map(store => ({
+    const safeItems = sanitizeListItems(items);
+
+    const storesList = stores.join(', ');
+    const itemsList = safeItems.map(item =>
+      `${item.produto.nome} (${item.produto.loja})`
+    ).join(', ');
+    const locationLine = userLocation
+      ? `Lat ${userLocation.lat}, Lng ${userLocation.lng}`
+      : '';
+
+    const gatewayResult = await aiGateway.complete({
+      task: 'route-optimization',
+      input: { storesList, itemsList, locationLine },
+      consumer: 'POST /optimize-route',
+      fallback: () => ({
+        rota_otimizada: stores.map(store => ({
           store,
           items: items.filter(item => item.produto.loja === store),
           totalCost: 0,
@@ -288,65 +192,20 @@ router.post('/optimize-route', async (req, res) => {
           cons: [],
           recommendation: 'acceptable'
         })),
-        savings: { time: 0, fuel: 0 },
-        confidence: 0.5
-      });
-    }
-
-    const storesList = stores.join(', ');
-    const itemsList = items.map(item => 
-      `${item.produto.nome} (${item.produto.loja})`
-    ).join(', ');
-
-    const prompt = `
-Otimize a rota de compras para estas lojas e itens:
-
-LOJAS: ${storesList}
-ITENS: ${itemsList}
-${userLocation ? `LOCALIZAÇÃO DO USUÁRIO: Lat ${userLocation.lat}, Lng ${userLocation.lng}` : ''}
-
-Sugira a melhor ordem de visita às lojas considerando:
-1. Economia de tempo e combustível
-2. Disponibilidade dos produtos
-3. Preços competitivos
-4. Distância entre lojas
-
-Responda em JSON com rota otimizada e economia estimada.`;
-
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: 'Você é um especialista em logística e otimização de rotas. Ajude a planejar rotas eficientes para compras.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      model: 'llama-3.1-70b-versatile',
-      temperature: 0.2,
-      max_tokens: 1536
+        economia: { time: 0, fuel: 0 },
+        confianca: 0.5,
+      }),
     });
 
-    const aiResponse = completion.choices[0]?.message?.content;
-    
-    try {
-      const routeOptimization = JSON.parse(aiResponse);
-      res.json({
-        optimizedRoute: routeOptimization.rota_otimizada || [],
-        savings: routeOptimization.economia || { time: 0, fuel: 0 },
-        confidence: routeOptimization.confianca || 0.7,
-        timestamp: new Date().toISOString()
-      });
-    } catch (parseError) {
-      res.json({
-        optimizedRoute: [],
-        savings: { time: 0, fuel: 0 },
-        confidence: 0.3,
-        rawResponse: aiResponse
-      });
-    }
+    const parsed = /** @type {Record<string, unknown>} */ (gatewayResult.data || {});
+    res.json({
+      optimizedRoute: parsed.rota_otimizada || [],
+      savings: parsed.economia || { time: 0, fuel: 0 },
+      confidence: parsed.confianca || 0.7,
+      explicacao: parsed.explicacao || null,
+      metadata: gatewayResult._meta,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('❌ Erro na otimização de rota:', error);
@@ -526,66 +385,36 @@ router.post('/analyze-prices', async (req, res) => {
       };
     });
 
-    // Análise AI se disponível
+    // Análise AI via gateway se disponível
     if (process.env.GROQ_API_KEY) {
       const analysisData = JSON.stringify(marketAnalysis, null, 2);
-      
-      const prompt = `
-Analise estes dados de preços de mercados e forneça insights de economia:
-
-DADOS DOS MERCADOS:
-${analysisData}
-
-Forneça uma análise estruturada em JSON com:
-1. Economia total possível por produto
-2. Melhores lojas por categoria
-3. Padrões de preços identificados
-4. Recomendações de compra
-5. Alertas sobre produtos caros ou em falta
-
-Responda apenas com JSON válido em português brasileiro.`;
 
       try {
-        const completion = await groq.chat.completions.create({
-          messages: [
-            {
-              role: 'system',
-              content: 'Você é um especialista em análise de preços de supermercados. Analise dados de mercados reais para identificar oportunidades de economia.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          model: 'llama-3.1-70b-versatile',
-          temperature: 0.2,
-          max_tokens: 2048
+        const gatewayResult = await aiGateway.complete({
+          task: 'price-analysis',
+          input: { marketDataJson: analysisData },
+          consumer: 'POST /analyze-prices',
+          useCache: true,
         });
 
-        const aiResponse = completion.choices[0]?.message?.content;
-        
-        try {
-          const aiAnalysis = JSON.parse(aiResponse);
-          
-          return res.json({
-            analysis: {
-              total_products_searched: products.length,
-              products_found: marketData.length,
-              markets_analyzed: [...new Set(marketData.flatMap(d => d.matches.map(m => m.market_name)))].length,
-              ai_insights: aiAnalysis.insights || [],
-              total_savings_potential: aiAnalysis.economia_total || 0,
-              best_markets: aiAnalysis.melhores_lojas || []
-            },
-            product_analysis: marketAnalysis,
-            suggestions: aiAnalysis.recomendacoes || [],
-            alerts: aiAnalysis.alertas || [],
-            timestamp: new Date().toISOString()
-          });
-          
-        } catch (parseError) {
-          console.error('Erro ao parsear análise AI:', parseError);
-          // Continuar com análise básica
-        }
+        const aiAnalysis = /** @type {Record<string, unknown>} */ (gatewayResult.data || {});
+
+        return res.json({
+          analysis: {
+            total_products_searched: products.length,
+            products_found: marketData.length,
+            markets_analyzed: [...new Set(marketData.flatMap(d => d.matches.map(m => m.market_name)))].length,
+            ai_insights: aiAnalysis.insights || [],
+            total_savings_potential: aiAnalysis.economia_total || 0,
+            best_markets: aiAnalysis.melhores_lojas || [],
+            explicacoes_por_produto: aiAnalysis.explicacoes_por_produto || [],
+          },
+          product_analysis: marketAnalysis,
+          suggestions: aiAnalysis.recomendacoes || [],
+          alerts: aiAnalysis.alertas || [],
+          metadata: gatewayResult._meta,
+          timestamp: new Date().toISOString()
+        });
       } catch (aiError) {
         console.error('Erro na chamada AI:', aiError);
         // Continuar com análise básica
@@ -663,6 +492,7 @@ Responda apenas com JSON válido em português brasileiro.`;
 router.get('/price-trends', async (req, res) => {
   try {
     const { category, market_id, days = 30 } = req.query;
+    const daysNum = Math.min(Math.max(parseInt(String(days), 10) || 30, 1), 365);
     
     console.log('📈 [AI] Analisando tendências de preços');
     
@@ -683,7 +513,6 @@ router.get('/price-trends', async (req, res) => {
       WHERE p.status = 'active' 
       AND m.status = 'active' 
       AND m.verified = true
-      AND p.created_at >= CURRENT_DATE - INTERVAL '${days} days'
     `;
     
     const values = [];
@@ -700,6 +529,10 @@ router.get('/price-trends', async (req, res) => {
       sql += ` AND m.id = $${paramCount}`;
       values.push(market_id);
     }
+
+    paramCount++;
+    sql += ` AND p.created_at >= CURRENT_DATE - ($${paramCount}::int * INTERVAL '1 day')`;
+    values.push(daysNum);
     
     sql += ` ORDER BY p.category, p.price ASC`;
     
@@ -710,7 +543,7 @@ router.get('/price-trends', async (req, res) => {
         trends: [],
         summary: {
           message: 'Nenhum dado encontrado para análise de tendências',
-          period: `${days} dias`
+          period: `${daysNum} dias`
         }
       });
     }

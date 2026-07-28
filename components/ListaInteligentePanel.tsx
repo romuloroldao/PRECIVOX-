@@ -24,6 +24,7 @@ import type { RotaPasso } from '@/lib/lista-rota-ia';
 import { BasketCompletionBlock } from '@/components/cliente/BasketCompletionBlock';
 import { ListaItemRow } from '@/components/lista-inteligente/ListaItemRow';
 import { ListaFooter } from '@/components/lista-inteligente/ListaFooter';
+import { ListaAnaliseIaBlock } from '@/components/lista-inteligente/ListaAnaliseIaBlock';
 import { ListaMenuSheet } from '@/components/lista-inteligente/ListaMenuSheet';
 
 export type ListaInteligenteVariant = 'drawer' | 'inline';
@@ -429,6 +430,8 @@ export function ListaInteligentePanel({
 
               {secaoIaAberta && (
                 <div className="mt-3 space-y-3 pb-1">
+                  <ListaAnaliseIaBlock itens={itens} listaAtivaId={listaAtivaId} />
+
                   <BasketCompletionBlock itens={itens} />
 
                   <p className="text-xs leading-relaxed text-emerald-900/85">

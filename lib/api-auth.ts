@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { TokenManager, type SessionUser } from '@/lib/token-manager';
+import { generateToken } from '@/lib/jwt';
 
 type Role = SessionUser['role'];
 
@@ -50,4 +51,18 @@ export async function getServerSessionUser(): Promise<SessionUser | null> {
 
 export function isAuthResponse(result: SessionUser | NextResponse): result is NextResponse {
   return result instanceof NextResponse;
+}
+
+/** JWT curto para chamadas BFF → Express (/api/v1/* exige validateJWT). */
+export async function mintInternalJwt(user: SessionUser): Promise<string> {
+  return generateToken(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      nome: user.nome ?? '',
+      tokenVersion: user.tokenVersion ?? 0,
+    },
+    '30m'
+  );
 }

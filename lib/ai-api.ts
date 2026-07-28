@@ -123,11 +123,11 @@ export async function fetchPricingRecommendations(mercadoId: string) {
 }
 
 /**
- * Busca recomendações GROOC
+ * Busca recomendações GROOC (engine estatístico core/ai)
  */
 export async function fetchGROOCRecommendations(mercadoId: string, usuarioId?: string) {
-  const { data, error } = await apiFetch<{ data: any }>(
-    '/api/ai-engines/grooc',
+  const { data, error } = await apiFetch<{ data: unknown }>(
+    '/api/ai/grooc-recommendations',
     {
       method: 'POST',
       body: JSON.stringify({ mercadoId, usuarioId }),
@@ -143,33 +143,17 @@ export async function fetchGROOCRecommendations(mercadoId: string, usuarioId?: s
 }
 
 /**
- * Busca estatísticas do cache
+ * Métricas do AI Gateway (LLM) — substitui cache/stats legado inexistente no Next
  */
-export async function fetchCacheStats() {
-  const { data, error } = await apiFetch<any>('/api/ai-engines/cache/stats');
+export async function fetchAiGatewayMetrics() {
+  const { data, error } = await apiFetch<unknown>('/api/ai/gateway/metrics');
 
   if (error) {
-    console.error('Erro ao buscar stats do cache:', error);
+    console.error('Erro ao buscar métricas do AI Gateway:', error);
     return null;
   }
 
   return data;
-}
-
-/**
- * Limpa o cache
- */
-export async function clearCache() {
-  const { data, error } = await apiFetch<any>('/api/ai-engines/cache', {
-    method: 'DELETE',
-  });
-
-  if (error) {
-    console.error('Erro ao limpar cache:', error);
-    return false;
-  }
-
-  return true;
 }
 
 /**
