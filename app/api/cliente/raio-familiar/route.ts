@@ -5,6 +5,7 @@ import {
   entrarRaioFamiliar,
   obterRaioFamiliar,
   sairRaioFamiliar,
+  transferirAdministracaoCasa,
   atualizarPreferenciasCasa,
   sincronizarListaCompartilhada,
   type ItemListaCompartilhada,
@@ -82,6 +83,19 @@ export async function POST(req: NextRequest) {
         compartilharListas: body.compartilharListas,
       });
       return NextResponse.json({ success: true, data: { preferencias: prefs } });
+    }
+
+    if (acao === 'transferir-admin') {
+      const novoAdminUserId = String(body.novoAdminUserId ?? '').trim();
+      if (!novoAdminUserId) {
+        return NextResponse.json({ success: false, error: 'Membro obrigatório' }, { status: 400 });
+      }
+      const circle = await transferirAdministracaoCasa(user.id, novoAdminUserId);
+      return NextResponse.json({
+        success: true,
+        message: 'Administração transferida',
+        data: { circle, meuRole: 'membro' },
+      });
     }
 
     if (acao === 'sync-lista') {

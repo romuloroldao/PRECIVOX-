@@ -102,8 +102,12 @@ function parseMembership(perfilPreci: unknown): RaioFamiliarMembership | null {
   return m;
 }
 
-async function salvarPerfil(userId: string, patch: Record<string, unknown>) {
-  const dbUser = await prisma.user.findUnique({
+async function salvarPerfil(
+  userId: string,
+  patch: Record<string, unknown>,
+  db: Prisma.TransactionClient | typeof prisma = prisma
+) {
+  const dbUser = await db.user.findUnique({
     where: { id: userId },
     select: { perfilPreci: true },
   });
@@ -115,7 +119,7 @@ async function salvarPerfil(userId: string, patch: Record<string, unknown>) {
     if (v === undefined) delete base[k];
     else base[k] = v;
   }
-  await prisma.user.update({
+  await db.user.update({
     where: { id: userId },
     data: {
       perfilPreci: base as Prisma.InputJsonValue,
@@ -348,6 +352,79 @@ export async function sairRaioFamiliar(userId: string): Promise<void> {
     });
   }
   await salvarPerfil(userId, { raioFamiliarMembership: undefined });
+}
+
+/** Admin transfere a casa para outro membro (circle migra para o perfil do novo admin). */
+export async function transferirAdministracaoCasa(
+  userId: string,
+  novoAdminUserId: string
+): Promise<RaioFamiliarCircle> {
+  const estado = await obterRaioFamiliar(userId);
+  if (!estado.ativo || !estado.circle) {
+    throw new Error('Você não está em uma casa');
+  }
+  if (estado.meuRole !== 'admin') {
+    throw new Error('Só quem administra a casa pode transferir');
+  }
+  if (novoAdminUserId === userId) {
+    throw new Error('Escolha outro membro');
+  }
+
+  const alvo = estado.circle.membros.find((m) => m.userId === novoAdminUserId);
+  if (!alvo) {
+    throw new Error('Membro não encontrado nesta casa');
+  }
+
+  const circleAtualizado: RaioFamiliarCircle = {
+    ...estado.circle,
+    adminUserId: novoAdminUserId,
+    membros: estado.circle.membros.map((m) => {
+      if (m.userId === novoAdminUserId) return { ...m, role: 'admin' as const };
+      if (m.userId === userId) return { ...m, role: 'membro' as const };
+      return m;
+    }),
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await salvarPerfil(
+      novoAdminUserId,
+      {
+        raioFamiliarCircle: circleAtualizado,
+        raioFamiliarMembership: undefined,
+      },
+      tx
+    );
+
+    await salvarPerfil(
+      userId,
+      {
+        raioFamiliarCircle: undefined,
+        raioFamiliarMembership: {
+          circleId: circleAtualizado.circleId,
+          adminUserId: novoAdminUserId,
+          role: 'membro',
+        },
+      },
+      tx
+    );
+
+    for (const m of circleAtualizado.membros) {
+      if (m.userId === novoAdminUserId || m.userId === userId) continue;
+      await salvarPerfil(
+        m.userId,
+        {
+          raioFamiliarMembership: {
+            circleId: circleAtualizado.circleId,
+            adminUserId: novoAdminUserId,
+            role: 'membro',
+          },
+        },
+        tx
+      );
+    }
+  });
+
+  return circleAtualizado;
 }
 
 export async function atualizarPreferenciasCasa(

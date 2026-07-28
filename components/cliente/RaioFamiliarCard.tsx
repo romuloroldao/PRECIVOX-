@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, ChevronRight } from 'lucide-react';
+import { Home, ChevronRight } from 'lucide-react';
 import { useSession } from '@/lib/hooks/useUnifiedSession';
 import { useRaioFamiliar } from '@/app/hooks/useRaioFamiliar';
+import { CASA } from '@/lib/ux-copy-casa';
 
 export function RaioFamiliarCard() {
   const { status } = useSession();
@@ -19,12 +20,10 @@ export function RaioFamiliarCard() {
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-start gap-2">
-            <Users className="h-5 w-5 shrink-0 text-indigo-700" />
+            <Home className="h-5 w-5 shrink-0 text-indigo-700" />
             <div>
-              <p className="font-semibold text-indigo-950">Raio familiar</p>
-              <p className="mt-0.5 text-sm text-indigo-800/90">
-                Compartilhe listas e preferências da casa com quem mora com você.
-              </p>
+              <p className="font-semibold text-indigo-950">{CASA.card.inativoTitulo}</p>
+              <p className="mt-0.5 text-sm text-indigo-800/90">{CASA.card.inativoDesc}</p>
             </div>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-indigo-400" />
@@ -44,18 +43,18 @@ export function RaioFamiliarCard() {
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-200">
-            Raio familiar ativo
+            {CASA.card.ativoBadge}
           </p>
           <p className="text-lg font-bold">{data.circle?.nomeCasa}</p>
           <p className="mt-1 text-sm text-indigo-100">
             {n} {n === 1 ? 'pessoa' : 'pessoas'}
             {lista?.itens?.length
-              ? ` · lista com ${lista.itens.length} itens`
-              : ' · lista compartilhada'}
+              ? ` · ${CASA.ativo.itensPendentes(lista.itens.length)}`
+              : ' · lista sincronizada'}
           </p>
           {lista?.atualizadoPorNome && (
             <p className="mt-1 text-[11px] text-indigo-200">
-              Atualizado por {lista.atualizadoPorNome}
+              {CASA.ativo.por} {lista.atualizadoPorNome}
             </p>
           )}
         </div>
