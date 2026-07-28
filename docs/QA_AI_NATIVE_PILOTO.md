@@ -1,18 +1,18 @@
 # QA piloto — jornada AI-Native
 
 **PR:** https://github.com/romuloroldao/PRECIVOX-/pull/9 (merged em `main`)  
-**Flag:** `NEXT_PUBLIC_AI_NATIVE_SHELL` (build) ou cookie `AI_NATIVE_SHELL=1` (QA sem rebuild)  
-**Regra:** produção permanece **off** até 1 ciclo de piloto estável.
+**Flag:** `NEXT_PUBLIC_AI_NATIVE_SHELL` (build) ou cookie `AI_NATIVE_SHELL` (QA: `1` liga / `0` desliga sem rebuild)  
+**Regra:** produção **on** desde 28/07/2026 (decisão explícita). Cookie `AI_NATIVE_SHELL=0` ainda permite rollback local de QA.
 
 ## Status infra (28/07/2026)
-- [x] `main` publicado; deploy produção BUILD_ID `46oQy-MKLBlr5tTL1KJks`
-- [x] `.env.production` com `NEXT_PUBLIC_AI_NATIVE_SHELL=false`
+- [x] `main` publicado; deploy com shell on
+- [x] `.env.production` com `NEXT_PUBLIC_AI_NATIVE_SHELL=true`
 - [x] Smoke apps + hardening OK; hub intent responde 401 sem auth
 - [x] Rotas `/cliente/casa`, `/cliente/compra`, `/cliente/mais` HTTP 200
 
 ## Pré-requisitos (QA manual com shell novo)
 - [ ] Login cliente válido
-- [ ] Cookie `AI_NATIVE_SHELL=1` no browser (ou rebuild staging com flag true)
+- [ ] Shell on por default (ou cookie `AI_NATIVE_SHELL=1` se testar rebuild antigo)
 - [ ] Backend com `INTERNAL_API_SECRET` / `JWT_SECRET` (gateway IA)
 - [ ] Opcional: `GROQ_API_KEY` (sem chave = análise de lista em modo básico/mock)
 
@@ -49,10 +49,10 @@
 
 ## Critérios de saída do piloto
 - [ ] Funil Casa → rascunho → confirmação ≥ baseline (ver `lib/ai-native-funnel.ts`)
-- [ ] Zero regressão crítica com flag off
-- [ ] Decisão: ligar flag default on em staging → depois prod
-- [ ] Só então: remover nav legada (Fase 9 restante)
+- [ ] Zero regressão crítica (cookie `AI_NATIVE_SHELL=0` ainda valida nav legada)
+- [x] Flag default on em produção
+- [ ] Remover nav legada (Fase 9 restante)
 
 ---
 
-*Atualizado 28/07/2026 — pós-merge e deploy.*
+*Atualizado 28/07/2026 — shell AI-Native ligado em produção.*

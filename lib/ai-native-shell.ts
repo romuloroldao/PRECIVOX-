@@ -1,7 +1,7 @@
 /**
  * Feature flag — shell AI-Native (Fase 0/1).
- * Default: OFF. Liga com NEXT_PUBLIC_AI_NATIVE_SHELL=true
- * ou cookie `AI_NATIVE_SHELL=1` (QA sem rebuild).
+ * Produção: NEXT_PUBLIC_AI_NATIVE_SHELL=true.
+ * Cookie `AI_NATIVE_SHELL=0|1` sobrescreve em QA sem rebuild.
  *
  * @see docs/PROPOSTA_AI_NATIVE_SHOPPING_JOURNEY.md
  */
