@@ -34,14 +34,17 @@ function statusFromDiasRestantes(dias: number | null): DespensaStatus {
 
 export async function calcularDespensaDigital(
   userId: string,
-  mercadoId: string,
+  mercadoId?: string | null,
   manual: DespensaManualEntry[] = []
 ): Promise<{ itens: DespensaItem[]; resumo: string }> {
   const fim = new Date();
   const inicio = new Date();
   inicio.setDate(inicio.getDate() - 120);
 
-  const eventos = await EventCollector.getUserEvents(userId, mercadoId, inicio, fim);
+  // Sem mercado = despensa da casa (todos os hábitos). Com mercado = recorte (cesta/emergência).
+  const eventos = mercadoId
+    ? await EventCollector.getUserEvents(userId, mercadoId, inicio, fim)
+    : await EventCollector.getUserEventsGlobal(userId, inicio, fim);
 
   const porProduto = new Map<string, { adds: Date[]; compras: Date[] }>();
 

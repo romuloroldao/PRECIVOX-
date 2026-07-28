@@ -17,16 +17,14 @@ export async function GET(req: NextRequest) {
     }
 
     const mercadoId = req.nextUrl.searchParams.get('mercadoId');
-    if (!mercadoId) {
-      return NextResponse.json({ success: false, error: 'mercadoId obrigatório' }, { status: 400 });
-    }
+    // mercadoId opcional: sem ele = despensa da casa (hábitos em todos os mercados)
 
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: { perfilPreci: true },
     });
     const manual = parseDespensaManual(dbUser?.perfilPreci);
-    const despensa = await calcularDespensaDigital(user.id, mercadoId, manual);
+    const despensa = await calcularDespensaDigital(user.id, mercadoId || null, manual);
 
     return NextResponse.json({
       success: true,

@@ -271,9 +271,6 @@ export function buildStructuredResponse(
 
     case 'pantry_update': {
       const produto = typeof slots.produto === 'string' ? slots.produto : '';
-      const href = context.mercadoId
-        ? `/cliente/despensa?mercadoId=${encodeURIComponent(context.mercadoId)}`
-        : '/cliente/despensa';
       return {
         intent,
         confidence,
@@ -282,7 +279,7 @@ export function buildStructuredResponse(
         explanation: produto
           ? `Abrindo a despensa para atualizar “${produto}”.`
           : 'Abrindo a despensa da casa.',
-        ui: { type: 'despensa', payload: { produto }, href },
+        ui: { type: 'despensa', payload: { produto }, href: '/cliente/despensa' },
       };
     }
 

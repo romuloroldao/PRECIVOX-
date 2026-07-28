@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 import { MercadoSelector } from '@/components/cliente/MercadoSelector';
@@ -16,7 +16,7 @@ import {
 } from '@/lib/despensa-copy';
 import { isAiNativeShellEnabled } from '@/lib/ai-native-shell';
 import { rememberMercadoId, getRememberedMercadoId } from '@/lib/cliente-mercado-ref';
-import { Loader2, Plus, ShoppingCart, Trash2, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type DespensaItem = {
@@ -36,58 +36,33 @@ const STATUS_COLOR: Record<DespensaItem['status'], string> = {
   ok: 'bg-emerald-100 text-emerald-800',
 };
 
+/**
+ * Despensa da casa — ver/adicionar sem mercado.
+ * Mercado só na hora de incluir item na compra (preço).
+ */
 export default function DespensaPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { adicionarItem, itens: itensLista } = useLista();
   const { success, error: toastError } = useToast();
-  const [mercadoId, setMercadoId] = useState('');
   const [itens, setItens] = useState<DespensaItem[]>([]);
   const [resumo, setResumo] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [novoNome, setNovoNome] = useState('');
   const [novoCiclo, setNovoCiclo] = useState('14');
   const [salvando, setSalvando] = useState(false);
   const [intentScore, setIntentScore] = useState<number | null>(null);
   const [incluindoId, setIncluindoId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const m = searchParams.get('mercadoId');
-    if (m) {
-      setMercadoId(m);
-      rememberMercadoId(m);
-      return;
-    }
-    const remembered = getRememberedMercadoId();
-    if (remembered) {
-      setMercadoId(remembered);
-      return;
-    }
-    void (async () => {
-      try {
-        const res = await fetch('/api/nps/suggest-mercado', { cache: 'no-store' });
-        const json = await res.json();
-        if (json.mercadoId) {
-          setMercadoId(json.mercadoId);
-          rememberMercadoId(json.mercadoId);
-        }
-      } catch {
-        /* usuário escolhe no seletor */
-      }
-    })();
-  }, [searchParams]);
+  /** Item aguardando escolha de mercado para ir à compra */
+  const [pendenteIncluir, setPendenteIncluir] = useState<DespensaItem | null>(null);
+  const [mercadoCompraId, setMercadoCompraId] = useState('');
 
   const carregar = useCallback(async () => {
-    if (!mercadoId) return;
     setLoading(true);
     setErro(null);
     try {
       const [despRes, intentRes] = await Promise.all([
-        fetch(`/api/cliente/despensa?mercadoId=${encodeURIComponent(mercadoId)}`, {
-          credentials: 'include',
-          cache: 'no-store',
-        }),
+        fetch('/api/cliente/despensa', { credentials: 'include', cache: 'no-store' }),
         fetch('/api/cliente/intent-score', { credentials: 'include', cache: 'no-store' }),
       ]);
       const json = await despRes.json();
@@ -108,11 +83,17 @@ export default function DespensaPage() {
     } finally {
       setLoading(false);
     }
-  }, [mercadoId]);
+  }, []);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    if (!pendenteIncluir) return;
+    const remembered = getRememberedMercadoId();
+    if (remembered) setMercadoCompraId(remembered);
+  }, [pendenteIncluir]);
 
   const jaNaLista = useCallback(
     (produtoId: string) =>
@@ -122,11 +103,13 @@ export default function DespensaPage() {
     [itensLista]
   );
 
-  const incluirNaCompra = async (item: DespensaItem) => {
+  const executarIncluirNaCompra = async (item: DespensaItem, mercadoId: string) => {
     if (!mercadoId || incluindoId) return;
     setIncluindoId(item.produtoId);
     setErro(null);
     try {
+      rememberMercadoId(mercadoId);
+
       if (item.produtoId.startsWith('manual-')) {
         const stub: ItemLista = {
           id: item.produtoId,
@@ -144,6 +127,7 @@ export default function DespensaPage() {
         };
         adicionarItem(stub);
         success(UX.despensa.incluido);
+        setPendenteIncluir(null);
         return;
       }
 
@@ -161,12 +145,14 @@ export default function DespensaPage() {
       if (resolved.length === 0) {
         toastError(UX.despensa.semEstoque);
         router.push(`/cliente/busca?q=${encodeURIComponent(item.nome)}`);
+        setPendenteIncluir(null);
         return;
       }
       for (const row of resolved) {
         adicionarItem(row);
       }
       success(UX.despensa.incluido);
+      setPendenteIncluir(null);
     } catch (e) {
       toastError(e instanceof Error ? e.message : 'Erro ao incluir');
     } finally {
@@ -174,8 +160,18 @@ export default function DespensaPage() {
     }
   };
 
+  const pedirIncluir = (item: DespensaItem) => {
+    const remembered = getRememberedMercadoId();
+    if (remembered) {
+      void executarIncluirNaCompra(item, remembered);
+      return;
+    }
+    setMercadoCompraId('');
+    setPendenteIncluir(item);
+  };
+
   const adicionarManual = async () => {
-    if (!mercadoId || !novoNome.trim()) return;
+    if (!novoNome.trim()) return;
     setSalvando(true);
     setErro(null);
     try {
@@ -225,33 +221,7 @@ export default function DespensaPage() {
     <DashboardLayout role="CLIENTE">
       <ClientePage title={UX.despensa.titulo} description={UX.despensa.subtitulo}>
         <div className="mx-auto max-w-lg space-y-5">
-          <MercadoSelector
-            mode="required"
-            value={mercadoId}
-            onChange={(id) => {
-              setMercadoId(id);
-              if (id) rememberMercadoId(id);
-              const url = new URL(window.location.href);
-              if (id) url.searchParams.set('mercadoId', id);
-              else url.searchParams.delete('mercadoId');
-              window.history.replaceState({}, '', url.pathname + (url.search || ''));
-            }}
-          />
-
-          {!mercadoId && (
-            <div
-              role="status"
-              className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
-            >
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
-              <div>
-                <p className="font-semibold">{UX.despensa.semMercadoTitulo}</p>
-                <p className="mt-1 text-amber-900/90">{UX.despensa.semMercado}</p>
-              </div>
-            </div>
-          )}
-
-          {resumo && !loading && mercadoId && (
+          {resumo && !loading && (
             <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">{resumo}</p>
           )}
 
@@ -327,8 +297,8 @@ export default function DespensaPage() {
                         ) : (
                           <button
                             type="button"
-                            disabled={busy || !mercadoId}
-                            onClick={() => void incluirNaCompra(item)}
+                            disabled={busy}
+                            onClick={() => pedirIncluir(item)}
                             className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
                           >
                             {busy ? (
@@ -344,18 +314,57 @@ export default function DespensaPage() {
                   </li>
                 );
               })}
-              {itens.length === 0 && mercadoId && (
+              {itens.length === 0 && (
                 <p className="py-8 text-center text-sm text-slate-500">{UX.despensa.vazio}</p>
               )}
             </ul>
           )}
 
-          <div
-            className={cn(
-              'rounded-xl border border-dashed p-4',
-              mercadoId ? 'border-slate-300 bg-slate-50' : 'border-amber-200 bg-amber-50/40'
-            )}
-          >
+          {pendenteIncluir && (
+            <div
+              role="dialog"
+              aria-labelledby="despensa-mercado-titulo"
+              className="rounded-xl border border-primary-200 bg-white p-4 shadow-md"
+            >
+              <p id="despensa-mercado-titulo" className="font-semibold text-slate-900">
+                {UX.despensa.escolherMercadoParaCompra}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {pendenteIncluir.nome} — {UX.despensa.escolherMercadoDica}
+              </p>
+              <div className="mt-3">
+                <MercadoSelector
+                  mode="required"
+                  value={mercadoCompraId}
+                  onChange={setMercadoCompraId}
+                />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPendenteIncluir(null)}
+                  className="min-h-[44px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  {UX.despensa.cancelar}
+                </button>
+                <button
+                  type="button"
+                  disabled={!mercadoCompraId || incluindoId === pendenteIncluir.produtoId}
+                  onClick={() => void executarIncluirNaCompra(pendenteIncluir, mercadoCompraId)}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {incluindoId === pendenteIncluir.produtoId ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ShoppingCart className="h-4 w-4" />
+                  )}
+                  {UX.despensa.incluir}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               {UX.despensa.adicionarManual}
             </p>
@@ -370,12 +379,15 @@ export default function DespensaPage() {
                   value={novoNome}
                   onChange={(e) => setNovoNome(e.target.value)}
                   placeholder="Ex.: Leite integral"
-                  disabled={!mercadoId || salvando}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70"
+                  disabled={salvando}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[10px] font-semibold uppercase text-slate-500" htmlFor="despensa-ciclo">
+                <label
+                  className="mb-1 block text-[10px] font-semibold uppercase text-slate-500"
+                  htmlFor="despensa-ciclo"
+                >
                   {UX.despensa.cicloDias}
                 </label>
                 <input
@@ -385,14 +397,14 @@ export default function DespensaPage() {
                   max={60}
                   value={novoCiclo}
                   onChange={(e) => setNovoCiclo(e.target.value)}
-                  disabled={!mercadoId || salvando}
-                  className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70"
+                  disabled={salvando}
+                  className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm"
                   title={UX.despensa.cicloDias}
                 />
               </div>
               <button
                 type="button"
-                disabled={salvando || !mercadoId || !novoNome.trim()}
+                disabled={salvando || !novoNome.trim()}
                 onClick={() => void adicionarManual()}
                 className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
               >
@@ -400,9 +412,6 @@ export default function DespensaPage() {
                 Adicionar
               </button>
             </div>
-            {!mercadoId && (
-              <p className="mt-2 text-xs font-medium text-amber-800">{UX.despensa.adicionarBloqueado}</p>
-            )}
           </div>
 
           {erro && (

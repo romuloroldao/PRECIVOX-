@@ -3,14 +3,10 @@
 import Link from 'next/link';
 import { Package } from 'lucide-react';
 
-export function DespensaCard({ mercadoId }: { mercadoId?: string | null }) {
-  const href = mercadoId
-    ? `/cliente/despensa?mercadoId=${encodeURIComponent(mercadoId)}`
-    : '/cliente/despensa';
-
+export function DespensaCard(_props?: { mercadoId?: string | null }) {
   return (
     <Link
-      href={href}
+      href="/cliente/despensa"
       className="block rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-4 shadow-sm transition hover:border-teal-300"
     >
       <div className="flex items-start gap-3">
@@ -18,9 +14,9 @@ export function DespensaCard({ mercadoId }: { mercadoId?: string | null }) {
           <Package className="h-5 w-5" />
         </span>
         <div>
-          <p className="font-semibold text-gray-900">Despensa digital</p>
+          <p className="font-semibold text-gray-900">Despensa</p>
           <p className="mt-0.5 text-sm text-gray-600">
-            Veja o que provavelmente acabou e inclua na compra em um toque
+            O que costuma acabar em casa — inclua na compra quando precisar
           </p>
         </div>
       </div>
