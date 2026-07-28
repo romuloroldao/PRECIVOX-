@@ -29,7 +29,8 @@ function loadEnvProduction() {
         const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
         if (m && !m[1].startsWith('#')) {
           const value = m[2].replace(/^["']|["']$/g, '').trim();
-          if (!process.env[m[1]]) process.env[m[1]] = value;
+          // Sempre sobrescreve a partir do arquivo (evita placeholders antigos no shell/PM2).
+          process.env[m[1]] = value;
         }
       });
     }
@@ -63,6 +64,13 @@ module.exports = {
         GROQ_API_KEY: process.env.GROQ_API_KEY,
         GROQ_MODEL_REASONING: process.env.GROQ_MODEL_REASONING,
         GROQ_MODEL_FAST: process.env.GROQ_MODEL_FAST,
+        // Login social Google (token exchange no Express)
+        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+        FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID,
+        FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
+        JWT_SECRET: process.env.JWT_SECRET,
+        DATABASE_URL: process.env.DATABASE_URL,
       },
       error_file: '/var/log/precivox-backend-error.log',
       out_file: '/var/log/precivox-backend-out.log',
@@ -86,6 +94,11 @@ module.exports = {
         JWT_SECRET: process.env.JWT_SECRET,
         DATABASE_URL: process.env.DATABASE_URL,
         NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL || 'https://precivox.com.br',
+        // BFF social (/api/auth/social/*/start) precisa do client id
+        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+        FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID,
+        FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
       },
       error_file: '/var/log/precivox-frontend-error.log',
       out_file: '/var/log/precivox-frontend-out.log',

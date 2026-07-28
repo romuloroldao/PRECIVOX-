@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { internalFetch } from '@/lib/internal-backend';
-import { buildRedirectUri, isSupportedProvider, OAUTH_COOKIE, SocialProvider } from '@/lib/social-auth';
+import { buildRedirectUri, isSupportedProvider, OAUTH_COOKIE, resolvePublicOrigin, SocialProvider } from '@/lib/social-auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -65,7 +65,7 @@ async function readInput(req: NextRequest): Promise<CallbackInput> {
 }
 
 async function handle(req: NextRequest, provider: string) {
-  const origin = req.nextUrl.origin;
+  const origin = resolvePublicOrigin(req);
   const loginErrorUrl = (reason: string) => new URL(`/login?error=${reason}`, origin);
 
   if (!isSupportedProvider(provider)) {

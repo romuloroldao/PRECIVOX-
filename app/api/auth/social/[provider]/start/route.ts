@@ -5,6 +5,7 @@ import {
   isSupportedProvider,
   OAUTH_COOKIE,
   randomToken,
+  resolvePublicOrigin,
 } from '@/lib/social-auth';
 import { safeCallbackUrl } from '@/lib/safe-callback-url';
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { provider: st
   }
 
   try {
-    const origin = req.nextUrl.origin;
+    const origin = resolvePublicOrigin(req);
     const state = randomToken();
     const nonce = randomToken();
     const { verifier, challenge } = generatePkce();
@@ -55,6 +56,6 @@ export async function GET(req: NextRequest, { params }: { params: { provider: st
     return res;
   } catch (err) {
     console.error('[social/start]', err);
-    return NextResponse.redirect(new URL('/login?error=social_config', req.nextUrl.origin));
+    return NextResponse.redirect(new URL('/login?error=social_config', resolvePublicOrigin(req)));
   }
 }

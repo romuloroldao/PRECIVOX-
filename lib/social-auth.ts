@@ -75,6 +75,28 @@ export function buildRedirectUri(origin: string, provider: SocialProvider): stri
   return `${origin}/api/auth/social/${provider}/callback`;
 }
 
+/**
+ * Origem pública canônica (atrás de nginx, nextUrl.origin vira localhost:3000).
+ * Preferência: NEXT_PUBLIC_URL → x-forwarded-* → nextUrl.origin.
+ */
+export function resolvePublicOrigin(req: {
+  nextUrl: { origin: string };
+  headers: { get(name: string): string | null };
+}): string {
+  const fromEnv = process.env.NEXT_PUBLIC_URL?.replace(/\/$/, '');
+  if (fromEnv && /^https?:\/\//i.test(fromEnv) && !/localhost|127\.0\.0\.1/i.test(fromEnv)) {
+    return fromEnv;
+  }
+  const xfHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const xfProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() || 'https';
+  if (xfHost) return `${xfProto}://${xfHost}`.replace(/\/$/, '');
+  const host = req.headers.get('host');
+  if (host && !/localhost|127\.0\.0\.1/i.test(host)) {
+    return `${xfProto}://${host}`.replace(/\/$/, '');
+  }
+  return req.nextUrl.origin;
+}
+
 export function buildAuthorizeUrl(params: {
   provider: SocialProvider;
   origin: string;
