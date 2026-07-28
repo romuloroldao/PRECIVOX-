@@ -78,13 +78,44 @@ deploy_sync_to_dest() {
   fi
 
   echo "📤 Sincronizando código: $src → $dest"
+  # Excludes: tooling/IDE/caches não fazem parte do runtime PM2.
+  # Sem isto o DEST herda .cursor-server, .nvm, etc. (GB de dívida).
+  # .next.backup.* vive só no DEST — preservar contra --delete.
   rsync -a --delete \
     --exclude 'node_modules' \
     --exclude '.git' \
     --exclude '.env' \
     --exclude '.env.local' \
     --exclude '.env.production' \
+    --exclude '.next' \
     --exclude '.next/cache' \
+    --exclude '.next.backup.*' \
+    --exclude '.next.last-backup' \
+    --exclude '.cursor' \
+    --exclude '.cursor-server' \
+    --exclude '.antigravity-server' \
+    --exclude '.nvm' \
+    --exclude '.npm' \
+    --exclude '.cache' \
+    --exclude '.agents' \
+    --exclude '.claude' \
+    --exclude '.gemini' \
+    --exclude '.composer' \
+    --exclude '.pm2' \
+    --exclude '.ssh' \
+    --exclude '.local' \
+    --exclude '.vscode' \
+    --exclude '.pki' \
+    --exclude '.config' \
+    --exclude 'snap' \
+    --exclude 'backups' \
+    --exclude '.bash_history' \
+    --exclude '.bashrc' \
+    --exclude '.gitconfig' \
+    --exclude '.tmux.conf' \
+    --exclude 'skills-lock.json' \
+    --exclude 'tsconfig.tsbuildinfo' \
+    --exclude 'tsconfig.lib.strict.tsbuildinfo' \
     "$src/" "$dest/"
 
   echo "📤 Sincronizando .next (chunks estáticos)..."
