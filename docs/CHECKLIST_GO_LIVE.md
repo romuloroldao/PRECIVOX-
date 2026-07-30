@@ -86,11 +86,12 @@ curl -X PATCH -H "Cookie: ..." -H "Content-Type: application/json" \
 Ver checklist detalhado: [`QA_AI_NATIVE_PILOTO.md`](./QA_AI_NATIVE_PILOTO.md)
 
 - [x] Código em produção com `NEXT_PUBLIC_AI_NATIVE_SHELL=true` (28/07/2026)
-- [ ] QA manual nav Casa/Compra/Scanner/Despensa/Mais
-- [ ] Hub texto / voz / foto → superfície correta
+- [x] QA nav Casa/Compra/Scanner/Despensa/Mais (30/07 — Playwright + dump)
+- [ ] Hub voz / foto → superfície correta (mic/câmera — manual)
 - [x] Flag on: shell novo é o default em produção (cookie `=0` ainda valida legada)
-- [ ] Funil eventos: `casa_aberta` → `compra_rascunho_montado` → `compra_confirmada`
+- [ ] Funil eventos: `casa_aberta` ✅ → `compra_rascunho_montado` (parcial) → `compra_confirmada` (manual ~90s)
 - [ ] Fase 9: remover nav legada após ciclo estável
+- [ ] Chip EL na busca/scan — revalidar (não visto no listing piloto)
 
 ### Gestor (Empório Select)
 - [x] Upload + sync + saúde catálogo (card visível; catálogo stale)

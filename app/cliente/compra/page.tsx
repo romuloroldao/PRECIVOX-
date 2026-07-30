@@ -97,12 +97,21 @@ export default function ClienteCompraPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('montar') !== '1') return;
-    if (!mercadoId || montando || totalItens > 0) return;
-    void montarRascunho().finally(() => {
+
+    const limparQueryMontar = () => {
       const url = new URL(window.location.href);
+      if (!url.searchParams.has('montar')) return;
       url.searchParams.delete('montar');
       window.history.replaceState({}, '', url.pathname + (url.search || ''));
-    });
+    };
+
+    // Lista já preenchida: só limpa a query (evita ?montar=1 “grudado” na URL).
+    if (totalItens > 0) {
+      limparQueryMontar();
+      return;
+    }
+    if (!mercadoId || montando) return;
+    void montarRascunho().finally(limparQueryMontar);
   }, [mercadoId, montando, totalItens, montarRascunho]);
 
   return (
