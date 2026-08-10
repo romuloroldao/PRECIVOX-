@@ -1,0 +1,58 @@
+{
+  "backup_vps": "/root/.agents-backup-2026-08-10",
+  "backup_repo": "docs/ai-skills/backup/2026-08-10/agents-skills-backup-2026-08-10.tgz",
+  "substitutions": [
+    {
+      "original": "debugging-expert",
+      "origin": "workspace+VPS /.agents/skills",
+      "capabilities": [
+        "persona debugging",
+        "5-step checklist",
+        "deliverables RCA"
+      ],
+      "replaced_by": "systematic-debugging",
+      "reason": "Mesma finalidade; systematic-debugging tem Iron Law, 4 fases, anti-patterns e maior cobertura"
+    },
+    {
+      "original": "system-architecture",
+      "origin": "workspace+VPS /.agents/skills",
+      "capabilities": [
+        "outline estilos arquiteturais",
+        "trade-offs cloud"
+      ],
+      "replaced_by": "software-architecture",
+      "reason": "software-architecture \u00e9 operacional (Clean/DDD/library-first); system-architecture \u00e9 outline raso"
+    },
+    {
+      "original": "tdd",
+      "origin": "VPS /.agents/skills (Matt Pocock)",
+      "capabilities": [
+        "red-green-refactor",
+        "vertical slices"
+      ],
+      "replaced_by": "test-driven-development",
+      "reason": "Conflito de Iron Laws com Superpowers; suite escolhida: Superpowers (alinha brainstorming\u2192plans\u2192TDD)"
+    },
+    {
+      "original": "performance-optimizer",
+      "origin": "workspace+VPS",
+      "capabilities": [
+        "checklist perf gen\u00e9rico"
+      ],
+      "replaced_by": "vercel-react-best-practices (+ vercel-react-native-skills)",
+      "reason": "Para stack web/mobile do Precivox, regras Vercel cobrem com profundidade; persona gen\u00e9rica fica archive"
+    }
+  ],
+  "project_local_added": [
+    {
+      "name": "nextjs-api-auth-pattern",
+      "from": "/root/app/.cursor/skills/nextjs-api-auth-pattern",
+      "to": "app/.cursor/skills/nextjs-api-auth-pattern",
+      "reason": "Skill espec\u00edfica do Precivox (wrappers withAdmin/withRole)"
+    }
+  ],
+  "not_deleted": [
+    "Nenhuma skill removida da VPS ou do projeto nesta fase \u2014 apenas backup + staging + docs + skill local sincronizada"
+  ],
+  "account_pack": "docs/ai-skills/account-pack"
+}

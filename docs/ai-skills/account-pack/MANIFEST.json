@@ -1,0 +1,219 @@
+{
+  "version": 1,
+  "created": "2026-08-10",
+  "source": "VPS r14653s + workspace PRECIVOX",
+  "categories": {
+    "global": [
+      {
+        "name": "brainstorming",
+        "sha256_16": "bba47904a7f6bbee"
+      },
+      {
+        "name": "caveman",
+        "sha256_16": "b4bb6fe3bf3da222"
+      },
+      {
+        "name": "design-an-interface",
+        "sha256_16": "a2596e9fa2d50e23"
+      },
+      {
+        "name": "dispatching-parallel-agents",
+        "sha256_16": "76806091c7f923ba"
+      },
+      {
+        "name": "edit-article",
+        "sha256_16": "cc372fb25b552017"
+      },
+      {
+        "name": "executing-plans",
+        "sha256_16": "e2102f1163143393"
+      },
+      {
+        "name": "finishing-a-development-branch",
+        "sha256_16": "5c8d4b59aedb14c9"
+      },
+      {
+        "name": "grill-me",
+        "sha256_16": "74147eb6010a6595"
+      },
+      {
+        "name": "handoff",
+        "sha256_16": "d215dd8f2a19bf85"
+      },
+      {
+        "name": "product-strategy",
+        "sha256_16": "c886c5e54e9e4464"
+      },
+      {
+        "name": "prototype",
+        "sha256_16": "a653deb65afa2ee8"
+      },
+      {
+        "name": "receiving-code-review",
+        "sha256_16": "c9382e92b8f32363"
+      },
+      {
+        "name": "requesting-code-review",
+        "sha256_16": "5a3a44a3667800e2"
+      },
+      {
+        "name": "software-architecture",
+        "sha256_16": "3431141943fbe02b"
+      },
+      {
+        "name": "software-engineer",
+        "sha256_16": "c84204b53840f3fa"
+      },
+      {
+        "name": "subagent-driven-development",
+        "sha256_16": "905a2b9be59b734d"
+      },
+      {
+        "name": "systematic-debugging",
+        "sha256_16": "4999cb851360485e"
+      },
+      {
+        "name": "test-driven-development",
+        "sha256_16": "7dee67b4af6bdccc"
+      },
+      {
+        "name": "to-issues",
+        "sha256_16": "0e6a2973fa5bdf32"
+      },
+      {
+        "name": "to-prd",
+        "sha256_16": "5212dee3af6a95e6"
+      },
+      {
+        "name": "ubiquitous-language",
+        "sha256_16": "2449e2345b96b9f1"
+      },
+      {
+        "name": "using-git-worktrees",
+        "sha256_16": "085a45ee3de432bd"
+      },
+      {
+        "name": "using-superpowers",
+        "sha256_16": "316e29381219adf0"
+      },
+      {
+        "name": "ux-expert",
+        "sha256_16": "1187f50cc6944246"
+      },
+      {
+        "name": "verification-before-completion",
+        "sha256_16": "ea52d15aabaf72bc"
+      },
+      {
+        "name": "write-a-skill",
+        "sha256_16": "be8f20e663092580"
+      },
+      {
+        "name": "writing-beats",
+        "sha256_16": "0843367d0a653bb1"
+      },
+      {
+        "name": "writing-fragments",
+        "sha256_16": "4ffa34a701caff27"
+      },
+      {
+        "name": "writing-plans",
+        "sha256_16": "4fd4627d2c023678"
+      },
+      {
+        "name": "writing-shape",
+        "sha256_16": "81a542b95fa86532"
+      },
+      {
+        "name": "writing-skills",
+        "sha256_16": "38ba648975ae6ba5"
+      },
+      {
+        "name": "zoom-out",
+        "sha256_16": "2a6894c7f9b1c9c5"
+      }
+    ],
+    "hybrid": [
+      {
+        "name": "diagnose",
+        "sha256_16": "28886402bbfa0470"
+      },
+      {
+        "name": "grill-with-docs",
+        "sha256_16": "3e35025119ba03ef"
+      },
+      {
+        "name": "improve-codebase-architecture",
+        "sha256_16": "f00de04c7bb83cfd"
+      },
+      {
+        "name": "qa",
+        "sha256_16": "d9727aac6503981b"
+      },
+      {
+        "name": "request-refactor-plan",
+        "sha256_16": "d59de4ba6cc1fe2d"
+      },
+      {
+        "name": "review",
+        "sha256_16": "5700f30d3f06706e"
+      },
+      {
+        "name": "scaffold-exercises",
+        "sha256_16": "75f5c9d771606fb9"
+      },
+      {
+        "name": "setup-matt-pocock-skills",
+        "sha256_16": "c778d4e3d86ecc91"
+      },
+      {
+        "name": "teach",
+        "sha256_16": "b55c93d761d4d1a7"
+      },
+      {
+        "name": "triage",
+        "sha256_16": "b819f0285e4e5814"
+      }
+    ],
+    "local": [
+      {
+        "name": "nextjs-api-auth-pattern",
+        "sha256_16": "39707eddf0039178"
+      }
+    ],
+    "archive-candidates": [
+      {
+        "name": "debugging-expert",
+        "sha256_16": "4ee0a6bed31cc561"
+      },
+      {
+        "name": "git-guardrails-claude-code",
+        "sha256_16": "03c4de7613c712ae"
+      },
+      {
+        "name": "migrate-to-shoehorn",
+        "sha256_16": "de4da4c11d924fac"
+      },
+      {
+        "name": "obsidian-vault",
+        "sha256_16": "7bed1d552aa5e934"
+      },
+      {
+        "name": "performance-optimizer",
+        "sha256_16": "ccba041eb06db397"
+      },
+      {
+        "name": "setup-pre-commit",
+        "sha256_16": "872f4037cb7e6e0e"
+      },
+      {
+        "name": "system-architecture",
+        "sha256_16": "b9a1d4a383fed6fd"
+      },
+      {
+        "name": "tdd",
+        "sha256_16": "af059705061156fd"
+      }
+    ]
+  }
+}
