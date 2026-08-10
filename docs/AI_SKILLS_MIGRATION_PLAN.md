@@ -103,12 +103,14 @@ bash docs/ai-skills/account-pack/install-to-account.sh hybrid
 # depois, no repo: usar setup-matt-pocock-skills uma vez
 ```
 
-### Fase 4 — VPS (não destrutivo ainda)
+### Fase 4 — VPS (executada 2026-08-10)
 
-1. Confirmar que Desktop/conta tem o pack global.
-2. Em `/root/.agents/skills`, mover skills promovidas para quarentena (ex. `/root/.agents-quarantine-YYYYMMDD/`) — **não** `rm -rf`.
-3. Manter `nextjs-api-auth-pattern` em `app/.cursor/skills`.
-4. Atualizar este plano com data da limpeza.
+1. [x] Skills movidas para `/root/.agents-quarantine-server-removal-20260810-102214` (54 skills).
+2. [x] `/root/.agents/skills` vazio; README + MIGRATION_STATUS no servidor.
+3. [x] Mantido `nextjs-api-auth-pattern` em `app/.cursor/skills` (src + deploy dest).
+4. [x] `.claude/skills` e `.gemini/.../skills` também quarentenados.
+5. [ ] Usuário instala pack na **Desktop** Cursor (`docs/ai-skills/INSTALL_ON_DESKTOP.md`).
+6. [ ] Após validar Desktop por alguns dias, apagar quarentena na VPS (opcional).
 
 ### Fase 5 — Validação
 

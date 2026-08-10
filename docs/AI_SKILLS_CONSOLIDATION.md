@@ -113,14 +113,20 @@ Cobertura fragmentada: git com núcleo; VPS com suíte completa; conta vazia nes
 
 ---
 
-## Próximo passo operacional
+## Executado no servidor (2026-08-10)
+
+- `/root/.agents/skills`: **54 → 0** (quarentena, não delete definitivo)
+- Removidos também dirs de skills em `.claude` / `.gemini` na VPS
+- Mantido: `app/.cursor/skills/nextjs-api-auth-pattern`
+- Removidas do **git** as cópias em `.agents/skills/` (repo deixa de carregar pack operacional)
+
+## Próximo passo (sua Desktop)
 
 ```bash
-bash docs/ai-skills/account-pack/install-to-account.sh dry-run
 bash docs/ai-skills/account-pack/install-to-account.sh global
 npx skills add vercel-labs/agent-skills@vercel-react-best-practices -g -y
 npx skills add vercel-labs/agent-skills@web-design-guidelines -g -y
 npx skills add vercel-labs/skills@find-skills -g -y
 ```
 
-Depois validar e só então quarentenar cópias na VPS.
+Detalhes: `docs/ai-skills/INSTALL_ON_DESKTOP.md`

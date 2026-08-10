@@ -84,6 +84,16 @@ Suite Matt Pocock em `docs/ai-skills/account-pack/hybrid/` — só após `setup-
 - [ ] `tdd` e `test-driven-development` não coexistem ativos
 - [ ] Backup intacto em `_migration_backup/`
 
-## Limitações deste Cloud Agent
+## Estado do servidor (VPS)
 
-Este runtime **não persistiu** skills globais de usuário (`list -g` = vazio). A arquitetura está preparada; a **ativação na conta** ocorre na Desktop/Remote do usuário.
+**Atualizado 2026-08-10:** skills operacionais **removidas** de `/root/.agents/skills` (0 skills).  
+Quarentena: `/root/.agents-quarantine-server-removal-*`  
+Exceção de projeto: `app/.cursor/skills/nextjs-api-auth-pattern`
+
+## Conta Cursor
+
+Instalar no **Desktop** (máquina onde você usa o Cursor logado):
+
+ver `docs/ai-skills/INSTALL_ON_DESKTOP.md`
+
+Cloud Agents efêmeros podem ter `~/.agents` próprio; isso **não substitui** a instalação na sua Desktop.
