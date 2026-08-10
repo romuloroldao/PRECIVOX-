@@ -36,3 +36,11 @@ Depois: **Developer: Reload Window** ou reiniciar o Cursor.
 ## Exceção de projeto (não vai para User)
 
 `app/.cursor/skills/nextjs-api-auth-pattern` — permanece só no Precivox.
+
+---
+
+## Se a UI User continua em 12
+
+Leia `docs/ai-skills/WHY_USER_UI_STILL_12.md`.
+
+Resumo: o terminal precisa ser o **local da Desktop**, não o SSH da VPS.
