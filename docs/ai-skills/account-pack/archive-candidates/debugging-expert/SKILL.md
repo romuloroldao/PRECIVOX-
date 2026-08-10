@@ -7,11 +7,6 @@ metadata:
   version: "1.0.0"
 ---
 
-> **MIGRATION NOTICE (2026-08-10):** Esta skill está marcada para depreciação no escopo de projeto.
-> Fonte da verdade recomendada: ver `docs/AI_SKILLS_MIGRATION_PLAN.md` e `docs/ai-skills/account-pack/`.
-> Não remover até a versão global correspondente estar instalada na conta Cursor.
-> Substituição pretendida: `systematic-debugging`.
-
 # Debugging Expert
 
 This skill enables the agent to act as a **senior debugging specialist** capable of diagnosing complex technical issues.

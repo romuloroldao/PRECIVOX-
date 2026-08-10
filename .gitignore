@@ -47,6 +47,11 @@ ecosystem.config.js.backup
 *.swp
 *.swo
 .cursor/
+# Versionar skills de projeto (não o restante do .cursor)
+!app/.cursor/
+app/.cursor/*
+!app/.cursor/skills/
+!app/.cursor/skills/**
 .cursor-server/
 .antigravity-server/
 .gemini/
@@ -111,6 +116,7 @@ top*
 .agents/
 skills-lock.json
 LEIA-ME-INSTALAR-SKILLS.md
+# Exceção: skill pack e backup da migração vivem em docs/ai-skills/ (versionados)
 
 # Dotfiles de runtime (workspace root é /root)
 .pki/
