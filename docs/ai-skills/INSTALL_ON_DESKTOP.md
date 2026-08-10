@@ -1,45 +1,38 @@
-# Instalar skills na conta Cursor (Desktop)
+# Skills de Usuário na interface Customize → Skills
 
-O servidor VPS **já não tem** skills operacionais em `/root/.agents/skills`.
+## Servidor (Remote SSH) — já aplicado
 
-A fonte da verdade passa a ser a **sua máquina onde o Cursor Desktop está logado** (`~/.agents/skills` / skills globais da conta).
+Em `r14653s` (`189.126.111.149`):
 
-## 1. No seu computador (Cursor Desktop)
+- **46 skills** em `/root/.cursor/skills/`
+- **8 archive-candidates NÃO instaladas:**
+  - `debugging-expert`
+  - `system-architecture`
+  - `performance-optimizer`
+  - `tdd`
+  - `obsidian-vault`
+  - `git-guardrails-claude-code`
+  - `migrate-to-shoehorn`
+  - `setup-pre-commit`
 
-No clone do repositório Precivox:
+Reinicie a janela remota / recarregue Customize → Skills se a lista User não atualizar.
+
+## Desktop local (se a UI User ainda mostrar só as 12 antigas)
+
+A lista **User** da Customize costuma ler `~/.cursor/skills` da **máquina local** (não só do SSH). Nesse caso:
 
 ```bash
-bash docs/ai-skills/account-pack/install-to-account.sh global
+# Opção A — script (a partir do clone do repo)
+bash docs/ai-skills/install-to-cursor-user-skills.sh
 
-npx skills add vercel-labs/agent-skills@vercel-react-best-practices -g -y
-npx skills add vercel-labs/agent-skills@web-design-guidelines -g -y
-npx skills add vercel-labs/skills@find-skills -g -y
-# opcional:
-npx skills add vercel-labs/agent-skills@vercel-react-native-skills -g -y
+# Opção B — tarball das 46 skills
+mkdir -p ~/.cursor/skills
+tar -xzf docs/ai-skills/cursor-user-skills-46.tgz -C ~/.cursor/
+# (extrai a pasta skills/ para ~/.cursor/skills)
 ```
 
-Conferir:
+Depois: **Developer: Reload Window** ou reiniciar o Cursor.
 
-```bash
-npx skills list -g
-```
+## Exceção de projeto (não vai para User)
 
-Reinicie o Cursor (ou abra nova janela de Agent) para as skills aparecerem.
-
-## 2. O que permanece no projeto
-
-Apenas:
-
-`app/.cursor/skills/nextjs-api-auth-pattern`
-
-(específica do Precivox — auth `withAdmin` / `withRole`)
-
-## 3. Servidor
-
-- Skills removidas → quarentena `/root/.agents-quarantine-server-removal-*`
-- Backup completo → `/root/.agents-backup-2026-08-10`
-- Deploy **não** sincroniza `.agents` (já excluído no rsync)
-
-## 4. Remote SSH
-
-Com skills só na conta/Desktop, o Agent no Remote deve usar as skills da sua conta Cursor — não reinstale o pack em `/root/.agents` na VPS.
+`app/.cursor/skills/nextjs-api-auth-pattern` — permanece só no Precivox.
