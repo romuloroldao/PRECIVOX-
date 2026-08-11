@@ -24,7 +24,7 @@ async function main() {
   const email = await import('../lib/email');
 
   if (!email.isEmailConfigured()) {
-    console.error('❌ E-mail não configurado. Defina SENDGRID_API_KEY em .env.production');
+    console.error('❌ E-mail não configurado. Defina SMTP_HOST/SMTP_USER/SMTP_PASS (KingHost) ou SENDGRID_API_KEY em .env.local / .env.production');
     process.exit(1);
   }
 
