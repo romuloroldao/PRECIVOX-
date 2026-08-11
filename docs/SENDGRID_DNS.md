@@ -1,5 +1,8 @@
 # SendGrid — DNS e produção (precivox.com.br)
 
+> **Atual (mensageria/lembretes):** o Precivox usa **KingHost SMTP** (`kinghost.smtpkl.com.br`). Ver `docs/KINGHOST_SMTP.md`.  
+> Este documento permanece para autenticação de domínio SendGrid / fallback se `SMTP_HOST` não estiver definido.
+
 DNS gerenciado na **KingHost** (`dns1.kinghost.com.br`).
 
 ## 1. Registros DNS (SendGrid Domain Authentication)

@@ -1,7 +1,8 @@
 /**
- * Envio transacional via SendGrid (SMTP) ou SMTP genérico.
- * Prioridade: SENDGRID_API_KEY → SMTP_HOST/SMTP_USER/SMTP_PASS
+ * Envio transacional via SMTP genérico (ex.: KingHost) ou SendGrid.
+ * Prioridade: SMTP_HOST/SMTP_USER/SMTP_PASS → SENDGRID_API_KEY
  *
+ * KingHost: host kinghost.smtpkl.com.br, porta 587 (STARTTLS) ou 465 (SSL).
  * Todos os templates usam o layout base `renderLayout` para manter
  * identidade visual consistente e responsiva entre os e-mails.
  */
@@ -46,7 +47,33 @@ function resolveSmtpConfig(): {
   user: string;
   pass: string;
   from: string;
+  secure: boolean;
 } | null {
+  const host = process.env.SMTP_HOST?.trim();
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim() || process.env.SMTP_PASSWORD?.trim();
+
+  // SMTP explícito (KingHost etc.) tem prioridade sobre SendGrid
+  if (host && user && pass) {
+    const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
+    const secureEnv = process.env.SMTP_SECURE?.trim().toLowerCase();
+    const secure =
+      secureEnv === 'true' || secureEnv === '1'
+        ? true
+        : secureEnv === 'false' || secureEnv === '0'
+          ? false
+          : port === 465;
+
+    return {
+      host,
+      port,
+      user,
+      pass,
+      from: process.env.SMTP_FROM?.trim() || 'noreply@precivox.com.br',
+      secure,
+    };
+  }
+
   const sendgridKey = process.env.SENDGRID_API_KEY?.trim();
   if (sendgridKey) {
     return {
@@ -55,21 +82,11 @@ function resolveSmtpConfig(): {
       user: 'apikey',
       pass: sendgridKey,
       from: process.env.SMTP_FROM?.trim() || 'noreply@precivox.com.br',
+      secure: false,
     };
   }
 
-  const host = process.env.SMTP_HOST?.trim();
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim() || process.env.SMTP_PASSWORD?.trim();
-  if (!host || !user || !pass) return null;
-
-  return {
-    host,
-    port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
-    user,
-    pass,
-    from: process.env.SMTP_FROM?.trim() || user,
-  };
+  return null;
 }
 
 export function isEmailConfigured(): boolean {
@@ -83,7 +100,9 @@ async function getTransporter() {
   return nodemailer.default.createTransport({
     host: cfg.host,
     port: cfg.port,
-    secure: cfg.port === 465,
+    secure: cfg.secure,
+    // Porta 587 (KingHost): negocia STARTTLS após conectar
+    requireTLS: !cfg.secure && cfg.port === 587,
     auth: { user: cfg.user, pass: cfg.pass },
   });
 }
